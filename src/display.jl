@@ -105,7 +105,13 @@ type WindowImage
 
     function WindowImage(buf::Array{Uint32,2}, props::Dict = Dict(), format::Integer = Cairo.CAIRO_FORMAT_RGB24, title::String = "Julia")
         w, h = size(buf)    # note it's in [x,y] order, not [row,col] order!
-        c = TkRenderer(title, w, h)
+        ps = get(props, "pixel_spacing", nothing)
+        local c
+        if !is(ps, nothing)
+            c = TkRenderer(title, iround(w*ps[2]/ps[1]), h)
+        else
+            c = TkRenderer(title, w, h)
+        end
         surf = Cairo.CairoImageSurface(buf, format, w, h)
         ip = initialize_canvas(c, w, h, props)
         obj = new(c, surf, buf, ip)
@@ -116,7 +122,7 @@ type WindowImage
         c.redraw = function (_)
             redraw(obj)
         end
-        redraw(obj)
+        _resize(obj)
     end
 end
 
