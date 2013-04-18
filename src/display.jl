@@ -127,6 +127,10 @@ type WindowImage
         c.redraw = function (_)
             redraw(obj)
         end
+        # Bind mouse clicks to zoom
+        c.mouse.button1press = (c, x, y) -> band_start(obj, x, y)
+        c.mouse.button1release = (c, x, y) -> band_stop(obj, x, y)
+        c.mouse.button3release = (c, x, y) -> zoom_reset(obj)
         _resize(obj)
     end
 end
@@ -181,6 +185,25 @@ function zoom_reset(wb::WindowImage)
     wb.ip.zoombb = BoundingBox(0, size(wb.buf,1), 0, size(wb.buf,2))
     _resize(wb)
 end
+
+function device_to_user(r::GraphicsContext, x::Number, y::Number)
+    p = device_to_user!(r, [float64(x),float64(y)])
+    p[1], p[2]
+end
+
+function band_start(wb::WindowImage, x, y)
+    xu, yu = device_to_user(getgc(wb.c), x, y)
+    wb.ip.zoombb = BoundingBox(xu, wb.ip.zoombb.xmax, yu, wb.ip.zoombb.ymax)
+end
+
+function band_stop(wb::WindowImage, x, y)
+    x1 = wb.ip.zoombb.xmin
+    y1 = wb.ip.zoombb.ymin
+    xu, yu = device_to_user(getgc(wb.c), x, y)
+    zoombb = BoundingBox(min(x1,xu), max(x1,xu), min(y1,yu), max(y1,yu))
+    zoom(wb, zoombb)
+end
+
 
 copy!(wb::WindowImage, data::Array{Uint32,2}) = copy!(wb.buf, data)
 fill!(wb::WindowImage, val::Uint32) = fill!(wb.buf, val)
