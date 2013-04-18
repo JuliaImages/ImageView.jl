@@ -175,12 +175,6 @@ function zoom_reset(wb::WindowImage)
     _resize(wb)
 end
 
-# # If you write new data to the buffer (e.g., using copy!), refresh the display
-# function update(wb::WindowImage)
-#     Cairo.image(Tk.getgc(wb.c), wb.surf, 0, 0, Cairo.width(wb.surf), Cairo.height(wb.surf))
-#     wb.c.redraw(wb.c)
-# end
-
 copy!(wb::WindowImage, data::Array{Uint32,2}) = copy!(wb.buf, data)
 fill!(wb::WindowImage, val::Uint32) = fill!(wb.buf, val)
 
@@ -311,7 +305,7 @@ function cairoRGB(buf::Array{Uint32,2}, img::Union(StridedArray,Images.AbstractI
                 for j = 1:jsz
                     k = firstindex + (j-1)*jstride
                     for i = 0:istride:(isz-1)*istride
-                        gr = scale(scalei, A[k+i])
+                        gr = Images.scale(scalei, A[k+i])
                         buf[l] = rgb24(gr, gr, gr)
                         l += 1
                     end
@@ -320,7 +314,7 @@ function cairoRGB(buf::Array{Uint32,2}, img::Union(StridedArray,Images.AbstractI
                 for j = 1:jsz
                     k = firstindex + (j-1)*jstride
                     for i = 1:isz
-                        gr = scale(scalei, A[k+(i-1)*istride])
+                        gr = Images.scale(scalei, A[k+(i-1)*istride])
                         buf[j,i] = rgb24(gr, gr, gr)
                     end
                 end
