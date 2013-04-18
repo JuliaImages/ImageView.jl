@@ -168,6 +168,8 @@ function _resize(wb::WindowImage)
         fill_canvas(r, wb.ip.perimeter)
     end
     redraw(wb)
+    Tk.reveal(wb.c)
+    wb
 end
 
 function zoom(wb::WindowImage, zoombb::BoundingBox)
