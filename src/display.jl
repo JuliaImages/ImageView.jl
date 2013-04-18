@@ -108,7 +108,12 @@ type WindowImage
         ps = get(props, "pixel_spacing", nothing)
         local c
         if !is(ps, nothing)
-            c = TkRenderer(title, iround(w*ps[2]/ps[1]), h)
+            r = ps[2]/ps[1]
+            if r > 1
+                c = TkRenderer(title, iround(w*r), h)
+            else
+                c = TkRenderer(title, w, iround(h/r))
+            end
         else
             c = TkRenderer(title, w, h)
         end
