@@ -1,6 +1,5 @@
 # Display images so they fill a window
 
-# TkRenderer adapted from Winston's tk.jl
 import Tk
 import Cairo
 
@@ -31,7 +30,7 @@ end
 function initialize_canvas(c::Canvas, w, h, props::Dict)
     ps = get(props, "pixel_spacing", nothing)
     background = get(props, "background", nothing)
-    perimeter = get(props, "perimeter", RGB(1,1,1))
+    perimeter = get(props, "perimeter", RGB(0,0,0))
     aspect_constrained = !is(ps, nothing)
     aspect_x_per_y = 1.0
     if aspect_constrained
@@ -128,8 +127,7 @@ type WindowImage
             redraw(obj)
         end
         # Bind mouse clicks to zoom
-        c.mouse.button1press = (c, x, y) -> band_start(obj, x, y)
-        c.mouse.button1release = (c, x, y) -> band_stop(obj, x, y)
+        c.mouse.button1press = (c, x, y) -> rubberband_start(obj, x, y)
         c.mouse.button3release = (c, x, y) -> zoom_reset(obj)
         _resize(obj)
     end
@@ -191,17 +189,65 @@ function device_to_user(r::GraphicsContext, x::Number, y::Number)
     p[1], p[2]
 end
 
-function band_start(wb::WindowImage, x, y)
-    xu, yu = device_to_user(getgc(wb.c), x, y)
-    wb.ip.zoombb = BoundingBox(xu, wb.ip.zoombb.xmax, yu, wb.ip.zoombb.ymax)
+function user_to_device(r::GraphicsContext, x::Number, y::Number)
+    p = user_to_device!(r, [float64(x),float64(y)])
+    p[1], p[2]
 end
 
-function band_stop(wb::WindowImage, x, y)
-    x1 = wb.ip.zoombb.xmin
-    y1 = wb.ip.zoombb.ymin
-    xu, yu = device_to_user(getgc(wb.c), x, y)
-    zoombb = BoundingBox(min(x1,xu), max(x1,xu), min(y1,yu), max(y1,yu))
-    zoom(wb, zoombb)
+## Mouse interaction
+type RubberBand
+    pos1::Vec2       # in user coordinates
+    pos2::Vec2       # in user coordinates
+end
+
+function rbdraw(r::GraphicsContext, rb::RubberBand)
+    rectangle(r, rb.pos1.x, rb.pos1.y, rb.pos2.x-rb.pos1.x, rb.pos2.y-rb.pos1.y)
+    set_dash(r, [3.0,3.0], 3.0)
+    set_source_rgb(r, 1, 1, 1)
+    stroke_preserve(r)
+    set_dash(r, [3.0,3.0], 0.0)
+    set_source_rgb(r, 0, 0, 0)
+    stroke_preserve(r)
+end
+
+function rubberband_start(wb::WindowImage, x, y)
+    r = wb.c.frontcc
+    xu, yu = device_to_user(r, x, y)
+    rb = RubberBand(Vec2(xu,yu), Vec2(xu,yu))    
+    wb.c.mouse.button1motion = (c, x, y) -> rubberband_move(wb.c, rb, x, y)
+    wb.c.mouse.button1release = (c, x, y) -> rubberband_stop(wb, rb, x, y)
+    save(r)
+    set_line_width(r, 1)
+    rbdraw(r, rb)
+end
+
+function rubberband_move(c::Canvas, rb::RubberBand, x, y)
+    r = c.frontcc
+    Cairo.set_source_surface(r, c.back, 0, 0)
+    set_line_width(r, 2)
+    set_dash(r, Float64[])
+    stroke(r)
+    xu, yu = device_to_user(r, x, y)
+    rb.pos2 = Vec2(xu, yu)
+    rbdraw(r, rb)
+    set_source_rgb(r, 0, 0, 0)
+    set_line_width(r, 1)
+    stroke_preserve(r)
+end
+
+function rubberband_stop(wb::WindowImage, rb::RubberBand, x, y)
+    r = wb.c.frontcc
+    Cairo.set_source_surface(r, wb.c.back, 0, 0)
+    set_line_width(r, 2)
+    stroke(r)
+    restore(r)
+    x1u, y1u = rb.pos1.x, rb.pos1.y
+    x1, y1 = user_to_device(r, x1u, y1u)
+    if abs(x1-x) > 2 || abs(y1-y) > 2
+        xu, yu = device_to_user(r, x, y)
+        zoombb = BoundingBox(min(x1u,xu), max(x1u,xu), min(y1u,yu), max(y1u,yu))
+        zoom(wb, zoombb)
+    end
 end
 
 
