@@ -136,6 +136,11 @@ function initialize_windowimage(obj::WindowImage)
     c.mouse.button1press = (c, x, y) -> rubberband_start(obj, x, y)
     dbl1cb = Tk.tcl_callback((path,x,y)->zoom_reset(obj))
     Tk.tcl_eval("bind $(c.c.path) <Double-Button-1> {$dbl1cb %x %y}")
+    # Bind mousewheel events to zoom
+    Tk.bindwheel(c.c, "Control", (path,delta,x,y)->zoomwheel(obj,int(delta),int(x),int(y)), "%x %y")
+    # Bind mousewheel events to pan
+    Tk.bindwheel(c.c, "", (path,delta)->panvert(obj,int(delta)))
+    Tk.bindwheel(c.c, "Shift", (path,delta)->panhorz(obj,int(delta)))
     _resize(obj)
 end
 
@@ -266,6 +271,61 @@ function rubberband_stop(wb::WindowImage, rb::RubberBand, x, y)
     end
 end
 
+function zoomwheel(wb::WindowImage, delta, x, y)
+    r = getgc(wb.c)
+    xu, yu = device_to_user(r, x, y)
+    zoombb = wb.ip.zoombb
+    if delta < 0
+        xmin, xmax = centeredclip(xu, width(zoombb)/2, xrange(zoombb))
+        ymin, ymax = centeredclip(yu, height(zoombb)/2, yrange(zoombb))
+    else
+        xmin, xmax = centeredclip(xu, 2*width(zoombb), (0,size(wb.buf,1)), xrange(zoombb))
+        ymin, ymax = centeredclip(yu, 2*height(zoombb), (0,size(wb.buf,2)), yrange(zoombb))
+    end
+    zoom(wb, BoundingBox(floor(xmin), ceil(xmax), floor(ymin), ceil(ymax)))
+end
+
+function centeredclip(x, w, lim, cur = lim)
+    w = min(w, lim[2]-lim[1])
+    f = (x-cur[1])/(cur[2]-cur[1])  # fraction into the range
+    xmin = x-f*w                    # preserve the fraction upon resize
+    if xmin < lim[1]
+        return lim[1], lim[1]+w
+    end
+    xmax = xmin+w
+    if xmax > lim[2]
+        return lim[2]-w, lim[2]
+    end
+    xmin, xmax
+end
+
+function panvert(wb::WindowImage, delta)
+    zoombb = wb.ip.zoombb
+    h = height(zoombb)
+    local dy
+    if delta < 0
+        dy = -min(zoombb.ymin, h/10)
+    else
+        dy = min(size(wb.buf, 2)-zoombb.ymax, h/10)
+    end
+    if dy != 0
+        zoom(wb, BoundingBox(zoombb.xmin, zoombb.xmax, zoombb.ymin+dy, zoombb.ymax+dy))
+    end
+end
+
+function panhorz(wb::WindowImage, delta)
+    zoombb = wb.ip.zoombb
+    w = width(zoombb)
+    local dx
+    if delta < 0
+        dx = -min(zoombb.xmin, w/10)
+    else
+        dx = min(size(wb.buf, 1)-zoombb.xmax, w/10)
+    end
+    if dx != 0
+        zoom(wb, BoundingBox(zoombb.xmin+dx, zoombb.xmax+dx, zoombb.ymin, zoombb.ymax))
+    end
+end
 
 copy!(wb::WindowImage, data::Array{Uint32,2}) = copy!(wb.buf, data)
 fill!(wb::WindowImage, val::Uint32) = fill!(wb.buf, val)
