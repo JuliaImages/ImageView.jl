@@ -195,6 +195,13 @@ function user_to_device(r::GraphicsContext, x::Number, y::Number)
 end
 
 ## Mouse interaction
+
+# For rubberband, we draw the selection region on the front canvas, and repair
+# by copying from the back. Note that the front canvas has
+#     user coordinates = device coordinates,
+# so device_to_user doesn't do anything. The back canvas has
+#     user coordinates = image pixel coordinates,
+# so is the correct reference for anything dealing with image pixels.
 type RubberBand
     pos1::Vec2       # in user coordinates
     pos2::Vec2       # in user coordinates
@@ -212,8 +219,7 @@ end
 
 function rubberband_start(wb::WindowImage, x, y)
     r = wb.c.frontcc
-    xu, yu = device_to_user(r, x, y)
-    rb = RubberBand(Vec2(xu,yu), Vec2(xu,yu))    
+    rb = RubberBand(Vec2(x,y), Vec2(x,y))    
     wb.c.mouse.button1motion = (c, x, y) -> rubberband_move(wb.c, rb, x, y)
     wb.c.mouse.button1release = (c, x, y) -> rubberband_stop(wb, rb, x, y)
     save(r)
@@ -227,8 +233,7 @@ function rubberband_move(c::Canvas, rb::RubberBand, x, y)
     set_line_width(r, 2)
     set_dash(r, Float64[])
     stroke(r)
-    xu, yu = device_to_user(r, x, y)
-    rb.pos2 = Vec2(xu, yu)
+    rb.pos2 = Vec2(x, y)
     rbdraw(r, rb)
     set_source_rgb(r, 0, 0, 0)
     set_line_width(r, 1)
@@ -241,10 +246,11 @@ function rubberband_stop(wb::WindowImage, rb::RubberBand, x, y)
     set_line_width(r, 2)
     stroke(r)
     restore(r)
-    x1u, y1u = rb.pos1.x, rb.pos1.y
-    x1, y1 = user_to_device(r, x1u, y1u)
+    x1, y1 = rb.pos1.x, rb.pos1.y
     if abs(x1-x) > 2 || abs(y1-y) > 2
-        xu, yu = device_to_user(r, x, y)
+        rback = getgc(wb.c)
+        xu, yu = device_to_user(rback, x, y)
+        x1u, y1u = device_to_user(rback, x1, y1)
         zoombb = BoundingBox(min(x1u,xu), max(x1u,xu), min(y1u,yu), max(y1u,yu))
         zoom(wb, zoombb)
     end
