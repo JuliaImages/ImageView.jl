@@ -128,7 +128,8 @@ type WindowImage
         end
         # Bind mouse clicks to zoom
         c.mouse.button1press = (c, x, y) -> rubberband_start(obj, x, y)
-        c.mouse.button3release = (c, x, y) -> zoom_reset(obj)
+        dbl1cb = Tk.tcl_callback((path,x,y)->(zoom_reset(obj)))
+        Tk.tcl_eval("bind $(c.c.path) <Double-Button-1> {$dbl1cb %x %y}")
         _resize(obj)
     end
 end
@@ -150,8 +151,6 @@ function redraw(wb::WindowImage)
         Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_GOOD)
     end
     fill(r)
-#     Tk.reveal(wb.c)
-#     Tk.tcl_doevent()
     wb
 end
 
@@ -205,10 +204,12 @@ end
 type RubberBand
     pos1::Vec2       # in user coordinates
     pos2::Vec2       # in user coordinates
+    moved::Bool
 end
 
 function rbdraw(r::GraphicsContext, rb::RubberBand)
     rectangle(r, rb.pos1.x, rb.pos1.y, rb.pos2.x-rb.pos1.x, rb.pos2.y-rb.pos1.y)
+    set_line_width(r, 1)
     set_dash(r, [3.0,3.0], 3.0)
     set_source_rgb(r, 1, 1, 1)
     stroke_preserve(r)
@@ -219,20 +220,21 @@ end
 
 function rubberband_start(wb::WindowImage, x, y)
     r = wb.c.frontcc
-    rb = RubberBand(Vec2(x,y), Vec2(x,y))    
+    rb = RubberBand(Vec2(x,y), Vec2(x,y), false)    
     wb.c.mouse.button1motion = (c, x, y) -> rubberband_move(wb.c, rb, x, y)
     wb.c.mouse.button1release = (c, x, y) -> rubberband_stop(wb, rb, x, y)
     save(r)
-    set_line_width(r, 1)
-    rbdraw(r, rb)
 end
 
 function rubberband_move(c::Canvas, rb::RubberBand, x, y)
     r = c.frontcc
-    Cairo.set_source_surface(r, c.back, 0, 0)
-    set_line_width(r, 2)
-    set_dash(r, Float64[])
-    stroke(r)
+    if rb.moved
+        Cairo.set_source_surface(r, c.back, 0, 0)
+        set_line_width(r, 2)
+        set_dash(r, Float64[])
+        stroke(r)
+    end
+    rb.moved = true
     rb.pos2 = Vec2(x, y)
     rbdraw(r, rb)
     set_source_rgb(r, 0, 0, 0)
@@ -241,6 +243,9 @@ function rubberband_move(c::Canvas, rb::RubberBand, x, y)
 end
 
 function rubberband_stop(wb::WindowImage, rb::RubberBand, x, y)
+    if !rb.moved
+        return
+    end
     r = wb.c.frontcc
     Cairo.set_source_surface(r, wb.c.back, 0, 0)
     set_line_width(r, 2)
