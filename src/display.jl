@@ -119,19 +119,24 @@ type WindowImage
         surf = Cairo.CairoImageSurface(buf, format, w, h)
         ip = initialize_canvas(c, w, h, props)
         obj = new(c, surf, buf, ip)
-        # Set up the resize callback
-        rcb = Tk.tcl_callback((path) -> resize(obj))
-        Tk.tcl_eval("bind $(c.c.path) <Configure> {$rcb}")
-        # Set up redraw function
-        c.redraw = function (_)
-            redraw(obj)
-        end
-        # Bind mouse clicks to zoom
-        c.mouse.button1press = (c, x, y) -> rubberband_start(obj, x, y)
-        dbl1cb = Tk.tcl_callback((path,x,y)->(zoom_reset(obj)))
-        Tk.tcl_eval("bind $(c.c.path) <Double-Button-1> {$dbl1cb %x %y}")
-        _resize(obj)
+        initialize_windowimage(obj)
     end
+end
+
+function initialize_windowimage(obj::WindowImage)
+    c = obj.c
+    # Set up the resize callback
+    rcb = Tk.tcl_callback((path) -> resize(obj))
+    Tk.tcl_eval("bind $(c.c.path) <Configure> {$rcb}")
+    # Set up redraw function
+    c.redraw = function (_)
+        redraw(obj)
+    end
+    # Bind mouse clicks to zoom
+    c.mouse.button1press = (c, x, y) -> rubberband_start(obj, x, y)
+    dbl1cb = Tk.tcl_callback((path,x,y)->zoom_reset(obj))
+    Tk.tcl_eval("bind $(c.c.path) <Double-Button-1> {$dbl1cb %x %y}")
+    _resize(obj)
 end
 
 function redraw(wb::WindowImage)
