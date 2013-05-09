@@ -1,5 +1,9 @@
 ### GUI controls for play forward/backward, up/down, and frame stepping ###
 
+# module Nav
+# 
+# import Tk
+
 ## Type for specifying a particular 2d slice from a possibly-4D image
 type NavigationSlice
     # Dimensions:
@@ -55,16 +59,16 @@ function create_navigation_buttons!(f, ctrls::NavigationControls, curframe::Navi
     end
     Tk.grid(ctrls.stop,1,stopindex,{:padx => 3*pad, :pady => pad})
     if havez
-        callback = (path->stepup(ctrls,curframe,showframe), path->playup(ctrls,curframe,showframe), 
-            path->playdown(ctrls,curframe,showframe), path->stepdown(ctrls,curframe,showframe),
+        callback = (path->stepz(1,ctrls,curframe,showframe), path->playz(1,ctrls,curframe,showframe), 
+            path->playz(-1,ctrls,curframe,showframe), path->stepz(-1,ctrls,curframe,showframe),
             path->setz(ctrls,curframe,showframe))
         ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz = 
             addbuttons(f, btnsz, bkg, pad, zindex, "z", callback)
         Tk.set_value(ctrls.editz, string(curframe.z))
     end
     if havet
-        callback = (path->stepback(ctrls,curframe,showframe), path->playback(ctrls,curframe,showframe), 
-            path->playfwd(ctrls,curframe,showframe), path->stepfwd(ctrls,curframe,showframe),
+        callback = (path->stept(-1,ctrls,curframe,showframe), path->playt(-1,ctrls,curframe,showframe), 
+            path->playt(1,ctrls,curframe,showframe), path->stept(1,ctrls,curframe,showframe),
             path->sett(ctrls,curframe,showframe))
         ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt = 
             addbuttons(f, btnsz, bkg, pad, tindex, "t", callback)
@@ -126,96 +130,68 @@ end
 updatez(ctrls,curframe) = Tk.set_value(ctrls.editz, string(curframe.z))
 updatet(ctrls,curframe) = Tk.set_value(ctrls.editt, string(curframe.t))
 
-function stepup(ctrls,curframe,showframe)
-    if curframe.z < curframe.zmax
-        curframe.z += 1
-        updatez(ctrls,curframe)
-        showframe(curframe)
+function incrementt(inc, ctrls, curframe, showframe)
+    curframe.t += inc
+    updatet(ctrls, curframe)
+    showframe(curframe)
+end
+
+function incrementz(inc, ctrls, curframe, showframe)
+    curframe.z += inc
+    updatez(ctrls, curframe)
+    showframe(curframe)
+end
+
+function stepz(inc, ctrls, curframe, showframe)
+    if 1 <= curframe.z+inc <= curframe.zmax
+        incrementz(inc, ctrls, curframe, showframe)
     end
 end
 
-function playup(ctrls,curframe,showframe)
+function playz(inc, ctrls, curframe, showframe)
     ctrls.isplaying = true
-    while curframe.z < curframe.zmax && ctrls.isplaying
-        curframe.z += 1
-        updatez(ctrls,curframe)
-        showframe(curframe)
+    while 1 <= curframe.z+inc <= curframe.zmax && ctrls.isplaying
+        Tk.tcl_doevent()    # allow the stop button to take effect
+        incrementz(inc, ctrls, curframe, showframe)
     end
     ctrls.isplaying = false
 end
 
-function playdown(ctrls,curframe,showframe)
-    ctrls.isplaying = true
-    while curframe.z > 1 && ctrls.isplaying
-        curframe.z -= 1
-        updatez(ctrls,curframe)
-        showframe(curframe)
-    end
-    ctrls.isplaying = false
-end
-
-function stepdown(ctrls,curframe,showframe)
-    if curframe.z > 1
-        curframe.z -= 1
-        updatez(ctrls,curframe)
-        showframe(curframe)
-    end
-end
-
-function setz(ctrls,curframe,showframe)
+function setz(ctrls,curframe, showframe)
     zstr = Tk.get_value(ctrls.editz)
-    local val
     try
         val = int(zstr)
         curframe.z = val
         showframe(curframe)
     catch
+        updatez(ctrls, curframe)
     end
 end
 
-function stepback(ctrls,curframe,showframe)
-    if curframe.t > 1
-        curframe.t -= 1
-        updatet(ctrls,curframe)
-        showframe(curframe)
+function stept(inc, ctrls, curframe, showframe)
+    if 1 <= curframe.t+inc <= curframe.tmax
+        incrementt(inc, ctrls, curframe, showframe)
     end
 end
 
-function playback(ctrls,curframe,showframe)
+function playt(inc, ctrls, curframe, showframe)
     ctrls.isplaying = true
-    while curframe.t > 1 && ctrls.isplaying
-        curframe.t -= 1
-        updatet(ctrls,curframe)
-        showframe(curframe)
+    while 1 <= curframe.t+inc <= curframe.tmax && ctrls.isplaying
+        Tk.tcl_doevent()    # allow the stop button to take effect
+        incrementt(inc, ctrls, curframe, showframe)
     end
     ctrls.isplaying = false
 end
 
-function playfwd(ctrls,curframe,showframe)
-    ctrls.isplaying = true
-    while curframe.t < curframe.tmax && ctrls.isplaying
-        curframe.t += 1
-        updatet(ctrls,curframe)
-        showframe(curframe)
-    end
-    ctrls.isplaying = false
-end
-
-function stepfwd(ctrls,curframe,showframe)
-    if curframe.t < curframe.tmax
-        curframe.t += 1
-        updatet(ctrls,curframe)
-        showframe(curframe)
-    end
-end
-
-function sett(ctrls,curframe,showframe)
+function sett(ctrls,curframe, showframe)
     tstr = Tk.get_value(ctrls.editt)
-    local val
     try
         val = int(tstr)
         curframe.t = val
         showframe(curframe)
     catch
+        updatet(ctrls, curframe)
     end
 end
+
+# end
