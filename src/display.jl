@@ -1,290 +1,473 @@
-# Display images so they fill a window
+using ImageView.Navigation
 
-import Tk
-import Cairo
+import Base: show
+import Base.Graphics: width, height, fill, set_coords
 
-const Surface = Cairo.CairoSurface
-const Canvas = Tk.Canvas
-
-# Create a window of a given size and initialize a canvas
-function TkRenderer(name, w, h)
-    win = Tk.Window(name, w, h)
-    c = Canvas(win)
-    Tk.pack(c, {:expand => true, :fill => "both"})  # support resize
-    # We'll set redraw later
-    c
+## Type for storing information about the rendering canvas
+# perimeter is the color used around the edges of the image; background is used
+# "behind" the image (relevant only if it has transparency)
+# render has syntax
+#    render!(buf, img)
+type ImageCanvas
+    render!::Function        # function to fill a Uint32 buffer with image data
+    aspect_x_per_y           # relative scaling of the two axes (unconstrained = nothing)
+    background               # nothing, RGB color, or checkerboard pattern
+    perimeter                # RGB color
+    flipx::Bool
+    flipy::Bool
+    surfaceformat::Int32     # The Cairo format (e.g., CAIRO_FORMAT_ARGB32)
+    c::Canvas                # canvas for rendering image
+    surface::CairoSurface    # source surface of the image (changes with zoom region)
+    canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
+    
+    function ImageCanvas(fmt::Int32, props::Dict)
+        ps = get(props, :pixel_spacing, nothing)
+        aspect_x_per_y = is(ps, nothing) ? nothing : ps[2]/ps[1]
+        render! = get(props, :render!, uint32color!)
+        background = get(props, :background, nothing)
+        perimeter = get(props, :perimeter, RGB(0,0,0))
+        flipx = get(props, :flipx, false)
+        flipy = get(props, :flipy, false)
+        new(render!, aspect_x_per_y, background, perimeter, flipx, flipy, fmt)
+        # c, surface, and canvasbb will be initialized later
+    end
 end
 
-# Type for storing settings related to image display
-type ImagePanelSettings
-    zoombb::BoundingBox      # selected region, in user coordinates
-    renderbb::BoundingBox    # drawing region, in device coordinates
-    aspect_constrained::Bool          # true if next parameter is to be used
-    aspect_x_per_y::Float64           # relative scaling of the two axes
-    background                        # nothing, RGB color, or checkerboard pattern
-    perimeter                         # RGB color
-end
+show(io::IO, imgc::ImageCanvas) = print(IO, "ImageCanvas")
 
-# Here w and h are the image width and height, in pixels
-# pixel_spacing is a 2-vector giving the spacing (in arbitrary units) of pixels along x and y
-function initialize_canvas(c::Canvas, w, h, props::Dict)
-    ps = get(props, "pixel_spacing", nothing)
-    background = get(props, "background", nothing)
-    perimeter = get(props, "perimeter", RGB(0,0,0))
-    aspect_constrained = !is(ps, nothing)
-    aspect_x_per_y = 1.0
-    if aspect_constrained
-        if length(ps) != 2
-            error("pixel_spacing must be two-dimensional")
-        end
-        aspect_x_per_y = ps[2]/ps[1]
-    end
-    zoombb = BoundingBox(0, w, 0, h)
-    renderbb = BoundingBox(0, width(c), 0, height(c))
-    ip = ImagePanelSettings(zoombb, renderbb, aspect_constrained, aspect_x_per_y, background, perimeter)
-    if aspect_constrained
-        placeimage!(ip, c)
-    end
-    r = getgc(c)
-    set_coords(r, renderbb, zoombb)
-    if aspect_constrained
-        fill_canvas(r, perimeter)
-    end
-    ip
-end
-
-# Size the rendered region
-function placeimage!(ip::ImagePanelSettings, c::Canvas)
-    if ip.aspect_constrained
-        wc = Tk.width(c)
-        hc = Tk.height(c)
-        wi = width(ip.zoombb)
-        hi = height(ip.zoombb)
-        sx = min(wc/wi, ip.aspect_x_per_y*hc/hi)
-        sy = sx/ip.aspect_x_per_y
-        wdraw = sx*wi
-        hdraw = sy*hi
+function setbb!(imgc::ImageCanvas, w, h)
+    if !is(imgc.aspect_x_per_y, nothing)
+        wc = width(imgc.c)
+        hc = height(imgc.c)
+        sx = min(wc/w, imgc.aspect_x_per_y*hc/h)
+        sy = sx/imgc.aspect_x_per_y
+        wdraw = sx*w
+        hdraw = sy*h
         xmin = (wc-wdraw)/2
         ymin = (hc-hdraw)/2
-        ip.renderbb = BoundingBox(xmin, xmin+wdraw, ymin, ymin+hdraw)
+        imgc.canvasbb = BoundingBox(xmin, xmin+wdraw, ymin, ymin+hdraw)
     else
-        ip.renderbb = BoundingBox(0, width(c), 0, height(c))
+        imgc.canvasbb = BoundingBox(0, width(imgc.c), 0, height(imgc.c))
     end
-    ip
+    imgc
 end
 
-function fill_canvas(r::GraphicsContext, col::ColorValue)
+# Handle z and t slicing, and zooming in x and y
+type ImageSlice2d{A<:AbstractImageDirect}
+    imslice::A
+    indexes::Vector{RangeIndex}
+    dims::Vector{Int}
+    zoombb::BoundingBox
+    xdim::Int
+    ydim::Int
+    zdim::Int
+    tdim::Int
+end
+
+function show(io::IO, img2::ImageSlice2d)
+    print(io, "ImageSlice2d: zoom = ", img2.zoombb)
+    if img2.zdim > 0
+        print(io, ", z = ", img2.indexes[img2.zdim])
+    end
+    if img2.tdim > 0
+        print(io, ", t = ", img2.indexes[img2.tdim])
+    end
+end
+
+function ImageSlice2d(img::AbstractArray, props::Dict)
+    sd = sdims(img)
+    if !(2 <= sd <= 3)
+        error("Only two or three spatial dimensions are permitted")
+    end
+    # Determine how dimensions map to x, y, z, t
+    xy = get(props, "xy", Images.xy)
+    cs = coords_spatial(img)
+    p = spatialpermutation(xy, img)
+    xdim = cs[p[1]]
+    ydim = cs[p[2]]
+    zdim = (sd == 2) ? 0 : cs[setdiff(1:3, p)][1]
+    tdim = timedim(img)
+    # Deal with pixel_spacing here
+    if !haskey(props, :pixel_spacing)
+        if haskey(img, "pixel_spacing")
+            props[:pixel_spacing] = img["pixel_spacing"][p]
+        end
+    end
+    # Start at z=1, t=1
+    indexes = RangeIndex[1:size(img,i) for i = 1:ndims(img)]
+#     flipx = get(props, "flipx", false)
+#     if flipx
+#         indexes[xdim] = size(img, xdim):-1:1
+#     end
+#     flipy = get(props, "flipy", false)
+#     if flipy
+#         indexes[ydim] = size(img, ydim):-1:1
+#     end
+    if zdim != 0
+        indexes[zdim] = 1
+    end
+    if tdim != 0
+        indexes[tdim] = 1
+    end
+    imslice = sliceim(img, indexes...)
+    bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
+    ImageSlice2d{typeof(imslice)}(imslice, indexes, Int[size(imslice)...], bb, xdim, ydim, zdim, tdim)#, flipx, flipy)
+end
+
+function _reslice!(img2::ImageSlice2d)
+    img2.imslice.data.indexes = tuple(img2.indexes...)
+    j = 1
+    for i = 1:length(img2.indexes)
+        if !isa(img2.indexes[i], Int)
+            img2.dims[j] = length(img2.indexes[i])
+            j += 1
+        end
+    end
+    img2.imslice.data.dims = tuple(img2.dims...)
+    resetfirst!(img2.imslice.data)
+end
+
+function slice2!(img2::ImageSlice2d, z::Int, t::Int)
+    if img2.zdim != 0
+        img2.indexes[img2.zdim] = z
+    end
+    if img2.tdim != 0
+        img2.indexes[img2.tdim] = t
+    end
+    _reslice!(img2)
+end
+
+function zoom2!(img2::ImageSlice2d, bb::BoundingBox)
+    img2.zoombb = bb
+#     if img2.flipx
+#         img2.indexes[img2.xdim] = iceil(bb.xmax):-1:ifloor(bb.xmin)+1
+#     else
+        img2.indexes[img2.xdim] = ifloor(bb.xmin)+1:iceil(bb.xmax)
+#     end
+#     if img2.flipy
+#         img2.indexes[img2.ydim] = iceil(bb.ymax):-1:ifloor(bb.ymin)+1
+#     else
+        img2.indexes[img2.ydim] = ifloor(bb.ymin)+1:iceil(bb.ymax)
+#     end
+    _reslice!(img2)
+end
+
+function zoom2!(img2::ImageSlice2d)
+    p = img2.imslice.parent
+#     if img2.flipx
+#         img2.indexes[img2.xdim] = size(p, img2.xdim):-1:1
+#     else
+        img2.indexes[img2.xdim] = 1:size(p, img2.xdim)
+#     end
+#     if img2.flipy
+#         img2.indexes[img2.ydim] = size(p, img2.ydim):-1:1
+#     else
+        img2.indexes[img2.ydim] = 1:size(p, img2.ydim)
+#     end
+    img2.imslice.indexes = tuple(img2.indexes...)
+    resetfirst!(img2.imslice)
+end
+
+width(img2::ImageSlice2d) = length(img2.indexes[img2.xdim])
+height(img2::ImageSlice2d) = length(img2.indexes[img2.ydim])
+xmin(img2::ImageSlice2d) = img2.indexes[img2.xdim][1]
+xmax(img2::ImageSlice2d) = img2.indexes[img2.xdim][end]
+ymin(img2::ImageSlice2d) = img2.indexes[img2.ydim][1]
+ymax(img2::ImageSlice2d) = img2.indexes[img2.ydim][end]
+sizex(img2::ImageSlice2d) = size(img2.imslice.data.parent, img2.xdim)
+sizey(img2::ImageSlice2d) = size(img2.imslice.data.parent, img2.ydim)
+sizez(img2::ImageSlice2d) = (img2.zdim > 0) ? size(img2.imslice.data.parent, img2.zdim) : 1
+sizet(img2::ImageSlice2d) = (img2.tdim > 0) ? size(img2.imslice.data.parent, img2.tdim) : 1
+xrange(img2::ImageSlice2d) = (xmin(img2), xmax(img2))
+yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
+
+# Valid properties:
+#   render!: supply a function render!(buf, imgslice) that fills Uint32 buffer for display
+#   xy: {"y", "x"} chooses orientation of display (which dims are horizontal, vertical)
+#   flipx, flipy: set to true if you want to invert one or both axes
+#   pixel_spacing: [1,1] enforces uniform aspect ratio (will default to use from img if available)
+#   name: a string giving the window name
+#   background, perimeter: colors
+
+function display(img::AbstractArray; proplist...)
+    # Convert keyword list to dictionary
+    props = Dict{Symbol,Any}()
+    sizehint(props, length(proplist))
+    for (k,v) in proplist
+        props[k] = v
+    end
+    # Extract relevant information from the image and properties
+    img2 = ImageSlice2d(img, props)
+    imgc = ImageCanvas(cairo_format(img), props)
+    w = width(img2)
+    h = height(img2)
+    zmax = sizez(img2)
+    tmax = sizet(img2)
+    havecontrols = zmax > 1 || tmax > 1
+    # Determine the desired window size
+    # (the actual size may be smaller, depending on screen size)
+    ww, wh = rendersize(w, h, imgc.aspect_x_per_y)
+    if havecontrols
+        btsz, pad = Navigation.widget_size()
+        wh += btnsz[2] + 2*pad
+    end
+    # Create the window and the canvas for displaying the image
+    win = Toplevel(get(props, "name", "Image"), ww, wh)
+    c = Canvas(win.w)
+    imgc.c = c
+    # Place the canvas and set its resize properties
+    Tk.grid(c, 1, 1)
+    Tk.grid_configure(c, {:sticky => "nsew"})    # fill the edges of its cell on all 4 sides
+    Tk.grid_rowconfigure(win, 1, {:weight => 1}) # scale this cell when the window resizes
+    Tk.grid_columnconfigure(win, 1, {:weight => 1})
+    Tk.init_canvas(c)
+    # Set up the rendering
+    buf = Array(Uint32, w, h)
+    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    setbb!(imgc, w, h)
+    # If necessary, create the navigation controls
+    if havecontrols
+        ctrls = NavigationControls()
+        state = NavigationState(zmax, tmax, 1, 1, false)
+        showframe = state -> reslice(imgc, img2, state)
+        fctrls = Tk.Frame(win)
+        Tk.grid(fctrls, 2, 1)  # place the controls below the image
+        init_navigation!(fctrls, ctrls, state, showframe)
+        # Bind mousewheel events to navigation
+        bindwheel(c.c, "Alt", (path,delta)->reslicet(imgc,img2,state,int(delta)))
+        bindwheel(c.c, "Alt-Control", (path,delta)->reslicez(imgc,img2,state,int(delta)))
+    end
+    # Set up the drawing callbacks
+    tk_bind(c.c, "<Configure>", path -> resize(imgc, img2))
+    c.redraw = x -> redraw(imgc)
+    # Bind mouse clicks to zoom
+    c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
+    tk_bind(c.c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
+    # Bind mousewheel events to zoom
+    bindwheel(c.c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
+    # Bind mousewheel events to pan
+    bindwheel(c.c, "", (path,delta)->panvert(imgc,img2,int(delta)))
+    bindwheel(c.c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    # render the initial state
+    rerender(imgc, img2)
+    redraw(imgc)
+    imgc, img2
+end
+
+### Callback handling ###
+# This takes the already-rendered surface and paints it to the canvas
+function redraw(imgc::ImageCanvas)
+    r = getgc(imgc.c)
+    # Define the path that encloses the image
+    bb = imgc.canvasbb
+    w, h = size(imgc.surface.data)  # the image width, height
+    save(r)
+    reset_clip(r)
+    reset_transform(r)
+    wbb = width(bb)
+    hbb = height(bb)
+    rectangle(r, bb.xmin, bb.ymin, wbb, hbb)
+#     rectangle(r, 0, 0, w, h)
+    # In cases of transparency, paint the background color
+    if imgc.surfaceformat == Cairo.CAIRO_FORMAT_ARGB32 && !is(imgc.background, nothing)
+        rgb = convert(RGB, imgc.background)
+        set_source_rgb(r, rgb.r, rgb.g, rgb.b)
+        fill_preserve(r)
+    end
+    # Paint the image with appropriate antialiasing settings
+    Cairo.translate(r, bb.xmin, bb.ymin)
+    Cairo.scale(r, wbb/w, hbb/h)
+    set_source_surface(r, imgc.surface, 0, 0)
+    p = get_source(r)
+    if wbb > w && hbb > h
+        # The canvas is bigger than the image region, show nearest pixel
+        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
+    else
+        # Fewer pixels in canvas than in image, antialias
+        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_GOOD)
+    end
+    fill(r)
+    restore(r)
+    reveal(imgc.c)
+end
+
+# Handle window resize events
+function resize(imgc::ImageCanvas, img2::ImageSlice2d)
+    Tk.configure(imgc.c)
+    _resize(imgc, img2)
+end
+
+# Used for window resize and zoom
+function _resize(imgc::ImageCanvas, img2::ImageSlice2d)
+    w, h = size(imgc.surface.data)
+    setbb!(imgc, w, h)
+    r = getgc(imgc.c)
+    if !is(imgc.aspect_x_per_y, nothing)
+        fill(r, imgc.perimeter)
+    end
+#     set_coords(imgc, img2.zoombb)
+#     bb = imgc.canvasbb
+#     set_coords(r, bb.xmin, bb.ymin, width(bb), height(bb), 0, w, 0, h)
+    redraw(imgc)
+end
+
+# Navigation in z and t
+function reslice(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState)
+    slice2!(img2, state.z, state.t)
+    rerender(imgc, img2)
+    redraw(imgc)
+end
+
+function reslicet(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState, delta::Int)
+    t = state.t + (delta>0)
+    if 1 <= t <= state.tmax
+        state.t = t
+        reslice(imgc, img2, state)
+    end
+end
+
+function reslicez(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState, delta::Int)
+    z = state.z + (delta>0)
+    if 1 <= z <= state.zmax
+        state.z = z
+        reslice(imgc, img2, state)
+    end
+end
+
+function zoomwheel(imgc::ImageCanvas, img2::ImageSlice2d, delta, x, y)
+    r = getgc(imgc.c)
+    xu, yu = device_to_user(r, x, y)
+    local xmn
+    local xmx
+    local ymn
+    local ymx
+    if delta < 0
+        xmn, xmx = centeredclip(xu, width(img2)/2, xrange(img2))
+        ymn, ymx = centeredclip(yu, height(img2)/2, yrange(img2))
+    else
+        xmn, xmx = centeredclip(xu, 2*width(img2), (1,sizex(img2)), xrange(img2))
+        ymn, ymx = centeredclip(yu, 2*height(img2), (1,sizey(img2)), yrange(img2))
+    end
+    zoombb(imgc, img2, BoundingBox(floor(xmn)-1, ceil(xmx), floor(ymn)-1, ceil(ymx)))
+#     println("zoomwheel ", get_matrix(getgc(imgc.c)))
+end
+
+function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
+    bb = BoundingBox(ifloor(bb.xmin), iceil(bb.xmax), ifloor(bb.ymin), iceil(bb.ymax))
+    w = int(width(bb))
+    h = int(height(bb))
+    buf = Array(Uint32, w, h)
+    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    panzoom(imgc, img2, bb)
+    _resize(imgc, img2)
+    set_coords(imgc, bb)
+end
+
+function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
+    w = sizex(img2)
+    h = sizey(img2)
+    buf = Array(Uint32, w, h)
+    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    bb = BoundingBox(0, w, 0, h)
+    panzoom(imgc, img2, bb)
+    _resize(imgc, img2)
+    set_coords(imgc, bb)
+end
+
+# Used by pan and zoom to change the displayed region
+function panzoom(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
+    zoom2!(img2, bb)
+    rerender(imgc, img2)
+end
+
+function set_coords(imgc::ImageCanvas, bb::BoundingBox)
+    l, r = bb.xmin, bb.xmax
+    if imgc.flipx
+        l, r = r, l
+    end
+    t, b = bb.ymin, bb.ymax
+    if imgc.flipy
+        t, b = b, t
+    end
+    bb = imgc.canvasbb
+    set_coords(getgc(imgc.c), bb.xmin, bb.ymin, width(bb), height(bb), l, r, t, b)
+end
+
+function panvert(imgc::ImageCanvas, img2::ImageSlice2d, delta)
+    h = size(imgc.surface.data, 2)
+    local dy
+    if delta < 0
+        dy = -min(ymin(img2)-1, h/10)
+    else
+        dy = min(sizey(img2)-ymax(img2), h/10)
+    end
+    dy = round(dy)
+    if dy != 0
+        bb = img2.zoombb
+        bb = BoundingBox(bb.xmin, bb.xmax, bb.ymin+dy, bb.ymax+dy)
+        panzoom(imgc, img2, bb)
+        set_coords(imgc, bb)
+        redraw(imgc)
+    end
+end
+
+function panhorz(imgc::ImageCanvas, img2::ImageSlice2d, delta)
+    w = size(imgc.surface.data, 1)
+    local dx
+    if delta < 0
+        dx = -min(xmin(img2)-1, w/10)
+    else
+        dx = min(sizex(img2)-xmax(img2), w/10)
+    end
+    dx = round(dx)
+    if dx != 0
+        bb = img2.zoombb
+        bb = BoundingBox(bb.xmin+dx, bb.xmax+dx, bb.ymin, bb.ymax)
+        panzoom(imgc, img2, bb)
+        set_coords(imgc, bb)
+        redraw(imgc)
+    end
+end
+
+### Utilities ###
+# Convert the raw image data to the Uint32 buffer that Cairo paints
+rerender(imgc::ImageCanvas, img2::ImageSlice2d) = imgc.render!(imgc.surface.data, img2.imslice)
+
+# Fill the entire canvas with a color
+function fill(r::GraphicsContext, col::ColorValue)
     rgb = convert(RGB, col)
     save(r)
-    Cairo.reset_clip(r)
+    reset_clip(r)
+    reset_transform(r)
     set_source_rgb(r, rgb.r, rgb.g, rgb.b)
     paint(r)
     restore(r)
 end
 
-function fill_background(r::GraphicsContext, ip::ImagePanelSettings, col::ColorValue)
-    rgb = convert(RGB, col)
-    set_source_rgb(r, rgb.r, rgb.g, rgb.b)
-    rectangle(r, zoombb.xmin, zoombb.ymin, width(zoombb), height(zoombb))
-    fill(r)
-end
-
-function set_coords(r::GraphicsContext, renderbb::BoundingBox, zoombb::BoundingBox)
-    Base.Graphics.set_coords(r, renderbb.xmin, renderbb.ymin, width(renderbb), height(renderbb),
-               zoombb.xmin, zoombb.xmax, zoombb.ymin, zoombb.ymax)
-end
-
-# Create a window that "views" an in-memory buffer
-# This does no transposition, that should be handled by the caller (or see copyt! below)
-type WindowImage
-    c::Canvas
-    surf::Surface
-    buf::Array{Uint32,2}
-    ip::ImagePanelSettings
-
-    function WindowImage(buf::Array{Uint32,2}, props::Dict = Dict(), format::Integer = Cairo.CAIRO_FORMAT_RGB24, title::String = "Julia")
-        w, h = size(buf)    # note it's in [x,y] order, not [row,col] order!
-        ps = get(props, "pixel_spacing", nothing)
-        local c
-        if !is(ps, nothing)
-            r = ps[2]/ps[1]
-            if r > 1
-                c = TkRenderer(title, iround(w*r), h)
-            else
-                c = TkRenderer(title, w, iround(h/r))
-            end
+# # Fill a BoundingBox with a color
+# function fill(r::GraphicsContext, bb::BoundingBox, col::ColorValue)
+#     rgb = convert(RGB, col)
+#     set_source_rgb(r, rgb.r, rgb.g, rgb.b)
+#     rectangle(r, bb.xmin, bb.ymin, width(bb), height(bb))
+#     fill(r)
+# end
+# 
+# r is the aspect ratio, i.e. aspect_x_per_y
+function rendersize(w::Integer, h::Integer, r)
+    ww = w
+    wh = h
+    if !is(r, nothing)
+        if r > 1
+            ww = iround(w*r)
         else
-            c = TkRenderer(title, w, h)
-        end
-        surf = Cairo.CairoImageSurface(buf, format, w, h)
-        ip = initialize_canvas(c, w, h, props)
-        obj = new(c, surf, buf, ip)
-        initialize_windowimage(obj)
-    end
-end
-
-function initialize_windowimage(obj::WindowImage)
-    c = obj.c
-    # Set up the resize callback
-    rcb = Tk.tcl_callback((path) -> resize(obj))
-    Tk.tcl_eval("bind $(c.c.path) <Configure> {$rcb}")
-    # Set up redraw function
-    c.redraw = function (_)
-        redraw(obj)
-    end
-    # Bind mouse clicks to zoom
-    c.mouse.button1press = (c, x, y) -> rubberband_start(obj, x, y)
-    dbl1cb = Tk.tcl_callback((path,x,y)->zoom_reset(obj))
-    Tk.tcl_eval("bind $(c.c.path) <Double-Button-1> {$dbl1cb %x %y}")
-    # Bind mousewheel events to zoom
-    Tk.bindwheel(c.c, "Control", (path,delta,x,y)->zoomwheel(obj,int(delta),int(x),int(y)), "%x %y")
-    # Bind mousewheel events to pan
-    Tk.bindwheel(c.c, "", (path,delta)->panvert(obj,int(delta)))
-    Tk.bindwheel(c.c, "Shift", (path,delta)->panhorz(obj,int(delta)))
-    _resize(obj)
-end
-
-function redraw(wb::WindowImage)
-    r = getgc(wb.c)
-    if !is(wb.ip.background, nothing)
-        hastransparency = Cairo.image_surface_get_format(wb.surf) == Cairo.CAIRO_FORMAT_ARGB32
-        if hastransparency
-            fill_background(r, wb.ip, wb.ip.background)
+            wh = iround(h/r)
         end
     end
-    rectangle(r, wb.ip.zoombb.xmin, wb.ip.zoombb.ymin, width(wb.ip.zoombb), height(wb.ip.zoombb))
-    Cairo.set_source_surface(r, wb.surf, 0, 0)
-    p = Cairo.get_source(r)
-    if width(wb.ip.renderbb) > width(wb.ip.zoombb) && height(wb.ip.renderbb) > height(wb.ip.zoombb)
-        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
-    else
-        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_GOOD)
-    end
-    fill(r)
-    wb
+    ww, wh
 end
 
-show(io::IO, wb::WindowImage) = print(io, "WindowImage with buffer size ", Base.dims2string(size(wb.buf)))
-
-function resize(wb::WindowImage)
-    Tk.configure(wb.c)
-    _resize(wb)
-end
-
-function _resize(wb::WindowImage)
-    placeimage!(wb.ip, wb.c)
-    r = getgc(wb.c)
-    set_coords(r, wb.ip.renderbb, wb.ip.zoombb)
-    if wb.ip.aspect_constrained
-        fill_canvas(r, wb.ip.perimeter)
-    end
-    redraw(wb)
-    Tk.reveal(wb.c)
-    wb
-end
-
-function zoom(wb::WindowImage, zoombb::BoundingBox)
-    wb.ip.zoombb = zoombb
-    _resize(wb)
-end
-
-function zoom_reset(wb::WindowImage)
-    wb.ip.zoombb = BoundingBox(0, size(wb.buf,1), 0, size(wb.buf,2))
-    _resize(wb)
-end
-
-function device_to_user(r::GraphicsContext, x::Number, y::Number)
-    p = device_to_user!(r, [float64(x),float64(y)])
-    p[1], p[2]
-end
-
-function user_to_device(r::GraphicsContext, x::Number, y::Number)
-    p = user_to_device!(r, [float64(x),float64(y)])
-    p[1], p[2]
-end
-
-## Mouse interaction
-
-# For rubberband, we draw the selection region on the front canvas, and repair
-# by copying from the back. Note that the front canvas has
-#     user coordinates = device coordinates,
-# so device_to_user doesn't do anything. The back canvas has
-#     user coordinates = image pixel coordinates,
-# so is the correct reference for anything dealing with image pixels.
-type RubberBand
-    pos1::Vec2       # in user coordinates
-    pos2::Vec2       # in user coordinates
-    moved::Bool
-end
-
-function rbdraw(r::GraphicsContext, rb::RubberBand)
-    rectangle(r, rb.pos1.x, rb.pos1.y, rb.pos2.x-rb.pos1.x, rb.pos2.y-rb.pos1.y)
-    set_line_width(r, 1)
-    set_dash(r, [3.0,3.0], 3.0)
-    set_source_rgb(r, 1, 1, 1)
-    stroke_preserve(r)
-    set_dash(r, [3.0,3.0], 0.0)
-    set_source_rgb(r, 0, 0, 0)
-    stroke_preserve(r)
-end
-
-function rubberband_start(wb::WindowImage, x, y)
-    r = wb.c.frontcc
-    rb = RubberBand(Vec2(x,y), Vec2(x,y), false)    
-    wb.c.mouse.button1motion = (c, x, y) -> rubberband_move(wb.c, rb, x, y)
-    wb.c.mouse.button1release = (c, x, y) -> rubberband_stop(wb, rb, x, y)
-    save(r)
-end
-
-function rubberband_move(c::Canvas, rb::RubberBand, x, y)
-    r = c.frontcc
-    if rb.moved
-        Cairo.set_source_surface(r, c.back, 0, 0)
-        set_line_width(r, 2)
-        set_dash(r, Float64[])
-        stroke(r)
-    end
-    rb.moved = true
-    rb.pos2 = Vec2(x, y)
-    rbdraw(r, rb)
-    set_source_rgb(r, 0, 0, 0)
-    set_line_width(r, 1)
-    stroke_preserve(r)
-end
-
-function rubberband_stop(wb::WindowImage, rb::RubberBand, x, y)
-    if !rb.moved
-        return
-    end
-    r = wb.c.frontcc
-    Cairo.set_source_surface(r, wb.c.back, 0, 0)
-    set_line_width(r, 2)
-    stroke(r)
-    restore(r)
-    x1, y1 = rb.pos1.x, rb.pos1.y
-    if abs(x1-x) > 2 || abs(y1-y) > 2
-        rback = getgc(wb.c)
-        xu, yu = device_to_user(rback, x, y)
-        x1u, y1u = device_to_user(rback, x1, y1)
-        zoombb = BoundingBox(min(x1u,xu), max(x1u,xu), min(y1u,yu), max(y1u,yu))
-        zoom(wb, zoombb)
-    end
-end
-
-function zoomwheel(wb::WindowImage, delta, x, y)
-    r = getgc(wb.c)
-    xu, yu = device_to_user(r, x, y)
-    zoombb = wb.ip.zoombb
-    if delta < 0
-        xmin, xmax = centeredclip(xu, width(zoombb)/2, xrange(zoombb))
-        ymin, ymax = centeredclip(yu, height(zoombb)/2, yrange(zoombb))
-    else
-        xmin, xmax = centeredclip(xu, 2*width(zoombb), (0,size(wb.buf,1)), xrange(zoombb))
-        ymin, ymax = centeredclip(yu, 2*height(zoombb), (0,size(wb.buf,2)), yrange(zoombb))
-    end
-    zoom(wb, BoundingBox(floor(xmin), ceil(xmax), floor(ymin), ceil(ymax)))
-end
-
+# Create a range of width w centered on x, subject to contraints
+# lim and cur are (min,max) tuples
 function centeredclip(x, w, lim, cur = lim)
     w = min(w, lim[2]-lim[1])
     f = (x-cur[1])/(cur[2]-cur[1])  # fraction into the range
@@ -299,277 +482,22 @@ function centeredclip(x, w, lim, cur = lim)
     xmin, xmax
 end
 
-function panvert(wb::WindowImage, delta)
-    zoombb = wb.ip.zoombb
-    h = height(zoombb)
-    local dy
-    if delta < 0
-        dy = -min(zoombb.ymin, h/10)
-    else
-        dy = min(size(wb.buf, 2)-zoombb.ymax, h/10)
+function resetfirst!(s::SubArray)
+    newfirst = 1
+    pstride = 1
+    for j = 1:length(s.indexes)
+        newfirst += (first(s.indexes[j])-1)*pstride
+        pstride *= size(s.parent, j)
     end
-    if dy != 0
-        zoom(wb, BoundingBox(zoombb.xmin, zoombb.xmax, zoombb.ymin+dy, zoombb.ymax+dy))
-    end
+    s.first_index = newfirst
+    s
 end
 
-function panhorz(wb::WindowImage, delta)
-    zoombb = wb.ip.zoombb
-    w = width(zoombb)
-    local dx
-    if delta < 0
-        dx = -min(zoombb.xmin, w/10)
-    else
-        dx = min(size(wb.buf, 1)-zoombb.xmax, w/10)
-    end
-    if dx != 0
-        zoom(wb, BoundingBox(zoombb.xmin+dx, zoombb.xmax+dx, zoombb.ymin, zoombb.ymax))
-    end
-end
-
-copy!(wb::WindowImage, data::Array{Uint32,2}) = copy!(wb.buf, data)
-fill!(wb::WindowImage, val::Uint32) = fill!(wb.buf, val)
-
-# Copy-with-transpose
-function copyt!(buf::Array{Uint32,2}, data::Array{Uint32,2})
-    h, w = size(data)
-    if size(buf,1) != w || size(buf,2) != h
-        error("Size mismatch")
-    end
-    for j = 1:w, i = 1:h
-        buf[j,i] = data[i,j]
-    end
-    buf
-end
-
-#### A demo  ####
-# w = 400
-# h = 200
-# buf = zeros(Uint32,w,h)
-# fill!(buf,0x00FF0000)  # red
-# wb = WindowImage(buf)
-#
-# sleep(1)
-#
-# for val = 0x00000000:0x000000FF
-#     fill!(wb, val)
-#     update(wb)
-# end
-
-
-
-# Now add some code to display Images
-# display(r::Cairo.CairoRenderer, img::AbstractArray, x, y, w, h)
-#     buf = cairoRGB(img)
-#     imw, imh = size(buf)
-#     surf = Cairo.CairoImageSurface(buf, format, imw, imh)
-#     Cairo.image(r, surf, x, y, w, h)
-#     r.on_close()
-# end
-# display(r::Cairo.CairoRenderer, img::AbstractArray) = display(r, img, r.lowerleft[1], r.lowerleft[2], 
-
-# display in a previous window
-function display(wb::WindowImage, img::AbstractArray, scalei::Images.ScaleInfo)
-    cairoRGB(wb.buf, img, scalei)
-    redraw(wb)
-end
-display(wb::WindowImage, img::AbstractArray) = display(wb, img, scaleinfo(Uint8, img))
-
-# display in a new window
-function display(img::AbstractArray, props::Dict = Dict(), scalei::Images.ScaleInfo = Images.scaleinfo(Uint8, img))
-    buf, format = cairoRGB(img, scalei)
-    WindowImage(buf, props, format)
-end
-
-# Changing display properties
-function aspect(wb::WindowImage, ps)
-    aspect_constrained = !is(ps, nothing)
-    aspect_x_per_y = 1.0
-    if aspect_constrained
-        if length(ps) != 2
-            error("pixel_spacing must be two-dimensional")
-        end
-        aspect_x_per_y = ps[2]/ps[1]
-    end
-    wb.ip.aspect_constrained = aspect_constrained
-    wb.ip.aspect_x_per_y = aspect_x_per_y
-    _resize(wb)
-end
-
-function background(wb::WindowImage, bkg)
-    wb.ip.background = bkg
-    redraw(wb)
-end
-
-function perimeter(wb::WindowImage, p)
-    wb.ip.perimeter = p
-    redraw(wb)
-end
-
-## Efficient conversions to RGB24 or ARGB32
-function cairoRGB(img::Union(StridedArray,Images.AbstractImageDirect), scalei::Images.ScaleInfo)
-    w, h = Images.widthheight(img)
-    buf = Array(Uint32, w, h)
-    format = cairoRGB(buf, img, scalei)
-    buf, format
-end
-
-function cairoRGB(buf::Array{Uint32,2}, img::Union(StridedArray,Images.AbstractImageDirect), scalei::Images.ScaleInfo)
-    Images.assert2d(img)
-    cs = Images.colorspace(img)
-    xfirst = Images.isxfirst(img)
-    firstindex, spsz, spstride, csz, cstride = Images.iterate_spatial(img)
-    isz, jsz = spsz
-    istride, jstride = spstride
-    A = Images.parent(img)
-    if xfirst
-        w, h = isz, jsz
-    else
-        w, h = jsz, isz
-    end
-    if size(buf, 1) != w || size(buf, 2) != h
-        error("Output buffer is of the wrong size")
-    end
-    # Check to see whether we can do a direct copy
-    if eltype(img) <: Union(Uint32, Int32)
-        if cs == "RGB24"
-            if xfirst
-                copy!(buf, img.data)
-            else
-                copyt!(buf, img.data)
-            end
-            return Cairo.CAIRO_FORMAT_RGB24
-        elseif cs == "ARGB32"
-            if xfirst
-                copy!(buf, img.data)
-            else
-                copyt!(buf, img.data)
-            end
-            return Cairo.CAIRO_FORMAT_ARGB32
-        end
-    end
-    local format
-    if cstride == 0
-        if cs == "Gray"
-            if xfirst
-                # Note: can't use a single linear index for RHS, because this might be a subarray
-                l = 1
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 0:istride:(isz-1)*istride
-                        gr = Images.scale(scalei, A[k+i])
-                        buf[l] = rgb24(gr, gr, gr)
-                        l += 1
-                    end
-                end
-            else
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 1:isz
-                        gr = Images.scale(scalei, A[k+(i-1)*istride])
-                        buf[j,i] = rgb24(gr, gr, gr)
-                    end
-                end
-            end
-            format = Cairo.CAIRO_FORMAT_RGB24
-        else
-            error("colorspace ", cs, " not yet supported")
-        end
-    else
-        if cs == "RGB"
-            if xfirst
-                l = 1
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 0:istride:(isz-1)*istride
-                        ki = k+i
-                        buf[l] = rgb24(scalei, A[ki], A[ki+cstride], A[ki+2cstride])
-                        l += 1
-                    end
-                end
-            else
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 1:isz
-                        ki = k+(i-1)*istride
-                        buf[j,i] = rgb24(scalei, A[ki], A[ki+cstride], A[ki+2cstride])
-                    end
-                end
-            end
-            format = Cairo.CAIRO_FORMAT_RGB24
-        elseif cs == "ARGB"
-            if xfirst
-                l = 1
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 0:istride:(isz-1)*istride
-                        ki = k+i
-                        buf[l] = argb32(scalei,A[ki],A[ki+cstride],A[ki+2cstride],A[ki+3cstride])
-                        l += 1
-                    end
-                end
-            else
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 1:isz
-                        ki = k+(i-1)*istride
-                        buf[j,i] = argb32(scalei,A[ki],A[ki+cstride],A[ki+2cstride],A[ki+3cstride])
-                    end
-                end
-            end
-            format = Cairo.CAIRO_FORMAT_ARGB32
-        elseif cs == "RGBA"
-            if xfirst
-                l = 1
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 0:istride:(isz-1)*istride
-                        ki = k+i
-                        buf[l] = argb32(scalei,A[ki+3cstride],A[ki],A[ki+cstride],A[ki+2cstride])
-                        l += 1
-                    end
-                end
-            else
-                for j = 1:jsz
-                    k = firstindex + (j-1)*jstride
-                    for i = 1:isz
-                        ki = k+(i-1)*istride
-                        buf[j,i] = argb32(scalei,A[ki+3cstride],A[ki],A[ki+cstride],A[ki+2cstride])
-                    end
-                end
-            end
-            format = Cairo.CAIRO_FORMAT_ARGB32
-        else
-            error("colorspace ", cs, " not yet supported")
-        end
+function cairo_format(img::AbstractArray)
+    format = Cairo.CAIRO_FORMAT_RGB24
+    cs = colorspace(img)
+    if cs == "ARGB" || cs == "ARGB32" || cs == "RGBA" || cs == "GrayAlpha"
+        format = Cairo.CAIRO_FORMAT_ARGB32
     end
     format
 end
-
-rgb24(r::Uint8, g::Uint8, b::Uint8) = convert(Uint32,r)<<16 + convert(Uint32,g)<<8 + convert(Uint32,b)
-
-argb32(a::Uint8, r::Uint8, g::Uint8, b::Uint8) = convert(Uint32,a)<<24 + convert(Uint32,r)<<16 + convert(Uint32,g)<<8 + convert(Uint32,b)
-
-rgb24{T}(scalei::Images.ScaleInfo{Uint8}, r::T, g::T, b::T) = convert(Uint32,Images.scale(scalei,r))<<16 + convert(Uint32,Images.scale(scalei,g))<<8 + convert(Uint32,Images.scale(scalei,b))
-
-argb32{T}(scalei::Images.ScaleInfo{Uint8}, a::T, r::T, g::T, b::T) = convert(Uint32,Images.scale(scalei,a))<<24 + convert(Uint32,Images.scale(scalei,r))<<16 + convert(Uint32,Images.scale(scalei,g))<<8 + convert(Uint32,Images.scale(scalei,b))
-
-
-
-## External-viewer interface
-function imshow(img, range)
-    if ndims(img) == 2 
-        # only makes sense for gray scale images
-        img = imadjustintensity(img, range)
-    end
-    tmp::String = "tmp.ppm"
-    imwrite(img, tmp)
-    cmd = `$imshow_cmd $tmp`
-    spawn(cmd)
-end
-
-imshow(img) = imshow(img, [])
-
-# 'illustrates' fourier transform
-ftshow{T}(A::Array{T,2}) = imshow(log(1+abs(fftshift(A))),[])
-

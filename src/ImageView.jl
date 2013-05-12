@@ -1,22 +1,27 @@
 module ImageView
 
 using Base.Graphics
-import Base.show
+# import Base.show
 
 using Color
-import Images
+using Tk
+using Cairo
+using Images
 
 include("config.jl")
+include("external.jl")
+include("rubberband.jl")
+include("navigation.jl")
 include("display.jl")
 
 export # types
     # display functions
-    aspect,
-    background,
+#     aspect,
+#     background,
     display,
     ftshow,
-    imshow,
-    perimeter,
-    redraw
+    imshow
+#     perimeter,
+#     redraw
 
 end

@@ -1,21 +1,22 @@
 ### GUI controls for play forward/backward, up/down, and frame stepping ###
 
-# module Nav
-# 
-# import Tk
+module Navigation
 
-## Type for specifying a particular 2d slice from a possibly-4D image
-type NavigationSlice
+using Tk
+
+## Type for holding GUI state
+# This specifies a particular 2d slice from a possibly-4D image
+type NavigationState
     # Dimensions:
     zmax::Int    # = 1 if only 2 spatial dims
     tmax::Int    # = 1 if only a single image
     # Current selection:
     z::Int
     t::Int
+    isplaying::Bool # are we in continuous playback?
 end
 
 ## Type for holding "handles" to GUI controls
-# Don't put anything in here that this GUI doesn't "own"
 type NavigationControls
     stepup                            # buttons...
     stepdown
@@ -30,13 +31,12 @@ type NavigationControls
     editt
     textz                             # static text (information)
     textt
-    isplaying::Bool                   # GUI state
 end
-NavigationControls() = NavigationControls(nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, false)
+NavigationControls() = NavigationControls(nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing)
 
 # f is a TkFrame
-function create_navigation_buttons!(f, ctrls::NavigationControls, curframe::NavigationSlice, showframe::Function)
-    btnsz, pad = navigation_controls_size()
+function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, showframe::Function)
+    btnsz, pad = widget_size()
     stop = trues(btnsz)
     mask = copy(stop)
     stop[[1,btnsz[1]],:] = false
@@ -44,12 +44,12 @@ function create_navigation_buttons!(f, ctrls::NavigationControls, curframe::Navi
     bkg = "gray70"
     icon = Tk.Image(stop, mask, bkg, "black")
     ctrls.stop = Tk.Button(f, icon)
-    Tk.tk_bind(ctrls.stop, "command", path -> ctrls.isplaying = false)
+    Tk.tk_bind(ctrls.stop, "command", path -> state.isplaying = false)
     local zindex
     local tindex
     local stopindex
-    havez = curframe.zmax > 1
-    havet = curframe.tmax > 1
+    havez = state.zmax > 1
+    havet = state.tmax > 1
     zindex = 1:6
     stopindex = 7
     tindex = 8:13
@@ -59,24 +59,24 @@ function create_navigation_buttons!(f, ctrls::NavigationControls, curframe::Navi
     end
     Tk.grid(ctrls.stop,1,stopindex,{:padx => 3*pad, :pady => pad})
     if havez
-        callback = (path->stepz(1,ctrls,curframe,showframe), path->playz(1,ctrls,curframe,showframe), 
-            path->playz(-1,ctrls,curframe,showframe), path->stepz(-1,ctrls,curframe,showframe),
-            path->setz(ctrls,curframe,showframe))
+        callback = (path->stepz(1,ctrls,state,showframe), path->playz(1,ctrls,state,showframe), 
+            path->playz(-1,ctrls,state,showframe), path->stepz(-1,ctrls,state,showframe),
+            path->setz(ctrls,state,showframe))
         ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz = 
             addbuttons(f, btnsz, bkg, pad, zindex, "z", callback)
-        Tk.set_value(ctrls.editz, string(curframe.z))
+        Tk.set_value(ctrls.editz, string(state.z))
     end
     if havet
-        callback = (path->stept(-1,ctrls,curframe,showframe), path->playt(-1,ctrls,curframe,showframe), 
-            path->playt(1,ctrls,curframe,showframe), path->stept(1,ctrls,curframe,showframe),
-            path->sett(ctrls,curframe,showframe))
+        callback = (path->stept(-1,ctrls,state,showframe), path->playt(-1,ctrls,state,showframe), 
+            path->playt(1,ctrls,state,showframe), path->stept(1,ctrls,state,showframe),
+            path->sett(ctrls,state,showframe))
         ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt = 
             addbuttons(f, btnsz, bkg, pad, tindex, "t", callback)
-        Tk.set_value(ctrls.editt, string(curframe.t))
+        Tk.set_value(ctrls.editt, string(state.t))
     end
 end
 
-function navigation_controls_size()
+function widget_size()
     btnsz = (21, 21)
     pad = 5
     return btnsz, pad
@@ -127,71 +127,94 @@ function addbuttons(f, sz, bkg, pad, index, orientation, callback)
     tuple(ctrl...)
 end
 
-updatez(ctrls,curframe) = Tk.set_value(ctrls.editz, string(curframe.z))
-updatet(ctrls,curframe) = Tk.set_value(ctrls.editt, string(curframe.t))
-
-function incrementt(inc, ctrls, curframe, showframe)
-    curframe.t += inc
-    updatet(ctrls, curframe)
-    showframe(curframe)
+function updatez(ctrls, state)
+    Tk.set_value(ctrls.editz, string(state.z))
+    enabledown = state.z > 1
+    set_enabled(ctrls.stepdown, enabledown)
+    set_enabled(ctrls.playdown, enabledown)
+    enableup = state.z < state.zmax
+    set_enabled(ctrls.stepup, enableup)
+    set_enabled(ctrls.playup, enableup)
 end
 
-function incrementz(inc, ctrls, curframe, showframe)
-    curframe.z += inc
-    updatez(ctrls, curframe)
-    showframe(curframe)
+function updatet(ctrls, state)
+    Tk.set_value(ctrls.editt, string(state.t))
+    enableback = state.t > 1
+    set_enabled(ctrls.stepback, enableback)
+    set_enabled(ctrls.playback, enableback)
+    enablefwd = state.t < state.tmax
+    set_enabled(ctrls.stepfwd, enablefwd)
+    set_enabled(ctrls.playfwd, enablefwd)
 end
 
-function stepz(inc, ctrls, curframe, showframe)
-    if 1 <= curframe.z+inc <= curframe.zmax
-        incrementz(inc, ctrls, curframe, showframe)
+function incrementt(inc, ctrls, state, showframe)
+    state.t += inc
+    updatet(ctrls, state)
+    showframe(state)
+end
+
+function incrementz(inc, ctrls, state, showframe)
+    state.z += inc
+    updatez(ctrls, state)
+    showframe(state)
+end
+
+function stepz(inc, ctrls, state, showframe)
+    if 1 <= state.z+inc <= state.zmax
+        incrementz(inc, ctrls, state, showframe)
     end
 end
 
-function playz(inc, ctrls, curframe, showframe)
-    ctrls.isplaying = true
-    while 1 <= curframe.z+inc <= curframe.zmax && ctrls.isplaying
+function playz(inc, ctrls, state, showframe)
+    state.isplaying = true
+    while 1 <= state.z+inc <= state.zmax && state.isplaying
         Tk.tcl_doevent()    # allow the stop button to take effect
-        incrementz(inc, ctrls, curframe, showframe)
+        incrementz(inc, ctrls, state, showframe)
     end
-    ctrls.isplaying = false
+    state.isplaying = false
 end
 
-function setz(ctrls,curframe, showframe)
+function setz(ctrls,state, showframe)
     zstr = Tk.get_value(ctrls.editz)
     try
         val = int(zstr)
-        curframe.z = val
-        showframe(curframe)
+        state.z = val
+        updatez(ctrls, state)
+        showframe(state)
     catch
-        updatez(ctrls, curframe)
+        updatez(ctrls, state)
     end
 end
 
-function stept(inc, ctrls, curframe, showframe)
-    if 1 <= curframe.t+inc <= curframe.tmax
-        incrementt(inc, ctrls, curframe, showframe)
+function stept(inc, ctrls, state, showframe)
+    if 1 <= state.t+inc <= state.tmax
+        incrementt(inc, ctrls, state, showframe)
     end
 end
 
-function playt(inc, ctrls, curframe, showframe)
-    ctrls.isplaying = true
-    while 1 <= curframe.t+inc <= curframe.tmax && ctrls.isplaying
+function playt(inc, ctrls, state, showframe)
+    state.isplaying = true
+    while 1 <= state.t+inc <= state.tmax && state.isplaying
         Tk.tcl_doevent()    # allow the stop button to take effect
-        incrementt(inc, ctrls, curframe, showframe)
+        incrementt(inc, ctrls, state, showframe)
     end
-    ctrls.isplaying = false
+    state.isplaying = false
 end
 
-function sett(ctrls,curframe, showframe)
+function sett(ctrls,state, showframe)
     tstr = Tk.get_value(ctrls.editt)
     try
         val = int(tstr)
-        curframe.t = val
-        showframe(curframe)
+        state.t = val
+        updatet(ctrls, state)
+        showframe(state)
     catch
-        updatet(ctrls, curframe)
+        updatet(ctrls, state)
     end
 end
 
-# end
+export NavigationState,
+    NavigationControls,
+    init_navigation!
+
+end
