@@ -21,7 +21,7 @@ type ImageCanvas
     canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
     
     function ImageCanvas(fmt::Int32, props::Dict)
-        ps = get(props, :pixel_spacing, nothing)
+        ps = get(props, :pixelspacing, nothing)
         aspect_x_per_y = is(ps, nothing) ? nothing : ps[2]/ps[1]
         render! = get(props, :render!, uint32color!)
         background = get(props, :background, nothing)
@@ -79,6 +79,9 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     if !(2 <= sd <= 3)
         error("Only two or three spatial dimensions are permitted")
     end
+    if !isa(img, AbstractImageDirect)
+        img = Image(img, ["colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)])
+    end
     # Determine how dimensions map to x, y, z, t
     xy = get(props, :xy, Images.xy)
     cs = coords_spatial(img)
@@ -87,22 +90,19 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     ydim = cs[p[2]]
     zdim = (sd == 2) ? 0 : cs[setdiff(1:3, p)][1]
     tdim = timedim(img)
-    # Deal with pixel_spacing here
-    if !haskey(props, :pixel_spacing)
-        if haskey(img, "pixel_spacing")
-            props[:pixel_spacing] = img["pixel_spacing"][p]
+    # Deal with pixelspacing here
+    if !haskey(props, :pixelspacing)
+        if haskey(img, "pixelspacing")
+            props[:pixelspacing] = img["pixelspacing"][p]
+        end
+    end
+    if !haskey(props, :render!)
+        if p[1] > p[2]
+            props[:render!] = (buf, img) -> uint32color!(buf, img, true)
         end
     end
     # Start at z=1, t=1
     indexes = RangeIndex[1:size(img,i) for i = 1:ndims(img)]
-#     flipx = get(props, "flipx", false)
-#     if flipx
-#         indexes[xdim] = size(img, xdim):-1:1
-#     end
-#     flipy = get(props, "flipy", false)
-#     if flipy
-#         indexes[ydim] = size(img, ydim):-1:1
-#     end
     if zdim != 0
         indexes[zdim] = 1
     end
@@ -110,9 +110,8 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
         indexes[tdim] = 1
     end
     imslice = sliceim(img, indexes...)
-    imslice.properties["spatialorder"] = xy
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
-    ImageSlice2d{typeof(imslice)}(imslice, indexes, Int[size(imslice)...], bb, xdim, ydim, zdim, tdim)#, flipx, flipy)
+    ImageSlice2d{typeof(imslice)}(imslice, indexes, Int[size(imslice)...], bb, xdim, ydim, zdim, tdim)
 end
 
 function _reslice!(img2::ImageSlice2d)
@@ -140,31 +139,15 @@ end
 
 function zoom2!(img2::ImageSlice2d, bb::BoundingBox)
     img2.zoombb = bb
-#     if img2.flipx
-#         img2.indexes[img2.xdim] = iceil(bb.xmax):-1:ifloor(bb.xmin)+1
-#     else
-        img2.indexes[img2.xdim] = ifloor(bb.xmin)+1:iceil(bb.xmax)
-#     end
-#     if img2.flipy
-#         img2.indexes[img2.ydim] = iceil(bb.ymax):-1:ifloor(bb.ymin)+1
-#     else
-        img2.indexes[img2.ydim] = ifloor(bb.ymin)+1:iceil(bb.ymax)
-#     end
+    img2.indexes[img2.xdim] = ifloor(bb.xmin)+1:iceil(bb.xmax)
+    img2.indexes[img2.ydim] = ifloor(bb.ymin)+1:iceil(bb.ymax)
     _reslice!(img2)
 end
 
 function zoom2!(img2::ImageSlice2d)
     p = img2.imslice.parent
-#     if img2.flipx
-#         img2.indexes[img2.xdim] = size(p, img2.xdim):-1:1
-#     else
-        img2.indexes[img2.xdim] = 1:size(p, img2.xdim)
-#     end
-#     if img2.flipy
-#         img2.indexes[img2.ydim] = size(p, img2.ydim):-1:1
-#     else
-        img2.indexes[img2.ydim] = 1:size(p, img2.ydim)
-#     end
+    img2.indexes[img2.xdim] = 1:size(p, img2.xdim)
+    img2.indexes[img2.ydim] = 1:size(p, img2.ydim)
     img2.imslice.indexes = tuple(img2.indexes...)
     resetfirst!(img2.imslice)
 end
@@ -186,7 +169,7 @@ yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 #   render!: supply a function render!(buf, imgslice) that fills Uint32 buffer for display
 #   xy: {"y", "x"} chooses orientation of display (which dims are horizontal, vertical)
 #   flipx, flipy: set to true if you want to invert one or both axes
-#   pixel_spacing: [1,1] enforces uniform aspect ratio (will default to use from img if available)
+#   pixelspacing: [1,1] enforces uniform aspect ratio (will default to use from img if available)
 #   name: a string giving the window name
 #   background, perimeter: colors
 
@@ -269,7 +252,6 @@ function redraw(imgc::ImageCanvas)
     wbb = width(bb)
     hbb = height(bb)
     rectangle(r, bb.xmin, bb.ymin, wbb, hbb)
-#     rectangle(r, 0, 0, w, h)
     # In cases of transparency, paint the background color
     if imgc.surfaceformat == Cairo.CAIRO_FORMAT_ARGB32 && !is(imgc.background, nothing)
         rgb = convert(RGB, imgc.background)
@@ -350,7 +332,6 @@ function zoomwheel(imgc::ImageCanvas, img2::ImageSlice2d, delta, x, y)
         ymn, ymx = centeredclip(yu, 2*height(img2), (1,sizey(img2)), yrange(img2))
     end
     zoombb(imgc, img2, BoundingBox(floor(xmn)-1, ceil(xmx), floor(ymn)-1, ceil(ymx)))
-#     println("zoomwheel ", get_matrix(getgc(imgc.c)))
 end
 
 function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
@@ -443,14 +424,6 @@ function fill(r::GraphicsContext, col::ColorValue)
     restore(r)
 end
 
-# # Fill a BoundingBox with a color
-# function fill(r::GraphicsContext, bb::BoundingBox, col::ColorValue)
-#     rgb = convert(RGB, col)
-#     set_source_rgb(r, rgb.r, rgb.g, rgb.b)
-#     rectangle(r, bb.xmin, bb.ymin, width(bb), height(bb))
-#     fill(r)
-# end
-# 
 # r is the aspect ratio, i.e. aspect_x_per_y
 function rendersize(w::Integer, h::Integer, r)
     ww = w
