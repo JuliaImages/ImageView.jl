@@ -80,7 +80,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
         error("Only two or three spatial dimensions are permitted")
     end
     # Determine how dimensions map to x, y, z, t
-    xy = get(props, "xy", Images.xy)
+    xy = get(props, :xy, Images.xy)
     cs = coords_spatial(img)
     p = spatialpermutation(xy, img)
     xdim = cs[p[1]]
@@ -110,6 +110,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
         indexes[tdim] = 1
     end
     imslice = sliceim(img, indexes...)
+    imslice.properties["spatialorder"] = xy
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
     ImageSlice2d{typeof(imslice)}(imslice, indexes, Int[size(imslice)...], bb, xdim, ydim, zdim, tdim)#, flipx, flipy)
 end
@@ -251,6 +252,7 @@ function display(img::AbstractArray; proplist...)
     # render the initial state
     rerender(imgc, img2)
     redraw(imgc)
+    set_coords(imgc, BoundingBox(0, w, 0, h))
     imgc, img2
 end
 
@@ -275,8 +277,9 @@ function redraw(imgc::ImageCanvas)
         fill_preserve(r)
     end
     # Paint the image with appropriate antialiasing settings
-    Cairo.translate(r, bb.xmin, bb.ymin)
-    Cairo.scale(r, wbb/w, hbb/h)
+    Cairo.translate(r, (1-imgc.flipx)*bb.xmin + imgc.flipx*bb.xmax,
+                       (1-imgc.flipy)*bb.ymin + imgc.flipy*bb.ymax)
+    Cairo.scale(r, (1-2imgc.flipx)*wbb/w, (1-2imgc.flipy)*hbb/h)
     set_source_surface(r, imgc.surface, 0, 0)
     p = get_source(r)
     if wbb > w && hbb > h
@@ -301,13 +304,11 @@ end
 function _resize(imgc::ImageCanvas, img2::ImageSlice2d)
     w, h = size(imgc.surface.data)
     setbb!(imgc, w, h)
+    set_coords(imgc, img2.zoombb)
     r = getgc(imgc.c)
     if !is(imgc.aspect_x_per_y, nothing)
         fill(r, imgc.perimeter)
     end
-#     set_coords(imgc, img2.zoombb)
-#     bb = imgc.canvasbb
-#     set_coords(r, bb.xmin, bb.ymin, width(bb), height(bb), 0, w, 0, h)
     redraw(imgc)
 end
 
@@ -360,7 +361,6 @@ function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
     panzoom(imgc, img2, bb)
     _resize(imgc, img2)
-    set_coords(imgc, bb)
 end
 
 function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
@@ -371,7 +371,6 @@ function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
     bb = BoundingBox(0, w, 0, h)
     panzoom(imgc, img2, bb)
     _resize(imgc, img2)
-    set_coords(imgc, bb)
 end
 
 # Used by pan and zoom to change the displayed region
