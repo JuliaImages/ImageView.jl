@@ -1,7 +1,7 @@
 # Create a cone in 3d that changes color over time
 sz = [201, 301, 31]
 center = iceil(sz/2)
-C3 = Bool[(i-center[1])^2+(j-center[2])^2 <= k^2 for i = 1:sz[1], j = 1:sz[2], k = 1:sz[3]]
+C3 = Bool[(i-center[1])^2+(j-center[2])^2 <= k^2 for i = 1:sz[1], j = 1:sz[2], k = sz[3]:-1:1]
 cmap1 = uint32(linspace(0,255,60))
 cmap = Array(Uint32, length(cmap1))
 for i = 1:length(cmap)
