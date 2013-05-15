@@ -217,6 +217,16 @@ function display(img::AbstractArray; proplist...)
         fctrls = Tk.Frame(win)
         Tk.grid(fctrls, 2, 1)  # place the controls below the image
         init_navigation!(fctrls, ctrls, state, showframe)
+        if zmax > 1
+            try
+                # Replace the z label with the name of the z coordinate
+                cs = coords_spatial(img)
+                ilabel = setdiff(cs, [img2.xdim,img2.ydim])[1]
+                ilabel = find(cs .== ilabel)[1]
+                set_value(ctrls.textz, spatialorder(img)[ilabel]*":")
+            catch
+            end
+        end
         # Bind mousewheel events to navigation
         bindwheel(c.c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
         bindwheel(c.c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
