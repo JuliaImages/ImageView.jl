@@ -22,7 +22,7 @@ type ImageCanvas
     
     function ImageCanvas(fmt::Int32, props::Dict)
         ps = get(props, :pixelspacing, nothing)
-        aspect_x_per_y = is(ps, nothing) ? nothing : ps[2]/ps[1]
+        aspect_x_per_y = is(ps, nothing) ? nothing : ps[1]/ps[2]
         render! = get(props, :render!, uint32color!)
         background = get(props, :background, nothing)
         perimeter = get(props, :perimeter, RGB(0,0,0))
@@ -192,7 +192,7 @@ function display(img::AbstractArray; proplist...)
     # (the actual size may be smaller, depending on screen size)
     ww, wh = rendersize(w, h, imgc.aspect_x_per_y)
     if havecontrols
-        btsz, pad = Navigation.widget_size()
+        btnsz, pad = Navigation.widget_size()
         wh += btnsz[2] + 2*pad
     end
     # Create the window and the canvas for displaying the image
@@ -218,8 +218,8 @@ function display(img::AbstractArray; proplist...)
         Tk.grid(fctrls, 2, 1)  # place the controls below the image
         init_navigation!(fctrls, ctrls, state, showframe)
         # Bind mousewheel events to navigation
-        bindwheel(c.c, "Alt", (path,delta)->reslicet(imgc,img2,state,int(delta)))
-        bindwheel(c.c, "Alt-Control", (path,delta)->reslicez(imgc,img2,state,int(delta)))
+        bindwheel(c.c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
+        bindwheel(c.c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
     end
     # Set up the drawing callbacks
     tk_bind(c.c, "<Configure>", path -> resize(imgc, img2))
@@ -301,18 +301,20 @@ function reslice(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState)
     redraw(imgc)
 end
 
-function reslicet(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState, delta::Int)
-    t = state.t + (delta>0)
+function reslicet(imgc::ImageCanvas, img2::ImageSlice2d, ctrls::NavigationControls, state::NavigationState, delta::Int)
+    t = state.t + 2*(delta>0) - 1
     if 1 <= t <= state.tmax
         state.t = t
+        Navigation.updatet(ctrls, state)
         reslice(imgc, img2, state)
     end
 end
 
-function reslicez(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState, delta::Int)
-    z = state.z + (delta>0)
+function reslicez(imgc::ImageCanvas, img2::ImageSlice2d, ctrls::NavigationControls, state::NavigationState, delta::Int)
+    z = state.z + 2*(delta>0) - 1
     if 1 <= z <= state.zmax
         state.z = z
+        Navigation.updatez(ctrls, state)
         reslice(imgc, img2, state)
     end
 end
