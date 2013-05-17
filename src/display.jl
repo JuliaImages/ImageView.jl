@@ -191,24 +191,20 @@ function display(img::AbstractArray; proplist...)
     # Determine the desired window size
     # (the actual size may be smaller, depending on screen size)
     ww, wh = rendersize(w, h, imgc.aspect_x_per_y)
+    whfull = wh
     if havecontrols
         btnsz, pad = Navigation.widget_size()
-        wh += btnsz[2] + 2*pad
+        whfull += btnsz[2] + 2*pad
     end
     # Create the window and the canvas for displaying the image
-    win = Toplevel(get(props, "name", "Image"), ww, wh)
-    c = Canvas(win.w)
+    win = Toplevel(get(props, "name", "ImageView"), ww, whfull, false)
+    c = Canvas(win.w, ww, wh)
     imgc.c = c
     # Place the canvas and set its resize properties
     Tk.grid(c, 1, 1)
     Tk.grid_configure(c, {:sticky => "nsew"})    # fill the edges of its cell on all 4 sides
     Tk.grid_rowconfigure(win, 1, {:weight => 1}) # scale this cell when the window resizes
     Tk.grid_columnconfigure(win, 1, {:weight => 1})
-    Tk.init_canvas(c)
-    # Set up the rendering
-    buf = Array(Uint32, w, h)
-    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
-    setbb!(imgc, w, h)
     # If necessary, create the navigation controls
     if havecontrols
         ctrls = NavigationControls()
@@ -231,6 +227,11 @@ function display(img::AbstractArray; proplist...)
         tk_bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
         tk_bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
     end
+    # Set up the rendering
+    set_visible(win, true)
+    Tk.init_canvas(c)
+    buf = Array(Uint32, w, h)
+    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
     # Set up the drawing callbacks
     tk_bind(c, "<Configure>", path -> resize(imgc, img2))
     c.redraw = x -> redraw(imgc)
@@ -244,8 +245,7 @@ function display(img::AbstractArray; proplist...)
     tk_bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
     # render the initial state
     rerender(imgc, img2)
-    redraw(imgc)
-    set_coords(imgc, BoundingBox(0, w, 0, h))
+    _resize(imgc, img2)
     imgc, img2
 end
 
