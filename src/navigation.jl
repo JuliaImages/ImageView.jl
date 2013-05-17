@@ -64,7 +64,7 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
             path->setz(ctrls,state,showframe))
         ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz = 
             addbuttons(f, btnsz, bkg, pad, zindex, "z", callback)
-        Tk.set_value(ctrls.editz, string(state.z))
+        updatez(ctrls, state)
     end
     if havet
         callback = (path->stept(-1,ctrls,state,showframe), path->playt(-1,ctrls,state,showframe), 
@@ -72,7 +72,7 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
             path->sett(ctrls,state,showframe))
         ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt = 
             addbuttons(f, btnsz, bkg, pad, tindex, "t", callback)
-        Tk.set_value(ctrls.editt, string(state.t))
+        updatet(ctrls, state)
     end
 end
 
