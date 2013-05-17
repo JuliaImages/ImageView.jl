@@ -228,8 +228,8 @@ function display(img::AbstractArray; proplist...)
             end
         end
         # Bind mousewheel events to navigation
-        bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
-        bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
+        tk_bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
+        tk_bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
     end
     # Set up the drawing callbacks
     tk_bind(c, "<Configure>", path -> resize(imgc, img2))
@@ -238,10 +238,10 @@ function display(img::AbstractArray; proplist...)
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
     tk_bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
     # Bind mousewheel events to zoom
-    bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
+    tk_bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
     # Bind mousewheel events to pan
-    bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
-    bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    tk_bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
+    tk_bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
     # render the initial state
     rerender(imgc, img2)
     redraw(imgc)
