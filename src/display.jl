@@ -198,20 +198,19 @@ function display(img::AbstractArray; proplist...)
     end
     # Create the window and the canvas for displaying the image
     win = Toplevel(get(props, "name", "ImageView"), ww, whfull, false)
-    c = Canvas(win.w, ww, wh)
+    c = Canvas(win, ww, wh)
     imgc.c = c
     # Place the canvas and set its resize properties
-    Tk.grid(c, 1, 1)
-    Tk.grid_configure(c, {:sticky => "nsew"})    # fill the edges of its cell on all 4 sides
-    Tk.grid_rowconfigure(win, 1, {:weight => 1}) # scale this cell when the window resizes
-    Tk.grid_columnconfigure(win, 1, {:weight => 1})
+    grid(c, 1, 1, {:sticky => "nsew"}) # fill the edges of its cell on all 4 sides
+    grid_rowconfigure(win, 1, {:weight => 1}) # scale this cell when the window resizes
+    grid_columnconfigure(win, 1, {:weight => 1})
     # If necessary, create the navigation controls
     if havecontrols
         ctrls = NavigationControls()
         state = NavigationState(zmax, tmax, 1, 1, false)
         showframe = state -> reslice(imgc, img2, state)
-        fctrls = Tk.Frame(win)
-        Tk.grid(fctrls, 2, 1)  # place the controls below the image
+        fctrls = Frame(win)
+        grid(fctrls, 2, 1, {:sticky => "ew"})  # place the controls below the image
         init_navigation!(fctrls, ctrls, state, showframe)
         if zmax > 1
             try
