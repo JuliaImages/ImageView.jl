@@ -233,8 +233,7 @@ function display(img::AbstractArray; proplist...)
     buf = Array(Uint32, w, h)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
     # Set up the drawing callbacks
-    tk_bind(c, "<Configure>", path -> resize(imgc, img2))
-    c.redraw = x -> redraw(imgc)
+    c.redraw = x -> resize(imgc, img2)
     # Bind mouse clicks to zoom
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
     tk_bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
@@ -245,7 +244,7 @@ function display(img::AbstractArray; proplist...)
     tk_bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
     # render the initial state
     rerender(imgc, img2)
-    _resize(imgc, img2)
+    resize(imgc, img2)
     imgc, img2
 end
 
@@ -287,14 +286,8 @@ function redraw(imgc::ImageCanvas)
     Tk.update()
 end
 
-# Handle window resize events
+# Used for both window resize and zoom events
 function resize(imgc::ImageCanvas, img2::ImageSlice2d)
-    Tk.configure(imgc.c)
-    _resize(imgc, img2)
-end
-
-# Used for window resize and zoom
-function _resize(imgc::ImageCanvas, img2::ImageSlice2d)
     w, h = size(imgc.surface.data)
     setbb!(imgc, w, h)
     set_coords(imgc, img2.zoombb)
@@ -354,7 +347,7 @@ function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     buf = Array(Uint32, w, h)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
     panzoom(imgc, img2, bb)
-    _resize(imgc, img2)
+    resize(imgc, img2)
 end
 
 function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
@@ -364,7 +357,7 @@ function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
     bb = BoundingBox(0, w, 0, h)
     panzoom(imgc, img2, bb)
-    _resize(imgc, img2)
+    resize(imgc, img2)
 end
 
 # Used by pan and zoom to change the displayed region
