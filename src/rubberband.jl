@@ -75,8 +75,3 @@ function rubberband_stop(c::Canvas, rb::RubberBand, x, y, callbacks_old, callbac
         callback_done(c, zoombb)
     end
 end
-
-function device_to_user(r::GraphicsContext, x::Number, y::Number)
-    p = device_to_user!(r, [float64(x),float64(y)])
-    p[1], p[2]
-end
