@@ -419,6 +419,11 @@ end
 # Convert the raw image data to the Uint32 buffer that Cairo paints
 rerender(imgc::ImageCanvas, img2::ImageSlice2d) = imgc.render!(imgc.surface.data, img2.imslice)
 
+function redraw(imgc::ImageCanvas, img2::ImageSlice2d)
+    rerender(imgc, img2)
+    redraw(imgc)
+end
+
 # Fill the entire canvas with a color
 function fill(r::GraphicsContext, col::ColorValue)
     rgb = convert(RGB, col)
