@@ -31,8 +31,13 @@ type NavigationControls
     editt
     textz                             # static text (information)
     textt
+    scalez                            # scale (slider) widgets
+    scalet
 end
-NavigationControls() = NavigationControls(nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing, nothing)
+NavigationControls() = NavigationControls(nothing, nothing, nothing, nothing,
+                                          nothing, nothing, nothing, nothing,
+                                          nothing, nothing, nothing, nothing,
+                                          nothing, nothing, nothing)
 
 # f is a TkFrame
 function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, showframe::Function)
@@ -43,8 +48,8 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
     stop[:,[1,btnsz[2]]] = false
     bkg = "gray70"
     icon = Tk.Image(stop, mask, bkg, "black")
-    ctrls.stop = Tk.Button(f, icon)
-    Tk.tk_bind(ctrls.stop, "command", path -> state.isplaying = false)
+    ctrls.stop = Button(f, icon)
+    tk_bind(ctrls.stop, "command", path -> state.isplaying = false)
     local zindex
     local tindex
     local stopindex
@@ -57,21 +62,21 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
         stopindex = 1
         tindex = 2:7
     end
-    Tk.grid(ctrls.stop,1,stopindex,{:padx => 3*pad, :pady => pad})
+    grid(ctrls.stop,1,stopindex,{:padx => 3*pad, :pady => pad})
     if havez
         callback = (path->stepz(1,ctrls,state,showframe), path->playz(1,ctrls,state,showframe), 
             path->playz(-1,ctrls,state,showframe), path->stepz(-1,ctrls,state,showframe),
-            path->setz(ctrls,state,showframe))
-        ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz = 
-            addbuttons(f, btnsz, bkg, pad, zindex, "z", callback)
+            path->setz(ctrls,state,showframe), path->scalez(ctrls,state,showframe))
+        ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz, ctrls.scalez = 
+            addbuttons(f, btnsz, bkg, pad, zindex, "z", callback, 1:state.zmax)
         updatez(ctrls, state)
     end
     if havet
         callback = (path->stept(-1,ctrls,state,showframe), path->playt(-1,ctrls,state,showframe), 
             path->playt(1,ctrls,state,showframe), path->stept(1,ctrls,state,showframe),
-            path->sett(ctrls,state,showframe))
-        ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt = 
-            addbuttons(f, btnsz, bkg, pad, tindex, "t", callback)
+            path->sett(ctrls,state,showframe), path->scalet(ctrls,state,showframe))
+        ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt, ctrls.scalet = 
+            addbuttons(f, btnsz, bkg, pad, tindex, "t", callback, 1:state.tmax)
         updatet(ctrls, state)
     end
 end
@@ -104,31 +109,35 @@ end
 # index contains the grid position of each object
 # orientation is "t" or "z"
 # callback is an array of 5 entries, the 5th being the edit box
-function addbuttons(f, sz, bkg, pad, index, orientation, callback)
+function addbuttons(f, sz, bkg, pad, index, orientation, callback, rng)
     rotflag = orientation == "z"
-    ctrl = Array(Any, 6)
+    ctrl = Array(Any, 7)
     ctrl[1], ctrl[2], ctrl[3], ctrl[4] = arrowheads(sz, rotflag)
     mask = trues(sz)
     const color = ("black", "green", "green", "black")
     ibutton = [1,2,5,6]
     for i = 1:4
         icon = Tk.Image(ctrl[i], mask, bkg, color[i])
-        b = Tk.Button(f, icon)
-        Tk.grid(b,1,index[ibutton[i]],{:padx => pad, :pady => pad})
-        Tk.tk_bind(b, "command", callback[i])
+        b = Button(f, icon)
+        grid(b,1,index[ibutton[i]],{:padx => pad, :pady => pad})
+        tk_bind(b, "command", callback[i])
         ctrl[i] = b
     end
-    ctrl[5] = Tk.Label(f, orientation*":")
-    Tk.grid(ctrl[5],1,index[3], {:padx => pad, :pady => pad})
-    ctrl[6] = Tk.Entry(f, "1")
-    Tk.tk_configure(ctrl[6], {:width => 5})
-    Tk.grid(ctrl[6],1,index[4],{:padx => pad, :pady => pad})
-    Tk.tk_bind(ctrl[6], "<Return>", callback[5])
+    ctrl[5] = Label(f, orientation*":")
+    grid(ctrl[5],1,index[3], {:padx => pad, :pady => pad})
+    ctrl[6] = Entry(f, "1")
+    tk_configure(ctrl[6], {:width => 5})
+    grid(ctrl[6],1,index[4],{:padx => pad, :pady => pad})
+    tk_bind(ctrl[6], "<Return>", callback[5])
+    ctrl[7] = Slider(f, rng)
+    grid(ctrl[7], 2, index, {:sticky => "ew", :padx => pad})
+    tk_bind(ctrl[7], "command", callback[6])
     tuple(ctrl...)
 end
 
 function updatez(ctrls, state)
-    Tk.set_value(ctrls.editz, string(state.z))
+    set_value(ctrls.editz, string(state.z))
+    set_value(ctrls.scalez, state.z)
     enabledown = state.z > 1
     set_enabled(ctrls.stepdown, enabledown)
     set_enabled(ctrls.playdown, enabledown)
@@ -138,7 +147,8 @@ function updatez(ctrls, state)
 end
 
 function updatet(ctrls, state)
-    Tk.set_value(ctrls.editt, string(state.t))
+    set_value(ctrls.editt, string(state.t))
+    set_value(ctrls.scalet, state.t)
     enableback = state.t > 1
     set_enabled(ctrls.stepback, enableback)
     set_enabled(ctrls.playback, enableback)
@@ -168,14 +178,14 @@ end
 function playz(inc, ctrls, state, showframe)
     state.isplaying = true
     while 1 <= state.z+inc <= state.zmax && state.isplaying
-        Tk.tcl_doevent()    # allow the stop button to take effect
+        tcl_doevent()    # allow the stop button to take effect
         incrementz(inc, ctrls, state, showframe)
     end
     state.isplaying = false
 end
 
 function setz(ctrls,state, showframe)
-    zstr = Tk.get_value(ctrls.editz)
+    zstr = get_value(ctrls.editz)
     try
         val = int(zstr)
         state.z = val
@@ -184,6 +194,12 @@ function setz(ctrls,state, showframe)
     catch
         updatez(ctrls, state)
     end
+end
+
+function scalez(ctrls, state, showframe)
+    state.z = get_value(ctrls.scalez)
+    updatez(ctrls, state)
+    showframe(state)
 end
 
 function stept(inc, ctrls, state, showframe)
@@ -195,14 +211,14 @@ end
 function playt(inc, ctrls, state, showframe)
     state.isplaying = true
     while 1 <= state.t+inc <= state.tmax && state.isplaying
-        Tk.tcl_doevent()    # allow the stop button to take effect
+        tcl_doevent()    # allow the stop button to take effect
         incrementt(inc, ctrls, state, showframe)
     end
     state.isplaying = false
 end
 
 function sett(ctrls,state, showframe)
-    tstr = Tk.get_value(ctrls.editt)
+    tstr = get_value(ctrls.editt)
     try
         val = int(tstr)
         state.t = val
@@ -211,6 +227,12 @@ function sett(ctrls,state, showframe)
     catch
         updatet(ctrls, state)
     end
+end
+
+function scalet(ctrls, state, showframe)
+    state.t = get_value(ctrls.scalet)
+    updatet(ctrls, state)
+    showframe(state)
 end
 
 export NavigationState,
