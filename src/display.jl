@@ -207,7 +207,7 @@ function display(img::AbstractArray; proplist...)
     # If necessary, create the navigation controls
     if havecontrols
         ctrls = NavigationControls()
-        state = NavigationState(zmax, tmax, 1, 1, false)
+        state = NavigationState(zmax, tmax)
         showframe = state -> reslice(imgc, img2, state)
         fctrls = Frame(win)
         grid(fctrls, 2, 1, {:sticky => "ew"})  # place the controls below the image

@@ -13,7 +13,18 @@ type NavigationState
     # Current selection:
     z::Int
     t::Int
-    isplaying::Bool # are we in continuous playback?
+    timer        # nothing if not playing, TimeoutAsyncWork if we are
+    fps::Float64
+end
+
+NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(int(zmax), int(tmax), int(z), int(t), nothing, 30.0)
+NavigationState(zmax::Integer, tmax::Integer) = NavigationState(zmax, tmax, 1, 1)
+
+function stop_playing!(state::NavigationState)
+    if !is(state.timer, nothing)
+        stop_timer(state.timer)
+        state.timer = nothing
+    end
 end
 
 ## Type for holding "handles" to GUI controls
@@ -49,7 +60,7 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
     bkg = "gray70"
     icon = Tk.Image(stop, mask, bkg, "black")
     ctrls.stop = Button(f, icon)
-    tk_bind(ctrls.stop, "command", path -> state.isplaying = false)
+    tk_bind(ctrls.stop, "command", path -> stop_playing!(state))
     local zindex
     local tindex
     local stopindex
@@ -79,6 +90,43 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
             addbuttons(f, btnsz, bkg, pad, tindex, "t", callback, 1:state.tmax)
         updatet(ctrls, state)
     end
+    # Context menu for settings
+    menu = Menu(f)
+    menu_fps = menu_add(menu, "Playback speed...", path -> set_fps!(state))
+    tk_popup(f, menu)
+#     tcl_eval("bind $(f.w.path) <3> {tk_popup $(menu.w.path) %X %Y}")
+#     tk_bind(f, "tk_popup <3>", menu, x, y)
+end
+
+# GUI to set the frame rate
+function set_fps!(state::NavigationState)
+    win = Toplevel()
+    f = Frame(win)
+    pack(f, {:expand=>true, :fill=>"both"})
+    
+    l = Label(f, "Frames per second:")
+    e = Entry(f, {:width=>5})
+    set_value(e, string(state.fps))
+    ok = Button(f, "OK")
+    cancel = Button(f, "Cancel")
+    
+    grid(l, 1, 1)
+    grid(e, 1, 2, {:pady=>5})
+    grid(cancel, 2, 1)
+    grid(ok, 2, 2)
+    
+    function set_close!(state::NavigationState)
+        try
+            fps = float64(get_value(e))
+            state.fps = fps
+            destroy(win)
+        catch
+            set_value(e, string(state.fps))
+        end
+    end
+    tk_bind(e, "<Return>", path->set_close!(state))
+    tk_bind(ok, "command", path->set_close!(state))
+    tk_bind(cancel, "command", path->destroy(win))
 end
 
 function widget_size()
@@ -157,12 +205,6 @@ function updatet(ctrls, state)
     set_enabled(ctrls.playfwd, enablefwd)
 end
 
-function incrementt(inc, ctrls, state, showframe)
-    state.t += inc
-    updatet(ctrls, state)
-    showframe(state)
-end
-
 function incrementz(inc, ctrls, state, showframe)
     state.z += inc
     updatez(ctrls, state)
@@ -172,16 +214,19 @@ end
 function stepz(inc, ctrls, state, showframe)
     if 1 <= state.z+inc <= state.zmax
         incrementz(inc, ctrls, state, showframe)
+    else
+        stop_playing!(state)
     end
 end
 
 function playz(inc, ctrls, state, showframe)
-    state.isplaying = true
-    while 1 <= state.z+inc <= state.zmax && state.isplaying
-        tcl_doevent()    # allow the stop button to take effect
-        incrementz(inc, ctrls, state, showframe)
+    if !(state.fps > 0)
+        error("Frame rate is not positive")
     end
-    state.isplaying = false
+    stop_playing!(state)
+    dt = 1/state.fps
+    state.timer = TimeoutAsyncWork(i -> stepz(inc, ctrls, state, showframe))
+    start_timer(state.timer, iround(1000*dt), iround(1000*dt))
 end
 
 function setz(ctrls,state, showframe)
@@ -202,19 +247,28 @@ function scalez(ctrls, state, showframe)
     showframe(state)
 end
 
+function incrementt(inc, ctrls, state, showframe)
+    state.t += inc
+    updatet(ctrls, state)
+    showframe(state)
+end
+
 function stept(inc, ctrls, state, showframe)
     if 1 <= state.t+inc <= state.tmax
         incrementt(inc, ctrls, state, showframe)
+    else
+        stop_playing!(state)
     end
 end
 
 function playt(inc, ctrls, state, showframe)
-    state.isplaying = true
-    while 1 <= state.t+inc <= state.tmax && state.isplaying
-        tcl_doevent()    # allow the stop button to take effect
-        incrementt(inc, ctrls, state, showframe)
+    if !(state.fps > 0)
+        error("Frame rate is not positive")
     end
-    state.isplaying = false
+    stop_playing!(state)
+    dt = 1/state.fps
+    state.timer = TimeoutAsyncWork(i -> stept(inc, ctrls, state, showframe))
+    start_timer(state.timer, iround(1000*dt), iround(1000*dt))
 end
 
 function sett(ctrls,state, showframe)
@@ -234,6 +288,7 @@ function scalet(ctrls, state, showframe)
     updatet(ctrls, state)
     showframe(state)
 end
+
 
 export NavigationState,
     NavigationControls,
