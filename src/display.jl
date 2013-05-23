@@ -201,16 +201,16 @@ function display(img::AbstractArray; proplist...)
     c = Canvas(win, ww, wh)
     imgc.c = c
     # Place the canvas and set its resize properties
-    grid(c, 1, 1, {:sticky => "nsew"}) # fill the edges of its cell on all 4 sides
-    grid_rowconfigure(win, 1, {:weight => 1}) # scale this cell when the window resizes
-    grid_columnconfigure(win, 1, {:weight => 1})
+    grid(c, 1, 1, sticky="nsew")        # fill the edges of its cell on all 4 sides
+    grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
+    grid_columnconfigure(win, 1, weight=1)
     # If necessary, create the navigation controls
     if havecontrols
         ctrls = NavigationControls()
         state = NavigationState(zmax, tmax)
         showframe = state -> reslice(imgc, img2, state)
         fctrls = Frame(win)
-        grid(fctrls, 2, 1, {:sticky => "ew"})  # place the controls below the image
+        grid(fctrls, 2, 1, sticky="ew")  # place the controls below the image
         init_navigation!(fctrls, ctrls, state, showframe)
         if zmax > 1
             try
@@ -223,24 +223,24 @@ function display(img::AbstractArray; proplist...)
             end
         end
         # Bind mousewheel events to navigation
-        tk_bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
-        tk_bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
+        bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
+        bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
     end
     # Set up the rendering
     set_visible(win, true)
-    Tk.init_canvas(c)
+    ctx = getgc(c)  # force initialization of canvas
     buf = Array(Uint32, w, h)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
     # Set up the drawing callbacks
     c.redraw = x -> resize(imgc, img2)
     # Bind mouse clicks to zoom
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
-    tk_bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
+    bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
     # Bind mousewheel events to zoom
-    tk_bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
+    bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
     # Bind mousewheel events to pan
-    tk_bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
-    tk_bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
+    bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
     # render the initial state
     rerender(imgc, img2)
     resize(imgc, img2)

@@ -13,8 +13,8 @@ type NavigationState
     # Current selection:
     z::Int
     t::Int
-    timer        # nothing if not playing, TimeoutAsyncWork if we are
-    fps::Float64
+    timer        # nothing if not playing, TimeoutAsyncWork if we are.
+    fps::Float64 # playback speed in frames per second
 end
 
 NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(int(zmax), int(tmax), int(z), int(t), nothing, 30.0)
@@ -60,7 +60,7 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
     bkg = "gray70"
     icon = Tk.Image(stop, mask, bkg, "black")
     ctrls.stop = Button(f, icon)
-    tk_bind(ctrls.stop, "command", path -> stop_playing!(state))
+    bind(ctrls.stop, "command", path -> stop_playing!(state))
     local zindex
     local tindex
     local stopindex
@@ -73,7 +73,7 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
         stopindex = 1
         tindex = 2:7
     end
-    grid(ctrls.stop,1,stopindex,{:padx => 3*pad, :pady => pad})
+    grid(ctrls.stop, 1, stopindex, padx=3*pad, pady=pad)
     if havez
         callback = (path->stepz(1,ctrls,state,showframe), path->playz(1,ctrls,state,showframe), 
             path->playz(-1,ctrls,state,showframe), path->stepz(-1,ctrls,state,showframe),
@@ -94,24 +94,22 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
     menu = Menu(f)
     menu_fps = menu_add(menu, "Playback speed...", path -> set_fps!(state))
     tk_popup(f, menu)
-#     tcl_eval("bind $(f.w.path) <3> {tk_popup $(menu.w.path) %X %Y}")
-#     tk_bind(f, "tk_popup <3>", menu, x, y)
 end
 
 # GUI to set the frame rate
 function set_fps!(state::NavigationState)
     win = Toplevel()
     f = Frame(win)
-    pack(f, {:expand=>true, :fill=>"both"})
+    pack(f, expand=true, fill="both")
     
     l = Label(f, "Frames per second:")
-    e = Entry(f, {:width=>5})
+    e = Entry(f, width=5)
     set_value(e, string(state.fps))
     ok = Button(f, "OK")
     cancel = Button(f, "Cancel")
     
     grid(l, 1, 1)
-    grid(e, 1, 2, {:pady=>5})
+    grid(e, 1, 2, pady=5)
     grid(cancel, 2, 1)
     grid(ok, 2, 2)
     
@@ -124,9 +122,9 @@ function set_fps!(state::NavigationState)
             set_value(e, string(state.fps))
         end
     end
-    tk_bind(e, "<Return>", path->set_close!(state))
-    tk_bind(ok, "command", path->set_close!(state))
-    tk_bind(cancel, "command", path->destroy(win))
+    bind(e, "<Return>", path->set_close!(state))
+    bind(ok, "command", path->set_close!(state))
+    bind(cancel, "command", path->destroy(win))
 end
 
 function widget_size()
@@ -167,19 +165,19 @@ function addbuttons(f, sz, bkg, pad, index, orientation, callback, rng)
     for i = 1:4
         icon = Tk.Image(ctrl[i], mask, bkg, color[i])
         b = Button(f, icon)
-        grid(b,1,index[ibutton[i]],{:padx => pad, :pady => pad})
-        tk_bind(b, "command", callback[i])
+        grid(b, 1, index[ibutton[i]], padx=pad, pady=pad)
+        bind(b, "command", callback[i])
         ctrl[i] = b
     end
     ctrl[5] = Label(f, orientation*":")
-    grid(ctrl[5],1,index[3], {:padx => pad, :pady => pad})
+    grid(ctrl[5], 1, index[3], padx=pad, pady=pad)
     ctrl[6] = Entry(f, "1")
-    tk_configure(ctrl[6], {:width => 5})
-    grid(ctrl[6],1,index[4],{:padx => pad, :pady => pad})
-    tk_bind(ctrl[6], "<Return>", callback[5])
+    configure(ctrl[6], width=5)
+    grid(ctrl[6], 1, index[4], padx=pad, pady=pad)
+    bind(ctrl[6], "<Return>", callback[5])
     ctrl[7] = Slider(f, rng)
-    grid(ctrl[7], 2, index, {:sticky => "ew", :padx => pad})
-    tk_bind(ctrl[7], "command", callback[6])
+    grid(ctrl[7], 2, index, sticky="ew", padx=pad)
+    bind(ctrl[7], "command", callback[6])
     tuple(ctrl...)
 end
 

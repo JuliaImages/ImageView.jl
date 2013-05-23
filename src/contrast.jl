@@ -22,26 +22,26 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     fwin = Frame(win)
     w = width(win.w)
     h = height(win.w)
-    pack(fwin, {:expand=>true, :fill=>"both"})
+    pack(fwin, expand=true, fill="both")
     
     chist = Canvas(fwin, 2w/3, h)
-    grid(chist, 1, 1, {:sticky=>"nsew", :padx=>5})
+    grid(chist, 1, 1, sticky="nsew", padx=5)
     fctrls = Frame(fwin)
     grid(fctrls, 1, 2)
-    grid_columnconfigure(fwin, 1, {:weight=>1})
-    grid_rowconfigure(fwin, 1, {:weight=>1})
+    grid_columnconfigure(fwin, 1, weight=1)
+    grid_rowconfigure(fwin, 1, weight=1)
     
     fminmax = Frame(fctrls)
-    emin = Entry(fminmax, {:width => 10})
-    emax = Entry(fminmax, {:width => 10})
+    emin = Entry(fminmax, width=10)
+    emax = Entry(fminmax, width=10)
     formlayout(emin, "Min:")
     formlayout(emax, "Max:")
-    grid(fminmax, 1, 1:2, {:sticky => "nw"})
+    grid(fminmax, 1, 1:2, sticky="nw")
     
     zoom = Button(fctrls, "Zoom")
     full = Button(fctrls, "Full range")
-    grid(zoom, 2, 1, {:sticky=>"sw", :padx => 5})
-    grid(full, 2, 2, {:sticky=>"se"})
+    grid(zoom, 2, 1, sticky="sw", padx=5)
+    grid(full, 2, 2, sticky="se")
     
     immin = min(img)
     immax = max(img)
@@ -80,8 +80,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         p = prepare_histogram(newimg, nbins, minval, maxval)
         rerender()
     end
-    tk_bind(emin, "<Return>", path -> setmin(emin, cs, rerender))
-    tk_bind(emax, "<Return>", path -> setmax(emax, cs, rerender))
+    bind(emin, "<Return>", path -> setmin(emin, cs, rerender))
+    bind(emax, "<Return>", path -> setmax(emax, cs, rerender))
     rerender()
     replaceimage
 end
