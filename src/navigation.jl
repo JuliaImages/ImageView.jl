@@ -8,13 +8,13 @@ using Tk
 # This specifies a particular 2d slice from a possibly-4D image
 type NavigationState
     # Dimensions:
-    zmax::Int    # = 1 if only 2 spatial dims
-    tmax::Int    # = 1 if only a single image
-    # Current selection:
-    z::Int
-    t::Int
-    timer        # nothing if not playing, TimeoutAsyncWork if we are.
-    fps::Float64 # playback speed in frames per second
+    zmax::Int          # number of frames in z, set to 1 if only 2 spatial dims
+    tmax::Int          # number of frames in t, set to 1 if only a single image
+    z::Int             # current position in z-stack
+    t::Int             # current moment in time
+    # Other state data:
+    timer              # nothing if not playing, TimeoutAsyncWork if we are
+    fps::Float64       # playback speed in frames per second
 end
 
 NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(int(zmax), int(tmax), int(z), int(t), nothing, 30.0)
@@ -29,11 +29,11 @@ end
 
 ## Type for holding "handles" to GUI controls
 type NavigationControls
-    stepup                            # buttons...
+    stepup                            # z buttons...
     stepdown
     playup
     playdown
-    stepback
+    stepback                          # t buttons...
     stepfwd
     playback
     playfwd
