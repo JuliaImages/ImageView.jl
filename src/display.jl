@@ -173,7 +173,7 @@ yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 #   name: a string giving the window name
 #   background, perimeter: colors
 
-function display(img::AbstractArray; proplist...)
+function display{A<:AbstractArray}(img::A; proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint(props, length(proplist))
