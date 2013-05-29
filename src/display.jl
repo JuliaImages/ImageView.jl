@@ -13,11 +13,13 @@ type ImageCanvas
     aspect_x_per_y           # relative scaling of the two axes (unconstrained = nothing)
     background               # nothing, RGB color, or checkerboard pattern
     perimeter                # RGB color
+    transpose::Bool
     flipx::Bool
     flipy::Bool
     surfaceformat::Int32     # The Cairo format (e.g., CAIRO_FORMAT_ARGB32)
     c::Canvas                # canvas for rendering image
     surface::CairoSurface    # source surface of the image (changes with zoom region)
+    renderbuf::Array{Uint32} # intermediate used if transpose is true
     canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
     
     function ImageCanvas(fmt::Int32, props::Dict)
@@ -26,10 +28,11 @@ type ImageCanvas
         render! = get(props, :render!, uint32color!)
         background = get(props, :background, nothing)
         perimeter = get(props, :perimeter, RGB(0,0,0))
+        transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
-        new(render!, aspect_x_per_y, background, perimeter, flipx, flipy, fmt)
-        # c, surface, and canvasbb will be initialized later
+        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt)
+        # c, surface, renderbuf, and canvasbb will be initialized later
     end
 end
 
@@ -96,11 +99,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
             props[:pixelspacing] = img["pixelspacing"][p]
         end
     end
-    if !haskey(props, :render!)
-        if p[1] > p[2]
-            props[:render!] = (buf, img) -> uint32color!(buf, img, true)
-        end
-    end
+    props[:transpose] = p[1] > p[2]
     # Start at z=1, t=1
     indexes = RangeIndex[1:size(img,i) for i = 1:ndims(img)]
     if zdim != 0
@@ -229,8 +228,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     # Set up the rendering
     set_visible(win, true)
     ctx = getgc(c)  # force initialization of canvas
-    buf = Array(Uint32, w, h)
-    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    allocate_surface!(imgc, w, h)
     # Set up the drawing callbacks
     c.redraw = x -> resize(imgc, img2)
     # Bind mouse clicks to zoom
@@ -343,8 +341,7 @@ function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     bb = BoundingBox(ifloor(bb.xmin), iceil(bb.xmax), ifloor(bb.ymin), iceil(bb.ymax))
     w = int(width(bb))
     h = int(height(bb))
-    buf = Array(Uint32, w, h)
-    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    allocate_surface!(imgc, w, h)
     panzoom(imgc, img2, bb)
     resize(imgc, img2)
 end
@@ -352,8 +349,7 @@ end
 function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
     w = sizex(img2)
     h = sizey(img2)
-    buf = Array(Uint32, w, h)
-    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    allocate_surface!(imgc, w, h)
     bb = BoundingBox(0, w, 0, h)
     panzoom(imgc, img2, bb)
     resize(imgc, img2)
@@ -415,8 +411,23 @@ function panhorz(imgc::ImageCanvas, img2::ImageSlice2d, delta)
 end
 
 ### Utilities ###
+function allocate_surface!(imgc::ImageCanvas, w, h)
+    buf = Array(Uint32, w, h)
+    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    if imgc.transpose
+        imgc.renderbuf = Array(Uint32, h, w)
+    end
+end
+
 # Convert the raw image data to the Uint32 buffer that Cairo paints
-rerender(imgc::ImageCanvas, img2::ImageSlice2d) = imgc.render!(imgc.surface.data, img2.imslice)
+function rerender(imgc::ImageCanvas, img2::ImageSlice2d)
+    if imgc.transpose
+        imgc.render!(imgc.renderbuf, img2.imslice)
+        Base.transpose!(imgc.surface.data, imgc.renderbuf)
+    else
+        imgc.render!(imgc.surface.data, img2.imslice)
+    end
+end
 
 function redraw(imgc::ImageCanvas, img2::ImageSlice2d)
     rerender(imgc, img2)
