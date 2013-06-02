@@ -36,7 +36,7 @@ type ImageCanvas
     end
 end
 
-show(io::IO, imgc::ImageCanvas) = print(IO, "ImageCanvas")
+show(io::IO, imgc::ImageCanvas) = print(io, "ImageCanvas")
 
 function setbb!(imgc::ImageCanvas, w, h)
     if !is(imgc.aspect_x_per_y, nothing)
