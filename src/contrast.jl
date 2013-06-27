@@ -11,6 +11,13 @@ type ContrastSettings
     max
 end
 
+type ContrastData
+    imgmin
+    imgmax
+    phist::FramedPlot
+    chist::Canvas
+end
+
 # The callback should have the syntax:
 #    callback(cs)
 # The callback's job is to replot the image with the new contrast settings
@@ -61,9 +68,12 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     nbins = iceil(min(sqrt(length(img)), 200))
     p = prepare_histogram(img, nbins, immin, immax)
     
+    # Store data we'll need for updating
+    cdata = ContrastData(immin, immax, p, chist)
+    
     function rerender()
-        pcopy = deepcopy(p)
-        bb = Winston.limits(p.content1)
+        pcopy = deepcopy(cdata.phist)
+        bb = Winston.limits(cdata.phist.content1)
         ylim = [bb.ymin, bb.ymax]
         add(pcopy, Curve([cs.min,cs.min],ylim,"color","blue"))
         add(pcopy, Curve([cs.max,cs.max],ylim,"color","red"))
@@ -76,10 +86,15 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     # So this function will be returned to the caller
     function replaceimage(newimg, minval = min(newimg), maxval = max(newimg))
         p = prepare_histogram(newimg, nbins, minval, maxval)
+        cdata.imgmin = minval
+        cdata.imgmax = maxval
+        cdata.phist = p
         rerender()
     end
     bind(emin, "<Return>", path -> setmin(emin, cs, rerender))
     bind(emax, "<Return>", path -> setmax(emax, cs, rerender))
+    bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax))
+    bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max)))
     rerender()
     replaceimage
 end
@@ -140,4 +155,9 @@ function setmax(w::Tk.Tk_Entry, cs::ContrastSettings, render::Function)
     end
 end
 
+function setrange(c::Canvas, p, minval, maxval)
+    setattr(p, "xrange", (minval, maxval))
+    Winston.display(c, p)
+end
+    
 end
