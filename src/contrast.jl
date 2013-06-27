@@ -13,6 +13,7 @@ end
 
 # The callback should have the syntax:
 #    callback(cs)
+# The callback's job is to replot the image with the new contrast settings
 function contrastgui{T}(img::AbstractArray{T}, cs::ContrastSettings, callback::Function)
     win = Toplevel("Adjust contrast", 500, 300, true)
     contrastgui(win, img, cs, callback)
@@ -62,13 +63,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     
     function rerender()
         pcopy = deepcopy(p)
-        println(cs)
-#         showcomponents(p)
-#         ylim = getattr(p, "yrange")
-#         @show ylim
         bb = Winston.limits(p.content1)
         ylim = [bb.ymin, bb.ymax]
-        @show ylim
         add(pcopy, Curve([cs.min,cs.min],ylim,"color","blue"))
         add(pcopy, Curve([cs.max,cs.max],ylim,"color","red"))
         Winston.display(chist, pcopy)
@@ -76,6 +72,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         callback(cs)
         Tk.update()
     end
+    # If we have a image sequence, we might need to generate a new histogram.
+    # So this function will be returned to the caller
     function replaceimage(newimg, minval = min(newimg), maxval = max(newimg))
         p = prepare_histogram(newimg, nbins, minval, maxval)
         rerender()
@@ -95,17 +93,7 @@ function prepare_histogram(img, nbins, immin, immax)
     setattr(p, "ylog", true)
     add(p, FillBetween(x, ones(length(x)), x, y, "color", "black"))
     setattr(p.frame, "tickdir", 1)
-#     showcomponents(p)
     p
-end
-
-function showcomponents(p)
-    for obj in p.content1.components
-        println("Here's a new content1 component: ", obj)
-    end
-    for obj in p.content2.components
-        println("Here's a new content2 component: ", obj)
-    end
 end
 
 function stairs(xin::AbstractVector, yin::Vector)
@@ -140,7 +128,6 @@ function setmin(w::Tk.Tk_Entry, cs::ContrastSettings, render::Function)
     catch
         set_value(w, string(cs.min))
     end
-    @show cs
 end
 
 function setmax(w::Tk.Tk_Entry, cs::ContrastSettings, render::Function)

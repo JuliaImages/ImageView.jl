@@ -1,4 +1,5 @@
 using ImageView.Navigation
+using Debug
 
 import Base: show
 import Base.Graphics: width, height, fill, set_coords
@@ -197,12 +198,16 @@ function display{A<:AbstractArray}(img::A; proplist...)
     end
     # Create the window and the canvas for displaying the image
     win = Toplevel(get(props, "name", "ImageView"), ww, whfull, false)
-    c = Canvas(win, ww, wh)
+    framec = Frame(win)
+    grid(framec, 1, 1, sticky="nsew")
+    grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
+    grid_columnconfigure(win, 1, weight=1)
+    c = Canvas(framec, ww, wh)
     imgc.c = c
     # Place the canvas and set its resize properties
     grid(c, 1, 1, sticky="nsew")        # fill the edges of its cell on all 4 sides
-    grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
-    grid_columnconfigure(win, 1, weight=1)
+    grid_rowconfigure(framec, 1, weight=1) # scale this cell when the window resizes
+    grid_columnconfigure(framec, 1, weight=1)
     # If necessary, create the navigation controls
     if havecontrols
         ctrls = NavigationControls()
@@ -227,7 +232,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     end
     # Set up the rendering
     set_visible(win, true)
-    ctx = getgc(c)  # force initialization of canvas
+#     ctx = getgc(c)  # force initialization of canvas
     allocate_surface!(imgc, w, h)
     # Set up the drawing callbacks
     c.draw = x -> resize(imgc, img2)
@@ -239,6 +244,14 @@ function display{A<:AbstractArray}(img::A; proplist...)
     # Bind mousewheel events to pan
     bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
     bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    if imgc.render! == uint32color! && colorspace(img) == "Gray"
+        menu = Menu(framec)
+        clim = scaledefault(img)
+        cs = ImageContrast.ContrastSettings(clim[1], clim[2])
+        imgc.render! = (buf,img) -> uint32color!(buf, img, scaleminmax(img, cs.min, cs.max))
+        menu_contrast = menu_add(menu, "Contrast...", path -> ImageContrast.contrastgui(img2.imslice, cs, x->redraw(imgc, img2)))
+        tk_popup(c, menu)
+    end
     # render the initial state
     rerender(imgc, img2)
     resize(imgc, img2)
@@ -285,7 +298,7 @@ end
 
 # Used for both window resize and zoom events
 function resize(imgc::ImageCanvas, img2::ImageSlice2d)
-    w, h = size(imgc.surface.data)
+    w, h = width(imgc.c), height(imgc.c)
     setbb!(imgc, w, h)
     set_coords(imgc, img2.zoombb)
     r = getgc(imgc.c)

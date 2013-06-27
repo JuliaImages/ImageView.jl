@@ -12,6 +12,7 @@ include("config.jl")
 include("external.jl")
 include("rubberband.jl")
 include("navigation.jl")
+include("contrast.jl")
 include("display.jl")
 
 export # types
