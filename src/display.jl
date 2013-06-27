@@ -230,7 +230,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     ctx = getgc(c)  # force initialization of canvas
     allocate_surface!(imgc, w, h)
     # Set up the drawing callbacks
-    c.redraw = x -> resize(imgc, img2)
+    c.draw = x -> resize(imgc, img2)
     # Bind mouse clicks to zoom
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
     bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
