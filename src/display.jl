@@ -1,5 +1,4 @@
 using ImageView.Navigation
-using Debug
 
 import Base: show
 import Base.Graphics: width, height, fill, set_coords
