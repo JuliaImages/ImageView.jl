@@ -224,7 +224,7 @@ function playz(inc, ctrls, state, showframe)
     stop_playing!(state)
     dt = 1/state.fps
     state.timer = TimeoutAsyncWork(i -> stepz(inc, ctrls, state, showframe))
-    start_timer(state.timer, iround(1000*dt), iround(1000*dt))
+    start_timer(state.timer, int64(iround(1000*dt)), int64(iround(1000*dt)))
 end
 
 function setz(ctrls,state, showframe)
@@ -266,7 +266,7 @@ function playt(inc, ctrls, state, showframe)
     stop_playing!(state)
     dt = 1/state.fps
     state.timer = TimeoutAsyncWork(i -> stept(inc, ctrls, state, showframe))
-    start_timer(state.timer, iround(1000*dt), iround(1000*dt))
+    start_timer(state.timer, int64(iround(1000*dt)), int64(iround(1000*dt)))
 end
 
 function sett(ctrls,state, showframe)
