@@ -254,6 +254,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     # render the initial state
     rerender(imgc, img2)
     resize(imgc, img2)
+    Tk.configure(imgc.c)
     imgc, img2
 end
 
