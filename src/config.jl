@@ -13,6 +13,7 @@ have_winston = false
 
 # Find a system image viewer
 imshow_cmd = ""
+@unix_only begin
 if !have_winston
     imshow_cmd_list = ["feh", "gwenview", "open"]
     for thiscmd in imshow_cmd_list
@@ -22,7 +23,5 @@ if !have_winston
             break
         end
     end
-    if isempty(imshow_cmd)
-        warn("No image viewer found. You will not be able to see images.")
-    end
+end
 end
