@@ -297,7 +297,7 @@ end
 
 # Used for both window resize and zoom events
 function resize(imgc::ImageCanvas, img2::ImageSlice2d)
-    w, h = width(imgc.c), height(imgc.c)
+    w, h = size(imgc.surface.data)
     setbb!(imgc, w, h)
     set_coords(imgc, img2.zoombb)
     r = getgc(imgc.c)
