@@ -66,6 +66,10 @@ type ImageSlice2d{A<:AbstractImageDirect}
     zdim::Int
     tdim::Int
 end
+function ImageSlice2d(img::AbstractImageDirect, indexes, dims, bb::BoundingBox, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
+    assert2d(img)
+    ImageSlice2d{typeof(img)}(img::AbstractImageDirect, RangeIndex[indexes...], Int[dims...], bb::BoundingBox, int(xdim), int(ydim), int(zdim), int(tdim))
+end
 
 function show(io::IO, img2::ImageSlice2d)
     print(io, "ImageSlice2d: zoom = ", img2.zoombb)
@@ -110,7 +114,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     end
     imslice = sliceim(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
-    ImageSlice2d{typeof(imslice)}(imslice, indexes, Int[size(imslice)...], bb, xdim, ydim, zdim, tdim)
+    ImageSlice2d(imslice, indexes, size(imslice), bb, xdim, ydim, zdim, tdim)
 end
 
 function _reslice!(img2::ImageSlice2d)
