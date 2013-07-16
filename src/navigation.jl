@@ -128,7 +128,7 @@ function set_fps!(state::NavigationState)
 end
 
 function widget_size()
-    btnsz = (21, 21)
+    btnsz = OS_NAME == :Darwin ? (13, 13) : (21, 21)
     pad = 5
     return btnsz, pad
 end
