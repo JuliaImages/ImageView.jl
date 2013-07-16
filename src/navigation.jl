@@ -128,7 +128,7 @@ function set_fps!(state::NavigationState)
 end
 
 function widget_size()
-    btnsz = (21, 21)
+    btnsz = OS_NAME == :Darwin ? (13, 13) : (21, 21)
     pad = 5
     return btnsz, pad
 end
@@ -223,8 +223,8 @@ function playz(inc, ctrls, state, showframe)
     end
     stop_playing!(state)
     dt = 1/state.fps
-    state.timer = TimeoutAsyncWork(i -> stepz(inc, ctrls, state, showframe))
-    start_timer(state.timer, int64(iround(1000*dt)), int64(iround(1000*dt)))
+    state.timer = TimeoutAsyncWork((timer, status) -> stepz(inc, ctrls, state, showframe))
+    start_timer(state.timer, dt, dt)
 end
 
 function setz(ctrls,state, showframe)
@@ -265,8 +265,8 @@ function playt(inc, ctrls, state, showframe)
     end
     stop_playing!(state)
     dt = 1/state.fps
-    state.timer = TimeoutAsyncWork(i -> stept(inc, ctrls, state, showframe))
-    start_timer(state.timer, int64(iround(1000*dt)), int64(iround(1000*dt)))
+    state.timer = TimeoutAsyncWork((timer, status) -> stept(inc, ctrls, state, showframe))
+    start_timer(state.timer, dt, dt)
 end
 
 function sett(ctrls,state, showframe)
