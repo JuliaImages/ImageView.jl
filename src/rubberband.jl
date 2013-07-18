@@ -63,7 +63,7 @@ function rubberband_stop(c::Canvas, rb::RubberBand, x, y, ctxcopy, callbacks_old
     set_source(r, ctxcopy)
     set_line_width(r, 2)
     stroke(r)
-    reveal(r)
+    reveal(c)
     restore(r)
     Tk.update()
     x1, y1 = rb.pos1.x, rb.pos1.y
