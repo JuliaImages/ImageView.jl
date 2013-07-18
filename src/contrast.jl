@@ -101,13 +101,16 @@ end
 
 function prepare_histogram(img, nbins, immin, immax)
     e = immin:(immax-immin)/(nbins-1):immax*(1+1e-6)
-    e, counts = hist(img[:], e)
+    e, counts = hist(reshape(img.data, length(img.data)), e)
     counts += 1   # because of log scaling
     x, y = stairs(e, counts)
     p = FramedPlot()
     setattr(p, "ylog", true)
+#    setattr(p.frame, "draw_nothing", true)
+    setattr(p.y, "draw_nothing", true)
+    setattr(p.x2, "draw_nothing", true)
+#    setattr(p.frame, "tickdir", 1)
     add(p, FillBetween(x, ones(length(x)), x, y, "color", "black"))
-    setattr(p.frame, "tickdir", 1)
     p
 end
 
