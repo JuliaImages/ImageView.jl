@@ -25,19 +25,21 @@ end
 # Its syntax is callback_done(canvas, boundingbox), where the boundingbox is
 # in user coordinates.
 function rubberband_start(c::Canvas, x, y, callback_done::Function)
-    r = c.frontcc
+    # Copy the surface to another buffer, so we can repaint the areas obscured by the rubberband
+    r = getgc(c)
+    ctxcopy = copy(r)
     save(r)
     rb = RubberBand(Vec2(x,y), Vec2(x,y), false)
     callbacks_old = (c.mouse.button1motion, c.mouse.button1release)
-    c.mouse.button1motion = (c, x, y) -> rubberband_move(c, rb, x, y)
-    c.mouse.button1release = (c, x, y) -> rubberband_stop(c, rb, x, y, callbacks_old, callback_done)
+    c.mouse.button1motion = (c, x, y) -> rubberband_move(c, rb, x, y, ctxcopy)
+    c.mouse.button1release = (c, x, y) -> rubberband_stop(c, rb, x, y, ctxcopy, callbacks_old, callback_done)
 end
 
-function rubberband_move(c::Canvas, rb::RubberBand, x, y)
-    r = c.frontcc
+function rubberband_move(c::Canvas, rb::RubberBand, x, y, ctxcopy)
+    r = getgc(c)
     if rb.moved
         # Erase the previous rubberband by copying from back surface to front
-        Cairo.set_source_surface(r, c.back, 0, 0)
+        set_source(r, ctxcopy)
         # Since the path was already created and preserved, we just modify its properties
         set_line_width(r, 2)
         set_dash(r, Float64[])
@@ -47,22 +49,21 @@ function rubberband_move(c::Canvas, rb::RubberBand, x, y)
     # Draw the new rubberband
     rb.pos2 = Vec2(x, y)
     rbdraw(r, rb)
-    set_source_rgb(r, 0, 0, 0)
-    set_line_width(r, 1)
-    stroke_preserve(r)
+    reveal(c)
     Tk.update()
 end
 
-function rubberband_stop(c::Canvas, rb::RubberBand, x, y, callbacks_old, callback_done)
+function rubberband_stop(c::Canvas, rb::RubberBand, x, y, ctxcopy, callbacks_old, callback_done)
     c.mouse.button1motion = callbacks_old[1]
     c.mouse.button1release = callbacks_old[2]
     if !rb.moved
         return
     end
-    r = c.frontcc
-    Cairo.set_source_surface(r, c.back, 0, 0)
+    r = getgc(c)
+    set_source(r, ctxcopy)
     set_line_width(r, 2)
     stroke(r)
+    reveal(r)
     restore(r)
     Tk.update()
     x1, y1 = rb.pos1.x, rb.pos1.y
