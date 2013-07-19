@@ -45,33 +45,32 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     h = height(win.w)
     pack(fwin, expand=true, fill="both")
 
-    # TODO: make me a slider in Tk/widgets.jl that takes Real ranges
     max_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(max_slider, int(ceil(immax)))
+    set_value(max_slider, ceil(immax))
     chist = Canvas(fwin, 2w/3, h)
     min_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(min_slider, int(floor(immin)))
+    set_value(min_slider, floor(immin))
+
     grid(max_slider, 1, 1, sticky="ew", padx=5)
     grid(chist, 2, 1, sticky="nsew", padx=5)
     grid(min_slider, 3, 1, sticky="ew", padx=5)
-    fctrls = Frame(fwin)
-    grid(fctrls, 2, 2)
     grid_columnconfigure(fwin, 1, weight=1)
-    grid_rowconfigure(fwin, 1, weight=1)
+    grid_rowconfigure(fwin, 2, weight=1)
     
-    fminmax = Frame(fctrls)
-    emin = Entry(fminmax, width=10)
-    emax = Entry(fminmax, width=10)
+    emin = Entry(fwin, width=10)
+    emax = Entry(fwin, width=10)
     set_value(emin, string(cs.min))
-    set_value(emax, string(cs.max))    
-    formlayout(emin, "Min:")
-    formlayout(emax, "Max:")
-    grid(fminmax, 1, 1:2, sticky="nw")
+    set_value(emax, string(cs.max)) 
+
+    fbuttons = Frame(fwin)
+    zoom = Button(fbuttons, "Zoom")
+    full = Button(fbuttons, "Full range")
+    grid(zoom, 1, 1, sticky="we")
+    grid(full, 2, 1, sticky="we")
     
-    zoom = Button(fctrls, "Zoom")
-    full = Button(fctrls, "Full range")
-    grid(zoom, 2, 1, sticky="we")
-    grid(full, 3, 1, sticky="we")
+    grid(emax, 1, 2, sticky="nw")
+    grid(fbuttons, 2, 2, sticky="nw")
+    grid(emin, 3, 2, sticky="nw")
     
     # Prepare the histogram
     nbins = iceil(min(sqrt(length(img)), 200))
@@ -85,10 +84,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     function rerender()
         pcopy = deepcopy(cdata.phist)
         bb = Winston.limits(cdata.phist.content1)
-#        ylim = [bb.ymin, bb.ymax]
-#        add(pcopy, Curve([cs.min,cs.min],ylim,"color","blue"))
-#        add(pcopy, Curve([cs.max,cs.max],ylim,"color","red"))
-        add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "color", "red"))
+        add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "linewidth", 10, "color", "white"))
+        add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "linewidth", 5, "color", "black"))
         Winston.display(chist, pcopy)
         reveal(chist)
         callback(cs)
