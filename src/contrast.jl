@@ -57,11 +57,13 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     grid_columnconfigure(fwin, 1, weight=1)
     grid_rowconfigure(fwin, 2, weight=1)
     
-    emin = Entry(fwin, width=10)
     emax = Entry(fwin, width=10)
+    emin = Entry(fwin, width=10)
+    set_value(emax, string(cs.max))
     set_value(emin, string(cs.min))
-    set_value(emax, string(cs.max)) 
-
+#    emax[:textvariable] = max_slider[:variable]
+#    emin[:textvariable] = min_slider[:variable]
+    
     fbuttons = Frame(fwin)
     zoom = Button(fbuttons, "Zoom")
     full = Button(fbuttons, "Full range")
@@ -79,7 +81,6 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     # Store data we'll need for updating
     cdata = ContrastData(immin, immax, p, chist)
     # Set initial histogram scale
-    setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax) 
     
     function rerender()
         pcopy = deepcopy(cdata.phist)
@@ -100,13 +101,15 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         cdata.phist = p
         rerender()
     end
+    setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender) 
+
     bind(emin, "<Return>", path -> setmin(emin, min_slider, cs, rerender))
     bind(emax, "<Return>", path -> setmax(emax, max_slider, cs, rerender))
     bind(min_slider, "command", path -> begin set_value(emin, min_slider[:value]); rerender(); end) #temp fix
     bind(max_slider, "command", path -> begin set_value(emax, max_slider[:value]); rerender(); end)
-    bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax))
-    bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max)))
-    rerender()
+    bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
+    bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max), rerender))
+    #rerender() #called above
     replaceimage
 end
 
@@ -150,7 +153,6 @@ end
 
 function setmin(w::Tk.Tk_Entry, s::Tk.Tk_Scale, cs::ContrastSettings, render::Function)
     try
-        println(float(s[:value]))
         val = float64(get_value(w))
         cs.min = val
         set_value(s, val)
@@ -173,9 +175,9 @@ function setmax(w::Tk.Tk_Entry, s::Tk.Tk_Scale, cs::ContrastSettings, render::Fu
     end
 end
 
-function setrange(c::Canvas, p, minval, maxval)
+function setrange(c::Canvas, p, minval, maxval, render::Function)
     setattr(p, "xrange", (minval, maxval))
-    Winston.display(c, p)
+    render()
 end
     
 end
