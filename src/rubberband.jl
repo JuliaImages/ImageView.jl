@@ -27,8 +27,9 @@ end
 function rubberband_start(c::Canvas, x, y, callback_done::Function)
     # Copy the surface to another buffer, so we can repaint the areas obscured by the rubberband
     r = getgc(c)
-    ctxcopy = copy(r)
     save(r)
+    reset_transform(r)
+    ctxcopy = copy(r)
     rb = RubberBand(Vec2(x,y), Vec2(x,y), false)
     callbacks_old = (c.mouse.button1motion, c.mouse.button1release)
     c.mouse.button1motion = (c, x, y) -> rubberband_move(c, rb, x, y, ctxcopy)
