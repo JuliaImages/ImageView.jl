@@ -105,8 +105,16 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
 
     bind(emin, "<Return>", path -> setmin(emin, min_slider, cs, rerender))
     bind(emax, "<Return>", path -> setmax(emax, max_slider, cs, rerender))
-    bind(min_slider, "command", path -> begin set_value(emin, min_slider[:value]); rerender(); end) #temp fix
-    bind(max_slider, "command", path -> begin set_value(emax, max_slider[:value]); rerender(); end)
+    bind(min_slider, "command") do path
+        cs.min = convert(typeof(cs.min), float(min_slider[:value]))
+        set_value(emin, min_slider[:value])
+        rerender()
+    end
+    bind(max_slider, "command") do path
+        cs.max = convert(typeof(cs.max), float(max_slider[:value]))
+        set_value(emax, max_slider[:value])
+        rerender()
+    end
     bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
     bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max), rerender))
     #rerender() #called above
