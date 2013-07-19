@@ -23,9 +23,12 @@ export # types
 #     background,
     canvas,
     canvasgrid,
+    destroy,
     display,
     ftshow,
-    imshow
+    imshow,
+    parent,
+    toplevel
 #     perimeter,
 #     redraw
 

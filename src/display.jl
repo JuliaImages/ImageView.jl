@@ -40,6 +40,10 @@ show(io::IO, imgc::ImageCanvas) = print(io, "ImageCanvas")
 
 canvas(imgc::ImageCanvas) = imgc.c
 
+parent(imgc::ImageCanvas) = Tk.parent(imgc.c)
+
+toplevel(imgc::ImageCanvas) = Tk.toplevel(canvas(imgc))
+
 function setbb!(imgc::ImageCanvas, w, h)
     if !is(imgc.aspect_x_per_y, nothing)
         wc = width(imgc.c)
@@ -268,6 +272,7 @@ function display{A<:AbstractArray}(imgc::ImageCanvas, img::A; proplist...)
     w = width(img2)
     h = height(img2)
     allocate_surface!(imgc, w, h)
+    create_callbacks(imgc, img2)
     rerender(imgc, img2)
     resize(imgc, img2)
     Tk.configure(imgc.c)
