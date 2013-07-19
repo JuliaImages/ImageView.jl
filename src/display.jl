@@ -27,7 +27,7 @@ type ImageCanvas
         aspect_x_per_y = is(ps, nothing) ? nothing : ps[1]/ps[2]
         render! = get(props, :render!, uint32color!)
         background = get(props, :background, nothing)
-        perimeter = get(props, :perimeter, RGB(0,0,0))
+        perimeter = get(props, :perimeter, OS_NAME == :Darwin? RGB(0.93, 0.93, 0.93) : RGB(0, 0, 0))
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
@@ -201,7 +201,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     end
     # Create the window and the canvas for displaying the image
     win = Toplevel(get(props, "name", "ImageView"), ww, whfull, false)
-    framec = Frame(win)
+    framec = OS_NAME == :Darwin ? Frame(win, padding = 30) : Frame(win) # helps with accidental rubberband on resize
     grid(framec, 1, 1, sticky="nsew")
     grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
     grid_columnconfigure(win, 1, weight=1)
