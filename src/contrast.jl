@@ -27,30 +27,7 @@ function contrastgui{T}(img::AbstractArray{T}, cs::ContrastSettings, callback::F
 end
 
 function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::ContrastSettings, callback::Function)
-    fwin = Frame(win)
-    w = width(win.w)
-    h = height(win.w)
-    pack(fwin, expand=true, fill="both")
-    
-    chist = Canvas(fwin, 2w/3, h)
-    grid(chist, 1, 1, sticky="nsew", padx=5)
-    fctrls = Frame(fwin)
-    grid(fctrls, 1, 2)
-    grid_columnconfigure(fwin, 1, weight=1)
-    grid_rowconfigure(fwin, 1, weight=1)
-    
-    fminmax = Frame(fctrls)
-    emin = Entry(fminmax, width=10)
-    emax = Entry(fminmax, width=10)
-    formlayout(emin, "Min:")
-    formlayout(emax, "Max:")
-    grid(fminmax, 1, 1:2, sticky="nw")
-    
-    zoom = Button(fctrls, "Zoom")
-    full = Button(fctrls, "Full range")
-    grid(zoom, 2, 1, sticky="sw", padx=5)
-    grid(full, 2, 2, sticky="se")
-    
+    # Get initial values
     immin = min(img)
     immax = max(img)
     if is(cs.min, nothing)
@@ -61,8 +38,41 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     end
     cs.min = convert(T, cs.min)
     cs.max = convert(T, cs.max)
-    set_value(emin, string(cs.min))
+
+    # Set up GUI
+    fwin = Frame(win)
+    w = width(win.w)
+    h = height(win.w)
+    pack(fwin, expand=true, fill="both")
+
+    max_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
+    set_value(max_slider, int(ceil(immax)))
+    chist = Canvas(fwin, 2w/3, h)
+    min_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
+    set_value(min_slider, int(floor(immin)))
+
+    grid(max_slider, 1, 1, sticky="ew", padx=5)
+    grid(chist, 2, 1, sticky="nsew", padx=5)
+    grid(min_slider, 3, 1, sticky="ew", padx=5)
+    grid_columnconfigure(fwin, 1, weight=1)
+    grid_rowconfigure(fwin, 2, weight=1)
+    
+    emax = Entry(fwin, width=10)
+    emin = Entry(fwin, width=10)
     set_value(emax, string(cs.max))
+    set_value(emin, string(cs.min))
+#    emax[:textvariable] = max_slider[:variable]
+#    emin[:textvariable] = min_slider[:variable]
+    
+    fbuttons = Frame(fwin)
+    zoom = Button(fbuttons, "Zoom")
+    full = Button(fbuttons, "Full range")
+    grid(zoom, 1, 1, sticky="we")
+    grid(full, 2, 1, sticky="we")
+    
+    grid(emax, 1, 2, sticky="nw")
+    grid(fbuttons, 2, 2, sticky="nw")
+    grid(emin, 3, 2, sticky="nw")
     
     # Prepare the histogram
     nbins = iceil(min(sqrt(length(img)), 200))
@@ -74,9 +84,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     function rerender()
         pcopy = deepcopy(cdata.phist)
         bb = Winston.limits(cdata.phist.content1)
-        ylim = [bb.ymin, bb.ymax]
-        add(pcopy, Curve([cs.min,cs.min],ylim,"color","blue"))
-        add(pcopy, Curve([cs.max,cs.max],ylim,"color","red"))
+        add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "linewidth", 10, "color", "white"))
+        add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "linewidth", 5, "color", "black"))
         Winston.display(chist, pcopy)
         reveal(chist)
         callback(cs)
@@ -91,11 +100,44 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         cdata.phist = p
         rerender()
     end
-    bind(emin, "<Return>", path -> setmin(emin, cs, rerender))
-    bind(emax, "<Return>", path -> setmax(emax, cs, rerender))
-    bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax))
-    bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max)))
-    rerender()
+
+    # Set initial histogram scale
+    setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender) 
+
+    # All bindings
+    bind(emin, "<Return>") do path
+        try
+            val = float64(get_value(emin))
+            cs.min = val
+            set_value(min_slider, val)
+            rerender()
+        catch
+            set_value(emin, string(cs.min))
+        end
+    end
+    bind(emax, "<Return>") do path
+        try
+            val = float64(get_value(emax))
+            cs.max = val
+            set_value(max_slider, val)
+            rerender()
+        catch
+            set_value(emax, string(cs.max))
+        end
+    end
+    bind(min_slider, "command") do path
+        cs.min = convert(typeof(cs.min), float(min_slider[:value]))
+        set_value(emin, min_slider[:value])
+        rerender()
+    end
+    bind(max_slider, "command") do path
+        cs.max = convert(typeof(cs.max), float(max_slider[:value]))
+        set_value(emax, max_slider[:value])
+        rerender()
+    end
+    bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
+    bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max), rerender))
+
     replaceimage
 end
 
@@ -106,8 +148,10 @@ function prepare_histogram(img, nbins, immin, immax)
     x, y = stairs(e, counts)
     p = FramedPlot()
     setattr(p, "ylog", true)
-    add(p, FillBetween(x, ones(length(x)), x, y, "color", "black"))
+    setattr(p.y, "draw_nothing", true)
+    setattr(p.x2, "draw_nothing", true)
     setattr(p.frame, "tickdir", 1)
+    add(p, FillBetween(x, ones(length(x)), x, y, "color", "black"))
     p
 end
 
@@ -135,29 +179,9 @@ function stairs(xin::AbstractVector, yin::Vector)
     xout, yout
 end
 
-function setmin(w::Tk.Tk_Entry, cs::ContrastSettings, render::Function)
-    try
-        val = float64(get_value(w))
-        cs.min = val
-        render()
-    catch
-        set_value(w, string(cs.min))
-    end
-end
-
-function setmax(w::Tk.Tk_Entry, cs::ContrastSettings, render::Function)
-    try
-        val = float64(get_value(w))
-        cs.max = val
-        render()
-    catch
-        set_value(w, string(cs.max))
-    end
-end
-
-function setrange(c::Canvas, p, minval, maxval)
+function setrange(c::Canvas, p, minval, maxval, render::Function)
     setattr(p, "xrange", (minval, maxval))
-    Winston.display(c, p)
+    render()
 end
     
 end
