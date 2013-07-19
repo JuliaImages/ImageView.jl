@@ -46,10 +46,10 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     pack(fwin, expand=true, fill="both")
 
     max_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(max_slider, ceil(immax))
+    set_value(max_slider, int(ceil(immax)))
     chist = Canvas(fwin, 2w/3, h)
     min_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(min_slider, floor(immin))
+    set_value(min_slider, int(floor(immin)))
 
     grid(max_slider, 1, 1, sticky="ew", padx=5)
     grid(chist, 2, 1, sticky="nsew", padx=5)
