@@ -80,7 +80,6 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     
     # Store data we'll need for updating
     cdata = ContrastData(immin, immax, p, chist)
-    # Set initial histogram scale
     
     function rerender()
         pcopy = deepcopy(cdata.phist)
@@ -101,10 +100,31 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         cdata.phist = p
         rerender()
     end
+
+    # Set initial histogram scale
     setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender) 
 
-    bind(emin, "<Return>", path -> setmin(emin, min_slider, cs, rerender))
-    bind(emax, "<Return>", path -> setmax(emax, max_slider, cs, rerender))
+    # All bindings
+    bind(emin, "<Return>") do path
+        try
+            val = float64(get_value(emin))
+            cs.min = val
+            set_value(min_slider, val)
+            rerender()
+        catch
+            set_value(emin, string(cs.min))
+        end
+    end
+    bind(emax, "<Return>") do path
+        try
+            val = float64(get_value(emax))
+            cs.max = val
+            set_value(max_slider, val)
+            rerender()
+        catch
+            set_value(emax, string(cs.max))
+        end
+    end
     bind(min_slider, "command") do path
         cs.min = convert(typeof(cs.min), float(min_slider[:value]))
         set_value(emin, min_slider[:value])
@@ -117,7 +137,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     end
     bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
     bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max), rerender))
-    #rerender() #called above
+
     replaceimage
 end
 
@@ -157,30 +177,6 @@ function stairs(xin::AbstractVector, yin::Vector)
         push!(yout, ytmp)
     end
     xout, yout
-end
-
-function setmin(w::Tk.Tk_Entry, s::Tk.Tk_Scale, cs::ContrastSettings, render::Function)
-    try
-        val = float64(get_value(w))
-        cs.min = val
-        set_value(s, val)
-        render()
-    catch
-        info("Resetting")
-        set_value(w, string(cs.min))
-    end
-end
-
-function setmax(w::Tk.Tk_Entry, s::Tk.Tk_Scale, cs::ContrastSettings, render::Function)
-    try
-        val = float64(get_value(w))
-        cs.max = val
-        set_value(s, val)
-        render()
-    catch
-        info("Resetting")
-        set_value(w, string(cs.max))
-    end
 end
 
 function setrange(c::Canvas, p, minval, maxval, render::Function)
