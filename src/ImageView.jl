@@ -1,3 +1,5 @@
+include(joinpath(Pkg.dir(),"ImageView","test","testimages.jl"))
+
 module ImageView
 
 using Base.Graphics
@@ -19,6 +21,8 @@ export # types
     # display functions
 #     aspect,
 #     background,
+    canvas,
+    canvasgrid,
     display,
     ftshow,
     imshow

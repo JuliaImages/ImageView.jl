@@ -38,6 +38,8 @@ end
 
 show(io::IO, imgc::ImageCanvas) = print(io, "ImageCanvas")
 
+canvas(imgc::ImageCanvas) = imgc.c
+
 function setbb!(imgc::ImageCanvas, w, h)
     if !is(imgc.aspect_x_per_y, nothing)
         wc = width(imgc.c)
@@ -237,16 +239,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     set_visible(win, true)
 #     ctx = getgc(c)  # force initialization of canvas
     allocate_surface!(imgc, w, h)
-    # Set up the drawing callbacks
-    c.draw = x -> resize(imgc, img2)
-    # Bind mouse clicks to zoom
-    c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
-    bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
-    # Bind mousewheel events to zoom
-    bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
-    # Bind mousewheel events to pan
-    bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
-    bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    create_callbacks(imgc, img2)
     if imgc.render! == uint32color! && colorspace(img) == "Gray"
         menu = Menu(framec)
         clim = scaledefault(img)
@@ -260,6 +253,84 @@ function display{A<:AbstractArray}(img::A; proplist...)
     resize(imgc, img2)
     Tk.configure(imgc.c)
     imgc, img2
+end
+
+# Display a new image in an old ImageCanvas, preserving properties
+function display{A<:AbstractArray}(imgc::ImageCanvas, img::A; proplist...)
+    # Convert keyword list to dictionary
+    props = Dict{Symbol,Any}()
+    sizehint(props, length(proplist))
+    for (k,v) in proplist
+        props[k] = v
+    end
+    # Extract relevant information from the image and properties
+    img2 = ImageSlice2d(img, props)
+    w = width(img2)
+    h = height(img2)
+    allocate_surface!(imgc, w, h)
+    rerender(imgc, img2)
+    resize(imgc, img2)
+    Tk.configure(imgc.c)
+    imgc, img2
+end
+
+# Display an image in a Canvas. Do not create controls.
+function display{A<:AbstractArray}(c::Canvas, img::A; proplist...)
+    # Convert keyword list to dictionary
+    props = Dict{Symbol,Any}()
+    sizehint(props, length(proplist))
+    for (k,v) in proplist
+        props[k] = v
+    end
+    # Extract relevant information from the image and properties
+    img2 = ImageSlice2d(img, props)
+    imgc = ImageCanvas(cairo_format(img), props)
+    imgc.c = c
+    w = width(img2)
+    h = height(img2)
+    allocate_surface!(imgc, w, h)
+    create_callbacks(imgc, img2)
+    rerender(imgc, img2)
+    resize(imgc, img2)
+    Tk.configure(imgc.c)
+    imgc, img2
+end
+
+function canvasgrid(ny, nx; w = 800, h = 600)
+    win = Toplevel("ImageView", w, h)
+    frame = Frame(win)
+    grid(frame, 1, 1, sticky="nsew")
+    grid_rowconfigure(win, 1, weight=1)
+    grid_columnconfigure(win, 1, weight=1)
+    c = Array(Canvas, ny, nx)
+    for j = 1:nx
+        for i = 1:ny
+            c1 = Canvas(frame, w/nx, h/ny)
+            grid(c1, i, j, sticky="nsew")
+            c[i,j] = c1
+        end
+    end
+    for j = 1:nx
+        grid_columnconfigure(frame, j, weight=1)
+    end
+    for i = 1:ny
+        grid_rowconfigure(frame, i, weight=1)
+    end
+    c
+end
+
+function create_callbacks(imgc, img2)
+    c = canvas(imgc)
+    # Set up the drawing callbacks
+    c.draw = x -> resize(imgc, img2)
+    # Bind mouse clicks to zoom
+    c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
+    bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
+    # Bind mousewheel events to zoom
+    bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
+    # Bind mousewheel events to pan
+    bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
+    bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
 end
 
 ### Callback handling ###
