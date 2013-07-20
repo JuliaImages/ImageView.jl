@@ -108,7 +108,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     bind(emin, "<Return>") do path
         try
             val = float64(get_value(emin))
-            cs.min = val
+            cs.min = convertsafely(typeof(cs.min), val)
             set_value(min_slider, val)
             rerender()
         catch
@@ -118,7 +118,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     bind(emax, "<Return>") do path
         try
             val = float64(get_value(emax))
-            cs.max = val
+            cs.max = convertsafely(typeof(cs.min), val)
             set_value(max_slider, val)
             rerender()
         catch
@@ -126,12 +126,12 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         end
     end
     bind(min_slider, "command") do path
-        cs.min = convert(typeof(cs.min), float(min_slider[:value]))
+        cs.min = convertsafely(typeof(cs.min), float(min_slider[:value]))
         set_value(emin, min_slider[:value])
         rerender()
     end
     bind(max_slider, "command") do path
-        cs.max = convert(typeof(cs.max), float(max_slider[:value]))
+        cs.max = convertsafely(typeof(cs.max), float(max_slider[:value]))
         set_value(emax, max_slider[:value])
         rerender()
     end
@@ -140,6 +140,9 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
 
     replaceimage
 end
+
+convertsafely{T<:Integer}(::Type{T}, val) = convert(T, round(val))
+convertsafely{T}(::Type{T}, val) = convert(T, val)
 
 function prepare_histogram(img, nbins, immin, immax)
     e = immin:(immax-immin)/(nbins-1):immax*(1+1e-6)
