@@ -28,8 +28,9 @@ end
 
 function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::ContrastSettings, callback::Function)
     # Get initial values
-    immin = min(img)
-    immax = max(img)
+    dat = img[:,:]
+    immin = min(dat)
+    immax = max(dat)
     if is(cs.min, nothing)
         cs.min = immin
     end
@@ -76,7 +77,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     
     # Prepare the histogram
     nbins = iceil(min(sqrt(length(img)), 200))
-    p = prepare_histogram(img, nbins, immin, immax)
+    p = prepare_histogram(dat, nbins, immin, immax)
     
     # Store data we'll need for updating
     cdata = ContrastData(immin, immax, p, chist)
