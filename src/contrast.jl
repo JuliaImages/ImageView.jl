@@ -47,10 +47,10 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     pack(fwin, expand=true, fill="both")
 
     max_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(max_slider, int(ceil(immax)))
+    set_value(max_slider, int(ceil(cs.max)))
     chist = Canvas(fwin, 2w/3, h)
     min_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(min_slider, int(floor(immin)))
+    set_value(min_slider, int(floor(cs.min)))
 
     grid(max_slider, 1, 1, sticky="ew", padx=5)
     grid(chist, 2, 1, sticky="nsew", padx=5)
@@ -60,8 +60,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     
     emax = Entry(fwin, width=10)
     emin = Entry(fwin, width=10)
-    set_value(emax, string(cs.max))
-    set_value(emin, string(cs.min))
+    set_value(emax, string(float64(cs.max)))
+    set_value(emin, string(float64(cs.min)))
 #    emax[:textvariable] = max_slider[:variable]
 #    emin[:textvariable] = min_slider[:variable]
     
@@ -110,7 +110,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         try
             val = float64(get_value(emin))
             cs.min = convertsafely(typeof(cs.min), val)
-            set_value(min_slider, val)
+            set_value(min_slider, int(val))
             rerender()
         catch
             set_value(emin, string(cs.min))
@@ -119,21 +119,21 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     bind(emax, "<Return>") do path
         try
             val = float64(get_value(emax))
-            cs.max = convertsafely(typeof(cs.min), val)
-            set_value(max_slider, val)
+            cs.max = convertsafely(typeof(cs.max), val)
+            set_value(max_slider, int(val))
             rerender()
         catch
             set_value(emax, string(cs.max))
         end
     end
     bind(min_slider, "command") do path
-        cs.min = convertsafely(typeof(cs.min), float(min_slider[:value]))
-        set_value(emin, min_slider[:value])
+        cs.min = convertsafely(typeof(cs.min), float64(min_slider[:value]))
+        set_value(emin, string(float(min_slider[:value])))
         rerender()
     end
     bind(max_slider, "command") do path
-        cs.max = convertsafely(typeof(cs.max), float(max_slider[:value]))
-        set_value(emax, max_slider[:value])
+        cs.max = convertsafely(typeof(cs.max), float64(max_slider[:value]))
+        set_value(emax, string(float(max_slider[:value])))
         rerender()
     end
     bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
