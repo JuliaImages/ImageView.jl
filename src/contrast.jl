@@ -108,9 +108,15 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     # All bindings
     bind(emin, "<Return>") do path
         try
-            val = float64(get_value(emin))
-            cs.min = convertsafely(typeof(cs.min), val)
-            set_value(min_slider, int(val))
+            my_min = float64(get_value(emin))
+            my_max = float64(get_value(emax))
+            # Don't let values cross
+            my_max = my_max < my_min ? my_min + 0.01 : my_max # offset is arbitrary
+            cs.min = convertsafely(typeof(cs.min), my_min)
+            cs.max = convertsafely(typeof(cs.max), my_max)
+            set_value(emax, string(my_max)) # caution: each widget gets it's own type
+            set_value(min_slider, my_min)
+            set_value(max_slider, my_max)
             rerender()
         catch
             set_value(emin, string(cs.min))
@@ -118,22 +124,42 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     end
     bind(emax, "<Return>") do path
         try
-            val = float64(get_value(emax))
-            cs.max = convertsafely(typeof(cs.max), val)
-            set_value(max_slider, int(val))
+            my_min = float64(get_value(emin))
+            my_max = float64(get_value(emax))
+            # Don't let values cross
+            my_min = my_min > my_max ? my_max - 0.01 : my_min # offset is arbitrary
+            cs.min = convertsafely(typeof(cs.min), my_min)
+            cs.max = convertsafely(typeof(cs.max), my_max)
+            set_value(emin, string(my_min))
+            set_value(min_slider, my_min)
+            set_value(max_slider, my_max)
             rerender()
         catch
             set_value(emax, string(cs.max))
         end
     end
     bind(min_slider, "command") do path
-        cs.min = convertsafely(typeof(cs.min), float64(min_slider[:value]))
-        set_value(emin, string(float(min_slider[:value])))
+        my_min = float64(min_slider[:value])
+        my_max = float64(max_slider[:value])
+        # Don't let values cross
+        my_max = my_max < my_min ? my_min + 0.01 : my_max # offset is arbitrary
+        cs.min = convertsafely(typeof(cs.min), my_min)
+        cs.max = convertsafely(typeof(cs.max), my_max)
+        set_value(emin, string(my_min))
+        set_value(emax, string(my_max))
+        set_value(max_slider, my_max)
         rerender()
     end
     bind(max_slider, "command") do path
-        cs.max = convertsafely(typeof(cs.max), float64(max_slider[:value]))
-        set_value(emax, string(float(max_slider[:value])))
+        my_min = float64(min_slider[:value])
+        my_max = float64(max_slider[:value])
+        # Don't let values cross
+        my_min = my_min > my_max ? my_max - 0.01 : my_min # offset is arbitrary
+        cs.min = convertsafely(typeof(cs.min), my_min)
+        cs.max = convertsafely(typeof(cs.max), my_max)
+        set_value(emin, string(my_min))
+        set_value(emax, string(my_max))
+        set_value(min_slider, my_min)
         rerender()
     end
     bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
