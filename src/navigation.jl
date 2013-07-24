@@ -240,7 +240,7 @@ function setz(ctrls,state, showframe)
 end
 
 function scalez(ctrls, state, showframe)
-    state.z = get_value(ctrls.scalez)
+    state.z = int(get_value(ctrls.scalez))
     updatez(ctrls, state)
     showframe(state)
 end
@@ -282,7 +282,7 @@ function sett(ctrls,state, showframe)
 end
 
 function scalet(ctrls, state, showframe)
-    state.t = get_value(ctrls.scalet)
+    state.t = int(get_value(ctrls.scalet))
     updatet(ctrls, state)
     showframe(state)
 end
