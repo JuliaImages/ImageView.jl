@@ -3,6 +3,12 @@ using ImageView.Navigation
 import Base: show
 import Base.Graphics: width, height, fill, set_coords
 
+
+# Since we have Tk available, don't force the user to type a filename
+import Images.imread
+imread() = imread(GetOpenFile())
+
+
 ## Type for storing information about the rendering canvas
 # perimeter is the color used around the edges of the image; background is used
 # "behind" the image (relevant only if it has transparency)
