@@ -10,16 +10,27 @@ You'll need the `ImageView` package:
 Pkg.add("ImageView")
 ```
 
-## Demonstration
+## Preparation
 
 First let's try it with a photograph. Load one this way:
 ```
-using Images
-using ImageView
+using ImageView, Images
 img = imread("my_photo.jpg")
 ```
-Any typical image format should be fine, it doesn't have to be a jpg.
-Now display the image this way:
+Any typical image format should be fine, it doesn't have to be a jpg. You can also use a GUI file-picker if you omit the filename:
+```
+img = imread()
+```
+Finally, ImageView comes with the ability to retrieve some standard test images:
+```
+using TestImages
+img = testimage("mandrill")
+```
+Currently, `mandrill`, `lighthouse`, `moonsurface`, and `mountainstream` are defined. It's easy to add more.
+
+## Demonstration of the GUI
+
+Now display the image:
 ```
 display(img, pixelspacing = [1,1])
 ```
@@ -109,3 +120,47 @@ Type 151 into the `y:` entry box (note its name has changed) and hit enter, or m
 
 This GUI is also useful for "plain movies" (2d images with time), in which case the `z` controls will be omitted and it will behave largely as a typical movie-player.
 Likewise, the `t` controls will be omitted for 3d images lacking a temporal component, making this a nice viewer for MRI scans.
+
+
+Finally, for grayscale images, right-clicking on the image yields a brightness/contrast GUI:
+
+![Contrast GUI snapshot](readme_images/contrast.jpg)
+
+
+## Programmatic usage
+
+`display` returns two outputs:
+```
+imgc, imgslice = display(img)
+```
+`imgc` is an `ImageCanvas`, and holds information and settings about the display. `imgslice` is useful if you're supplying multidimensional images; from it, you can infer the currently-selected frame in the GUI.
+
+Using these outputs, you can display a new image in place of the old one:
+```
+display(imgc, newimg)
+```
+This preserves settings (like `pixelspacing`); should you want to forget everything and start fresh, do it this way:
+```
+display(canvas(imgc), newimg)
+```
+`canvas(imgc)` just returns a [Tk Canvas](https://github.com/JuliaLang/Tk.jl/tree/master/examples), so this shows you can view images inside any pre-defined `Canvas`.
+
+Likewise, you can close the display,
+```
+destroy(toplevel(imgc))
+```
+and resize it:
+```
+set_size(toplevel(imgc), w, h)
+```
+
+Another nice tool is `canvasgrid`:
+```
+c = canvasgrid(2,2)
+ops = [:pixelspacing => [1,1]]
+display(c[1,1], testimage("lighthouse.png"); ops...)
+display(c[1,2], testimage("mountainstream"); ops...)
+display(c[2,1], testimage("moonsurface"); ops...)
+display(c[2,2], testimage("mandrill"); ops...)
+```
+![canvasgrid snapshot](readme_images/canvasgrid.jpg)
