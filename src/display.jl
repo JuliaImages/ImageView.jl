@@ -22,7 +22,7 @@ type ImageCanvas
     transpose::Bool
     flipx::Bool
     flipy::Bool
-    surfaceformat::Int32     # The Cairo format (e.g., CAIRO_FORMAT_ARGB32)
+    surfaceformat::Int32     # The Cairo format (e.g., Cairo.FORMAT_ARGB32)
     c::Canvas                # canvas for rendering image
     surface::CairoSurface    # source surface of the image (changes with zoom region)
     renderbuf::Array{Uint32} # intermediate used if transpose is true
@@ -358,7 +358,7 @@ function redraw(imgc::ImageCanvas)
     hbb = height(bb)
     rectangle(r, bb.xmin, bb.ymin, wbb, hbb)
     # In cases of transparency, paint the background color
-    if imgc.surfaceformat == Cairo.CAIRO_FORMAT_ARGB32 && !is(imgc.background, nothing)
+    if imgc.surfaceformat == Cairo.FORMAT_ARGB32 && !is(imgc.background, nothing)
         rgb = convert(RGB, imgc.background)
         set_source_rgb(r, rgb.r, rgb.g, rgb.b)
         fill_preserve(r)
@@ -371,10 +371,10 @@ function redraw(imgc::ImageCanvas)
     p = get_source(r)
     if wbb > w && hbb > h
         # The canvas is bigger than the image region, show nearest pixel
-        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
+        Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
     else
         # Fewer pixels in canvas than in image, antialias
-        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_GOOD)
+        Cairo.pattern_set_filter(p, Cairo.FILTER_GOOD)
     end
     fill(r)
     restore(r)
@@ -512,7 +512,7 @@ end
 ### Utilities ###
 function allocate_surface!(imgc::ImageCanvas, w, h)
     buf = Array(Uint32, w, h)
-    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, w, h)
+    imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, flipxy = false)
     if imgc.transpose
         imgc.renderbuf = Array(Uint32, h, w)
     end
@@ -586,10 +586,10 @@ function resetfirst!(s::SubArray)
 end
 
 function cairo_format(img::AbstractArray)
-    format = Cairo.CAIRO_FORMAT_RGB24
+    format = Cairo.FORMAT_RGB24
     cs = colorspace(img)
     if cs == "ARGB" || cs == "ARGB32" || cs == "RGBA" || cs == "GrayAlpha"
-        format = Cairo.CAIRO_FORMAT_ARGB32
+        format = Cairo.FORMAT_ARGB32
     end
     format
 end
