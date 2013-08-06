@@ -8,6 +8,9 @@ import Base.Graphics: width, height, fill, set_coords
 import Images.imread
 imread() = imread(GetOpenFile())
 
+@linux_only const default_perimeter = RGB(0.85,0.85,0.85)
+@osx_only const default_perimeter = RGB(0.93, 0.93, 0.93)
+@windows_only const default_perimeter = RGB(1,1,1)  # untested
 
 ## Type for storing information about the rendering canvas
 # perimeter is the color used around the edges of the image; background is used
@@ -42,7 +45,7 @@ type ImageCanvas
             end
         end
         background = get(props, :background, nothing)
-        perimeter = get(props, :perimeter, OS_NAME == :Darwin? RGB(0.93, 0.93, 0.93) : RGB(0, 0, 0))
+        perimeter = get(props, :perimeter, default_perimeter)
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
@@ -316,7 +319,7 @@ function display{A<:AbstractArray}(c::Canvas, img::A; proplist...)
     imgc, img2
 end
 
-function canvasgrid(ny, nx; w = 800, h = 600)
+function canvasgrid(ny, nx; w = 800, h = 600, pad=0)
     win = Toplevel("ImageView", w, h)
     frame = Frame(win)
     grid(frame, 1, 1, sticky="nsew")
@@ -326,7 +329,7 @@ function canvasgrid(ny, nx; w = 800, h = 600)
     for j = 1:nx
         for i = 1:ny
             c1 = Canvas(frame, w/nx, h/ny)
-            grid(c1, i, j, sticky="nsew")
+            grid(c1, i, j, sticky="nsew", padx=pad, pady=pad)
             c[i,j] = c1
         end
     end
