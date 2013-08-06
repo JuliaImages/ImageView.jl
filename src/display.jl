@@ -31,7 +31,16 @@ type ImageCanvas
     function ImageCanvas(fmt::Int32, props::Dict)
         ps = get(props, :pixelspacing, nothing)
         aspect_x_per_y = is(ps, nothing) ? nothing : ps[1]/ps[2]
-        render! = get(props, :render!, uint32color!)
+        if haskey(props, :render!)
+            render! = props[:render!]
+        else
+            if haskey(props, :clim)
+                clim = props[:clim]
+                render! = (buf, img) -> uint32color!(buf, img, scaleminmax(img, clim[1], clim[2]))
+            else
+                render! = uint32color!
+            end
+        end
         background = get(props, :background, nothing)
         perimeter = get(props, :perimeter, OS_NAME == :Darwin? RGB(0.93, 0.93, 0.93) : RGB(0, 0, 0))
         transpose = props[:transpose]
