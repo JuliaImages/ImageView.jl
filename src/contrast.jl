@@ -29,8 +29,8 @@ end
 function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::ContrastSettings, callback::Function)
     # Get initial values
     dat = img[:,:]
-    immin = min(dat)
-    immax = max(dat)
+    immin = minfinite(dat)
+    immax = maxfinite(dat)
     if is(cs.min, nothing)
         cs.min = immin
     end
@@ -173,7 +173,8 @@ convertsafely{T}(::Type{T}, val) = convert(T, val)
 
 function prepare_histogram(img, nbins, immin, immax)
     e = immin:(immax-immin)/(nbins-1):immax*(1+1e-6)
-    e, counts = hist(img[:], e)
+    dat = img[:]
+    e, counts = hist(dat[isfinite(dat)], e)
     counts += 1   # because of log scaling
     x, y = stairs(e, counts)
     p = FramedPlot()
