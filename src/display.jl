@@ -225,7 +225,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
         whfull += btnsz[2] + 2*pad
     end
     # Create the window and the canvas for displaying the image
-    win = Toplevel(get(props, "name", "ImageView"), ww, whfull, false)
+    win = Toplevel(get(props, :name, "ImageView"), ww, whfull, false)
     framec = OS_NAME == :Darwin ? Frame(win, padding = 30) : Frame(win) # helps with accidental rubberband on resize
     grid(framec, 1, 1, sticky="nsew")
     grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
@@ -320,8 +320,8 @@ function display{A<:AbstractArray}(c::Canvas, img::A; proplist...)
     imgc, img2
 end
 
-function canvasgrid(ny, nx; w = 800, h = 600, pad=0)
-    win = Toplevel("ImageView", w, h)
+function canvasgrid(ny, nx; w = 800, h = 600, pad=0, name="ImageView")
+    win = Toplevel(name, w, h)
     frame = Frame(win)
     grid(frame, 1, 1, sticky="nsew")
     grid_rowconfigure(win, 1, weight=1)
