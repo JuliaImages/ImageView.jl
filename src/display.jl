@@ -26,6 +26,7 @@ type ImageCanvas
     flipx::Bool
     flipy::Bool
     surfaceformat::Int32     # The Cairo format (e.g., Cairo.FORMAT_ARGB32)
+    annotations::Vector{AbstractAnnotation}
     c::Canvas                # canvas for rendering image
     surface::CairoSurface    # source surface of the image (changes with zoom region)
     renderbuf::Array{Uint32} # intermediate used if transpose is true
@@ -49,7 +50,7 @@ type ImageCanvas
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
-        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt)
+        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Array(AbstractAnnotation, 0))
         # c, surface, renderbuf, and canvasbb will be initialized later
     end
 end
@@ -342,6 +343,21 @@ function canvasgrid(ny, nx; w = 800, h = 600, pad=0)
     c
 end
 
+function annotate!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::Bool=true)
+    if anchored
+        push!(imgc.annotations, AnchoredAnnotation((_)->imgc.canvasbb, (_)->img2.zoombb, ann))
+    else
+        push!(imgc.annotations, FloatingAnnotation((_)->imgc.canvasbb, ann))
+    end
+    redraw(imgc)
+    return length(imgc.annotations)
+end
+
+function delete_annotation!(imgc::ImageCanvas, indx::Int)
+    splice!(imgc.annotations, indx)
+    redraw(imgc)
+end
+
 function create_callbacks(imgc, img2)
     c = canvas(imgc)
     # Set up the drawing callbacks
@@ -390,6 +406,10 @@ function redraw(imgc::ImageCanvas)
     end
     fill(r)
     restore(r)
+    # Render any annotations
+    for ann in imgc.annotations
+        draw(imgc.c, ann)
+    end
     reveal(imgc.c)
     Tk.update()
 end
