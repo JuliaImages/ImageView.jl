@@ -449,7 +449,9 @@ function zoomwheel(imgc::ImageCanvas, img2::ImageSlice2d, delta, x, y)
 end
 
 function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
-    bb = BoundingBox(ifloor(bb.xmin), iceil(bb.xmax), ifloor(bb.ymin), iceil(bb.ymax))
+    bb = BoundingBox(floor(bb.xmin), ceil(bb.xmax), floor(bb.ymin), ceil(bb.ymax))
+    w, h = widthheight(img2.imslice)
+    bb = bb & BoundingBox(0, w, 0, h)
     w = int(width(bb))
     h = int(height(bb))
     allocate_surface!(imgc, w, h)
