@@ -10,7 +10,7 @@ using Tk
 using Cairo
 using Images
 
-include("config.jl")
+# include("config.jl")
 include("external.jl")
 include("rubberband.jl")
 include("annotations.jl")

@@ -18,7 +18,8 @@ if !have_winston
     imshow_cmd_list = ["feh", "gwenview", "open"]
     for thiscmd in imshow_cmd_list
         _, p = readsfrom(`which $thiscmd`)
-        if Base.wait_success(p)
+        wait(p)
+        if success(p)
             imshow_cmd = thiscmd
             break
         end
