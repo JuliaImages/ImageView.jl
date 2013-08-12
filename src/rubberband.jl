@@ -70,9 +70,8 @@ function rubberband_stop(c::Canvas, rb::RubberBand, x, y, ctxcopy, callbacks_old
     x1, y1 = rb.pos1.x, rb.pos1.y
     if abs(x1-x) > 2 || abs(y1-y) > 2
         # It moved sufficiently, let's execute the callback
-        rback = getgc(c)
-        xu, yu = device_to_user(rback, x, y)
-        x1u, y1u = device_to_user(rback, x1, y1)
+        xu, yu = device_to_user(r, x, y)
+        x1u, y1u = device_to_user(r, x1, y1)
         zoombb = BoundingBox(min(x1u,xu), max(x1u,xu), min(y1u,yu), max(y1u,yu))
         callback_done(c, zoombb)
     end
