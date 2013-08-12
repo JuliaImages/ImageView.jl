@@ -470,7 +470,8 @@ end
 
 function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     bb = BoundingBox(floor(bb.xmin), ceil(bb.xmax), floor(bb.ymin), ceil(bb.ymax))
-    w, h = widthheight(img2.imslice)
+    w = sizex(img2)
+    h = sizey(img2)
     bb = bb & BoundingBox(0, w, 0, h)
     w = int(width(bb))
     h = int(height(bb))
