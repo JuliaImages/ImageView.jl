@@ -1,4 +1,5 @@
 using Images, Color
+import ImageView
 z = ones(10,50);
 y = 8; x = 2;
 z[y,x] = 0

@@ -1,3 +1,5 @@
+import Images
+
 # Create a cone in 3d that changes color over time
 sz = [201, 301, 31]
 center = iceil(sz/2)
