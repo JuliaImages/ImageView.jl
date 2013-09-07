@@ -41,6 +41,8 @@ type ImageCanvas
             if haskey(props, :clim)
                 clim = props[:clim]
                 render! = (buf, img) -> uint32color!(buf, img, scaleminmax(img, clim[1], clim[2]))
+            elseif haskey(props, :scalei)
+                render! = (buf, img) -> uint32color!(buf, img, props[:scalei])
             else
                 render! = uint32color!
             end
