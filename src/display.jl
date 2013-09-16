@@ -1,6 +1,6 @@
 using ImageView.Navigation
 
-import Base: display, show
+import Base: show
 import Base.Graphics: width, height, fill, set_coords
 
 
@@ -17,7 +17,7 @@ imread() = imread(GetOpenFile())
 # "behind" the image (relevant only if it has transparency)
 # render has syntax
 #    render!(buf, img)
-type ImageCanvas <: Display
+type ImageCanvas
     render!::Function        # function to fill a Uint32 buffer with image data
     aspect_x_per_y           # relative scaling of the two axes (unconstrained = nothing)
     background               # nothing, RGB color, or checkerboard pattern
