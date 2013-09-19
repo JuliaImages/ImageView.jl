@@ -83,7 +83,7 @@ function setbb!(imgc::ImageCanvas, w, h)
 end
 
 # Handle z and t slicing, and zooming in x and y
-type ImageSlice2d{A<:AbstractImageDirect}
+type ImageSlice2d{A<:AbstractImage}
     imslice::A
     indexes::Vector{RangeIndex}
     dims::Vector{Int}
@@ -93,9 +93,9 @@ type ImageSlice2d{A<:AbstractImageDirect}
     zdim::Int
     tdim::Int
 end
-function ImageSlice2d(img::AbstractImageDirect, indexes, dims, bb::BoundingBox, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
+function ImageSlice2d(img::AbstractImage, indexes, dims, bb::BoundingBox, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
     assert2d(img)
-    ImageSlice2d{typeof(img)}(img::AbstractImageDirect, RangeIndex[indexes...], Int[dims...], bb::BoundingBox, int(xdim), int(ydim), int(zdim), int(tdim))
+    ImageSlice2d{typeof(img)}(img, RangeIndex[indexes...], Int[dims...], bb, int(xdim), int(ydim), int(zdim), int(tdim))
 end
 
 function show(io::IO, img2::ImageSlice2d)
@@ -113,7 +113,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     if !(2 <= sd <= 3)
         error("Only two or three spatial dimensions are permitted")
     end
-    if !isa(img, AbstractImageDirect)
+    if !isa(img, AbstractImage)
         img = Image(img, ["colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)])
     end
     # Determine how dimensions map to x, y, z, t
