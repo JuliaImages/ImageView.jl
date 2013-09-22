@@ -31,6 +31,8 @@ type ImageCanvas
     surface::CairoSurface    # source surface of the image (changes with zoom region)
     renderbuf::Array{Uint32} # intermediate used if transpose is true
     canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
+    navigationstate
+    navigationctrls
     
     function ImageCanvas(fmt::Int32, props::Dict)
         ps = get(props, :pixelspacing, nothing)
@@ -250,6 +252,8 @@ function display{A<:AbstractArray}(img::A; proplist...)
             catch
             end
         end
+        imgc.navigationstate = state
+        imgc.navigationctrls = ctrls
         # Bind mousewheel events to navigation
         bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
         bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
