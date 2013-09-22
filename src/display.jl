@@ -340,17 +340,27 @@ function canvasgrid(ny, nx; w = 800, h = 600, pad=0, name="ImageView")
 end
 
 function annotate!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::Bool=true)
+    len = annotate_nodraw!(imgc, img2, ann; anchored = anchored)
+    redraw(imgc)
+    len
+end
+
+function annotate_nodraw!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::Bool=true)
     if anchored
         push!(imgc.annotations, AnchoredAnnotation((_)->imgc.canvasbb, (_)->img2.zoombb, ann))
     else
         push!(imgc.annotations, FloatingAnnotation((_)->imgc.canvasbb, ann))
     end
-    redraw(imgc)
-    return length(imgc.annotations)
+    length(imgc.annotations)
 end
 
 function delete_annotation!(imgc::ImageCanvas, indx::Int)
     splice!(imgc.annotations, indx)
+    redraw(imgc)
+end
+
+function delete_annotations!(imgc::ImageCanvas)
+    empty!(imgc.annotations)
     redraw(imgc)
 end
 

@@ -25,6 +25,7 @@ export # types
     canvas,
     canvasgrid,
     delete_annotation!,
+    delete_annotations!,
     destroy,
     display,
     ftshow,
