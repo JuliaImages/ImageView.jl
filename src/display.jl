@@ -439,6 +439,9 @@ end
 # Navigation in z and t
 function reslice(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState)
     slice2!(img2, state.z, state.t)
+    for ann in imgc.annotations
+        setvalid!(ann, state.z, state.t)
+    end
     rerender(imgc, img2)
     redraw(imgc)
 end
