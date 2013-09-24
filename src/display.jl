@@ -87,6 +87,7 @@ end
 # Handle z and t slicing, and zooming in x and y
 type ImageSlice2d{A<:AbstractImage}
     imslice::A
+    pdims::Vector{Int}
     indexes::Vector{RangeIndex}
     dims::Vector{Int}
     zoombb::BoundingBox
@@ -95,9 +96,9 @@ type ImageSlice2d{A<:AbstractImage}
     zdim::Int
     tdim::Int
 end
-function ImageSlice2d(img::AbstractImage, indexes, dims, bb::BoundingBox, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
+function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
     assert2d(img)
-    ImageSlice2d{typeof(img)}(img, RangeIndex[indexes...], Int[dims...], bb, int(xdim), int(ydim), int(zdim), int(tdim))
+    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, int(xdim), int(ydim), int(zdim), int(tdim))
 end
 
 function show(io::IO, img2::ImageSlice2d)
@@ -135,13 +136,19 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     props[:transpose] = p[1] > p[2]
     # Start at z=1, t=1
     indexes = ntuple(ndims(img), i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)))
+    pdims = parentdims(data(img))
     imslice = sliceim(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
-    ImageSlice2d(imslice, indexes, size(imslice), bb, xdim, ydim, zdim, tdim)
+    ImageSlice2d(imslice, pdims, indexes, size(imslice), bb, xdim, ydim, zdim, tdim)
 end
 
+parentdims(A::AbstractArray) = [1:ndims(A)]
+parentdims(A::SubArray) = Base.parentdims(A)
+
 function _reslice!(img2::ImageSlice2d)
-    img2.imslice.data.indexes = tuple(img2.indexes...)
+    newindexes = RangeIndex[img2.imslice.data.indexes...]
+    newindexes[img2.pdims] = img2.indexes
+    img2.imslice.data.indexes = tuple(newindexes...)
     j = 1
     for i = 1:length(img2.indexes)
         if !isa(img2.indexes[i], Int)
