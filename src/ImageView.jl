@@ -20,6 +20,7 @@ include("display.jl")
 
 export # types
     AnnotationText,
+    AnnotationScalebarFixed,
     # display functions
     annotate!,
     canvas,
@@ -31,6 +32,7 @@ export # types
     ftshow,
     imshow,
     parent,
+    scalebar,
     toplevel
 
 end

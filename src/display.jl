@@ -658,3 +658,6 @@ end
 
 AnnotationScalebarFixed{T}(width::T, height::T, imsl::ImageSlice2d, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) =
     AnnotationScalebarFixed{T}(width, height, (wp,hp) -> scalebarsize(imsl,wp,hp), float64(centerx), float64(centery), color)
+
+scalebar(imgc::ImageCanvas, imsl::ImageSlice2d, length) = annotate!(imgc, imsl, AnnotationScalebarFixed(length, length/10, imsl, 0.8, 0.1, RGB(1,1,1)), anchored=false)
+
