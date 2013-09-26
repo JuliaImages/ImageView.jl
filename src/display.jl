@@ -648,3 +648,13 @@ function cairo_format(img::AbstractArray)
     end
     format
 end
+
+function scalebarsize(imsl::ImageSlice2d, width, height)
+    ps = pixelspacing(imsl.imslice)
+    w = width/ps[imsl.xdim]/imsl.dims[1]
+    h = height/ps[imsl.ydim]/imsl.dims[2]
+    w, h
+end
+
+AnnotationScalebarFixed{T}(width::T, height::T, imsl::ImageSlice2d, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) =
+    AnnotationScalebarFixed{T}(width, height, (wp,hp) -> scalebarsize(imsl,wp,hp), float64(centerx), float64(centery), color)
