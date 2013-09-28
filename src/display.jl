@@ -272,7 +272,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     create_callbacks(imgc, img2)
     if imgc.render! == uint32color! && colorspace(img) == "Gray"
         menu = Menu(framec)
-        clim = scaledefault(img)
+        clim = climdefault(img)
         cs = ImageContrast.ContrastSettings(clim[1], clim[2])
         imgc.render! = (buf,img) -> uint32color!(buf, img, scaleminmax(img, cs.min, cs.max))
         menu_contrast = menu_add(menu, "Contrast...", path -> ImageContrast.contrastgui(img2.imslice, cs, x->redraw(imgc, img2)))
