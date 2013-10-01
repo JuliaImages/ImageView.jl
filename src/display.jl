@@ -495,9 +495,11 @@ function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     bb = bb & BoundingBox(0, w, 0, h)
     w = int(width(bb))
     h = int(height(bb))
-    allocate_surface!(imgc, w, h)
-    panzoom(imgc, img2, bb)
-    resize(imgc, img2)
+    if w > 0 && h > 0
+        allocate_surface!(imgc, w, h)
+        panzoom(imgc, img2, bb)
+        resize(imgc, img2)
+    end
 end
 
 function zoom_reset(imgc::ImageCanvas, img2::ImageSlice2d)
