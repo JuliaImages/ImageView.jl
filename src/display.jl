@@ -242,12 +242,13 @@ function display{A<:AbstractArray}(img::A; proplist...)
     grid_rowconfigure(framec, 1, weight=1) # scale this cell when the window resizes
     grid_columnconfigure(framec, 1, weight=1)
     # If necessary, create the navigation controls
+    lastrow = 1
     if havecontrols
         ctrls = NavigationControls()
         state = NavigationState(zmax, tmax)
         showframe = state -> reslice(imgc, img2, state)
         fctrls = Frame(win)
-        grid(fctrls, 2, 1, sticky="ew")  # place the controls below the image
+        grid(fctrls, lastrow+=1, 1, sticky="ew")  # place the controls below the image
         init_navigation!(fctrls, ctrls, state, showframe)
         if zmax > 1
             try
@@ -265,11 +266,17 @@ function display{A<:AbstractArray}(img::A; proplist...)
         bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
         bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
     end
+    # Create the x,y position reporter
+    fnotify = Frame(win)
+    grid(fnotify, lastrow+=1, 1, sticky="ew")
+    xypos = Label(fnotify)
+    grid(xypos, 1, 1, sticky="ne")
     # Set up the rendering
     set_visible(win, true)
 #     ctx = getgc(c)  # force initialization of canvas
     allocate_surface!(imgc, w, h)
     create_callbacks(imgc, img2)
+    c.mouse.motion = (path,x,y) -> updatexylabel(xypos, imgc, x, y)
     if imgc.render! == uint32color! && colorspace(img) == "Gray"
         menu = Menu(framec)
         clim = climdefault(img)
@@ -441,6 +448,15 @@ function resize(imgc::ImageCanvas, img2::ImageSlice2d)
         fill(r, imgc.perimeter)
     end
     redraw(imgc)
+end
+
+function updatexylabel(xypos, imgc, x, y)
+    if isinside(imgc.canvasbb, x, y)
+        xu,yu = device_to_user(getgc(imgc.c), x, y)
+        set_value(xypos, string(iceil(xu), ", ", iceil(yu)))
+    else
+        set_value(xypos, "")
+    end
 end
 
 # Navigation in z and t
