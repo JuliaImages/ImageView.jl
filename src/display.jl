@@ -372,6 +372,13 @@ function annotate_nodraw!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::
     length(imgc.annotations)
 end
 
+function validate_annotations!(imgc::ImageCanvas)
+    state = imgc.navigationstate
+    for ann in imgc.annotations
+        setvalid!(ann, state.z, state.t)
+    end
+end    
+
 function delete_annotation!(imgc::ImageCanvas, indx::Int)
     splice!(imgc.annotations, indx)
     redraw(imgc)
