@@ -398,9 +398,18 @@ function create_callbacks(imgc, img2)
     bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
     # Bind mousewheel events to zoom
     bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
+    # Bind keys to zoom
+    win = Tk.toplevel(c)
+    bind(win, "<Control-Up>", path->zoomwheel(imgc,img2,-1,pointerxy(win)...))
+    bind(win, "<Control-Down>", path->zoomwheel(imgc,img2,1,pointerxy(win)...))
     # Bind mousewheel events to pan
     bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
     bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    # Bind arrow keys to pan
+    bind(win, "<Up>", path->panvert(imgc,img2,-1))
+    bind(win, "<Down>", path->panvert(imgc,img2,1))
+    bind(win, "<Left>", path->panhorz(imgc,img2,-1))
+    bind(win, "<Right>", path->panhorz(imgc,img2,1))
 end
 
 ### Callback handling ###
@@ -495,6 +504,9 @@ function reslicez(imgc::ImageCanvas, img2::ImageSlice2d, ctrls::NavigationContro
 end
 
 function zoomwheel(imgc::ImageCanvas, img2::ImageSlice2d, delta, x, y)
+    if !isinside(imgc.canvasbb, x, y)
+        return
+    end
     r = getgc(imgc.c)
     xu, yu = device_to_user(r, x, y)
     local xmn

@@ -74,12 +74,20 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
         tindex = 2:7
     end
     grid(ctrls.stop, 1, stopindex, padx=3*pad, pady=pad)
+    win = toplevel(f)
+    if havez || havet
+        bind(win, "<space>", path->stop_playing!(state))
+    end
     if havez
         callback = (path->stepz(1,ctrls,state,showframe), path->playz(1,ctrls,state,showframe), 
             path->playz(-1,ctrls,state,showframe), path->stepz(-1,ctrls,state,showframe),
             path->setz(ctrls,state,showframe), path->scalez(ctrls,state,showframe))
         ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz, ctrls.scalez = 
             addbuttons(f, btnsz, bkg, pad, zindex, "z", callback, 1:state.zmax)
+        bind(win, "<Alt-Up>", path->stepz(1,ctrls,state,showframe))
+        bind(win, "<Alt-Down>", path->stepz(-1,ctrls,state,showframe))
+        bind(win, "<Alt-Shift-Up>", path->playz(1,ctrls,state,showframe))
+        bind(win, "<Alt-Shift-Down>", path->playz(-1,ctrls,state,showframe))
         updatez(ctrls, state)
     end
     if havet
@@ -88,6 +96,10 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
             path->sett(ctrls,state,showframe), path->scalet(ctrls,state,showframe))
         ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt, ctrls.scalet = 
             addbuttons(f, btnsz, bkg, pad, tindex, "t", callback, 1:state.tmax)
+        bind(win, "<Alt-Right>", path->stept(1,ctrls,state,showframe))
+        bind(win, "<Alt-Left>", path->stept(-1,ctrls,state,showframe))
+        bind(win, "<Alt-Shift-Right>", path->playt(1,ctrls,state,showframe))
+        bind(win, "<Alt-Shift-Left>", path->playt(-1,ctrls,state,showframe))
         updatet(ctrls, state)
     end
     # Context menu for settings
