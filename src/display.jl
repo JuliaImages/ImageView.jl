@@ -26,7 +26,7 @@ type ImageCanvas
     flipx::Bool
     flipy::Bool
     surfaceformat::Int32     # The Cairo format (e.g., Cairo.FORMAT_ARGB32)
-    annotations::Vector{AbstractAnnotation}
+    annotations::Dict{Uint, AbstractAnnotation}
     c::Canvas                # canvas for rendering image
     surface::CairoSurface    # source surface of the image (changes with zoom region)
     renderbuf::Array{Uint32} # intermediate used if transpose is true
@@ -54,7 +54,7 @@ type ImageCanvas
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
-        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Array(AbstractAnnotation, 0))
+        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Dict{Uint,AbstractAnnotation}())
         # c, surface, renderbuf, and canvasbb will be initialized later
     end
 end
@@ -364,23 +364,26 @@ function annotate!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::Bool=tr
 end
 
 function annotate_nodraw!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::Bool=true)
+    local newann
     if anchored
-        push!(imgc.annotations, AnchoredAnnotation((_)->imgc.canvasbb, (_)->img2.zoombb, ann))
+        newann = AnchoredAnnotation((_)->imgc.canvasbb, (_)->img2.zoombb, ann)
     else
-        push!(imgc.annotations, FloatingAnnotation((_)->imgc.canvasbb, ann))
+        newann = FloatingAnnotation((_)->imgc.canvasbb, ann)
     end
-    length(imgc.annotations)
+    h = hash(newann)
+    imgc.annotations[h] = newann
+    h
 end
 
 function validate_annotations!(imgc::ImageCanvas)
     state = imgc.navigationstate
-    for ann in imgc.annotations
+    for (h,ann) in imgc.annotations
         setvalid!(ann, state.z, state.t)
     end
 end    
 
-function delete_annotation!(imgc::ImageCanvas, indx::Int)
-    splice!(imgc.annotations, indx)
+function delete_annotation!(imgc::ImageCanvas, h::Uint)
+    delete!(imgc.annotations, h)
     redraw(imgc)
 end
 
@@ -447,7 +450,7 @@ function redraw(imgc::ImageCanvas)
     fill(r)
     restore(r)
     # Render any annotations
-    for ann in imgc.annotations
+    for (h,ann) in imgc.annotations
         draw(imgc.c, ann)
     end
     reveal(imgc.c)
@@ -478,7 +481,7 @@ end
 # Navigation in z and t
 function reslice(imgc::ImageCanvas, img2::ImageSlice2d, state::NavigationState)
     slice2!(img2, state.z, state.t)
-    for ann in imgc.annotations
+    for (h,ann) in imgc.annotations
         setvalid!(ann, state.z, state.t)
     end
     rerender(imgc, img2)
