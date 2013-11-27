@@ -49,7 +49,7 @@ type ImageCanvas
                 render! = uint32color!
             end
         end
-        background = get(props, :background, nothing)
+        background = get(props, :background, fmt == Cairo.FORMAT_ARGB32 ? checker(32) : nothing)
         perimeter = get(props, :perimeter, default_perimeter)
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
@@ -430,8 +430,13 @@ function redraw(imgc::ImageCanvas)
     rectangle(r, bb.xmin, bb.ymin, wbb, hbb)
     # In cases of transparency, paint the background color
     if imgc.surfaceformat == Cairo.FORMAT_ARGB32 && !is(imgc.background, nothing)
-        rgb = convert(RGB, imgc.background)
-        set_source_rgb(r, rgb.r, rgb.g, rgb.b)
+        if isa(imgc.background, CairoPattern)
+#             set_source(r, RGB(1,1,1))
+#             fill_preserve(r)
+            set_source(r, imgc.background)
+        else
+            set_source(r, convert(RGB, imgc.background))
+        end
         fill_preserve(r)
     end
     # Paint the image with appropriate antialiasing settings
@@ -637,6 +642,20 @@ function fill(r::GraphicsContext, col::ColorValue)
     set_source_rgb(r, rgb.r, rgb.g, rgb.b)
     paint(r)
     restore(r)
+end
+
+# Create a checkerboard pattern (for use with transparency)
+function checker(checkersize::Int; light = 0xffb0b0b0, dark = 0xff404040)
+    buf = Array(Uint32, 2checkersize, 2checkersize)
+    fill!(buf, light)
+    buf[1:checkersize,checkersize+1:2checkersize] = dark
+    buf[checkersize+1:2checkersize,1:checkersize] = dark
+    s = CairoImageSurface(buf, Cairo.FORMAT_ARGB32)
+    checkerboard = CairoPattern(s)
+    pattern_set_filter(checkerboard, Cairo.FILTER_NEAREST)
+    pattern_set_extend(checkerboard, Cairo.EXTEND_REPEAT)
+    @show typeof(checkerboard)
+    checkerboard
 end
 
 # r is the aspect ratio, i.e. aspect_x_per_y
