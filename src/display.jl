@@ -431,8 +431,6 @@ function redraw(imgc::ImageCanvas)
     # In cases of transparency, paint the background color
     if imgc.surfaceformat == Cairo.FORMAT_ARGB32 && !is(imgc.background, nothing)
         if isa(imgc.background, CairoPattern)
-#             set_source(r, RGB(1,1,1))
-#             fill_preserve(r)
             set_source(r, imgc.background)
         else
             set_source(r, convert(RGB, imgc.background))
@@ -654,7 +652,6 @@ function checker(checkersize::Int; light = 0xffb0b0b0, dark = 0xff404040)
     checkerboard = CairoPattern(s)
     pattern_set_filter(checkerboard, Cairo.FILTER_NEAREST)
     pattern_set_extend(checkerboard, Cairo.EXTEND_REPEAT)
-    @show typeof(checkerboard)
     checkerboard
 end
 

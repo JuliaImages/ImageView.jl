@@ -7,7 +7,8 @@ imagedict = [
     "lighthouse.png" => "http://r0k.us/graphics/kodak/kodak/kodim21.png",
     "mountainstream.png" => "http://r0k.us/graphics/kodak/kodak/kodim13.png",
     "moonsurface.tiff" => "http://sipi.usc.edu/database/download.php?vol=misc&img=5.1.09",
-    "mandrill.tiff" => "http://sipi.usc.edu/database/download.php?vol=misc&img=4.2.03"
+    "mandrill.tiff" => "http://sipi.usc.edu/database/download.php?vol=misc&img=4.2.03",
+    "autumn_leaves.png" => "http://www.imagemagick.org/Usage/images/autumn_leaves.png"
 ]
 
 imagedict_noext = similar(imagedict)
