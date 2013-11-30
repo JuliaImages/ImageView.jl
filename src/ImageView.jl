@@ -11,7 +11,7 @@ using Cairo
 using Images
 
 # include("config.jl")
-include("external.jl")
+# include("external.jl")
 include("rubberband.jl")
 include("annotations.jl")
 include("navigation.jl")
@@ -29,8 +29,8 @@ export # types
     delete_annotations!,
     destroy,
     display,
-    ftshow,
-    imshow,
+#     ftshow,
+#     imshow,
     parent,
     scalebar,
     toplevel
