@@ -84,7 +84,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     
     function rerender()
         pcopy = deepcopy(cdata.phist)
-        bb = Winston.limits(cdata.phist.content1)
+        bb = Winston.limits(cdata.phist)
         add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "linewidth", 10, "color", "white"))
         add(pcopy, Curve([cs.min, cs.max], [bb.ymin, bb.ymax], "linewidth", 5, "color", "black"))
         Winston.display(chist, pcopy)
