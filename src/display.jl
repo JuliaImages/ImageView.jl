@@ -33,7 +33,7 @@ type ImageCanvas
     canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
     navigationstate
     navigationctrls
-    
+
     function ImageCanvas(fmt::Int32, props::Dict)
         ps = get(props, :pixelspacing, nothing)
         aspect_x_per_y = is(ps, nothing) ? nothing : ps[1]/ps[2]
@@ -235,6 +235,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
     grid(framec, 1, 1, sticky="nsew")
     grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
     grid_columnconfigure(win, 1, weight=1)
+    tcl_doevent() # This magically fixes "Cannot write to canvas" problem
     c = Canvas(framec, ww, wh)
     imgc.c = c
     # Place the canvas and set its resize properties
@@ -380,7 +381,7 @@ function validate_annotations!(imgc::ImageCanvas)
     for (h,ann) in imgc.annotations
         setvalid!(ann, state.z, state.t)
     end
-end    
+end
 
 function delete_annotation!(imgc::ImageCanvas, h::Uint)
     delete!(imgc.annotations, h)
@@ -716,4 +717,3 @@ AnnotationScalebarFixed{T}(width::T, height::T, imsl::ImageSlice2d, centerx::Rea
     AnnotationScalebarFixed{T}(width, height, (wp,hp) -> scalebarsize(imsl,wp,hp), float64(centerx), float64(centery), color)
 
 scalebar(imgc::ImageCanvas, imsl::ImageSlice2d, length) = annotate!(imgc, imsl, AnnotationScalebarFixed(length, length/10, imsl, 0.8, 0.1, RGB(1,1,1)), anchored=false)
-
