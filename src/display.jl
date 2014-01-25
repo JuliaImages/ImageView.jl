@@ -125,7 +125,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     p = spatialpermutation(xy, img)
     xdim = cs[p[1]]
     ydim = cs[p[2]]
-    zdim = (sd == 2) ? 0 : cs[setdiff(1:3, p)][1]
+    zdim = (sd == 2) ? 0 : cs[p[3]]
     tdim = timedim(img)
     # Deal with pixelspacing here
     if !haskey(props, :pixelspacing)
