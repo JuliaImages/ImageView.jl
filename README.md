@@ -37,6 +37,8 @@ display(img, pixelspacing = [1,1])
 The basic command to view the image is `display`.
 The optional `pixelspacing` input tells `display` that this image has a fixed aspect ratio, and that this needs to be honored when displaying the image. (Alternatively, you could set `img["pixelspacing"] = [1,1]` and then you wouldn't have to tell this to the `display` function.)
 
+**Note:** If you are running Julia from a script file, the julia process will terminate towards the end of the program. This will cause any windows opened with `display()` to terminate (Which is probably not what you intend). Refer to [calling display from a script file](#calling-display-from-a-script-file) section for more information on how to avoid this behavior. 
+
 You should get a window with your image:
 
 ![photo](readme_images/photo1.jpg)
@@ -105,6 +107,7 @@ You can change the playback speed by right-clicking in an empty space within the
 
 ![GUI snapshot](readme_images/popup.jpg)
 
+
 <br />
 <br />
 
@@ -164,3 +167,42 @@ display(c[2,1], testimage("moonsurface"); ops...)
 display(c[2,2], testimage("mandrill"); ops...)
 ```
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
+
+
+## Additional notes
+
+### Calling display from a script file
+
+If you call Julia from a script file, the julia process will terminate towards the end of the program. This will cause any windows opened with `display()` to terminate (Which is probably not what you intend). We want to make it only terminate the process when the image window changes. Bellow is some example code to do this:
+
+```
+using Tk
+using Images
+using ImageView
+
+img = imread()
+imgc, imgslice = display(img);
+
+#If we are not in a REPL
+if (!isinteractive())
+
+	# Create a condition object
+    c = Condition()
+
+    # Get the main window (A Tk toplevel object)
+    win = toplevel(imgc)
+
+    # Notify the condition object when the window closes
+    bind(win, "<Destroy>", e->notify(c))
+
+    # Wait for the notification before proceeding ... 
+    wait(c)
+end
+```
+
+This will stop the julia process from terminating immediately. Note that if we did not add the `bind` function, the process will keep waiting even after the image window has closed, and you will have to manually close it with `CTRL + C`.
+
+If you are opening more than one window you may need to create more than one `Condition` object.
+
+<br>
+<br> 
