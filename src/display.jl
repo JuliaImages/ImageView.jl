@@ -135,11 +135,13 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     end
     props[:transpose] = p[1] > p[2]
     # Start at z=1, t=1
+    pindexes = parentindexes(data(img))
     indexes = ntuple(ndims(img), i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)))
+    pindexes = ntuple(length(pindexes), i -> (i == zdim || i == tdim) ? 1 : pindexes[i])
     pdims = parentdims(data(img))
     imslice = sliceim(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
-    ImageSlice2d(imslice, pdims, indexes, size(imslice), bb, xdim, ydim, zdim, tdim)
+    ImageSlice2d(imslice, pdims, pindexes, size(imslice), bb, xdim, ydim, zdim, tdim)
 end
 
 parentdims(A::AbstractArray) = [1:ndims(A)]
