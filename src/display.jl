@@ -1,7 +1,7 @@
 using ImageView.Navigation
 
 import Base: show
-import Base.Graphics: width, height, fill, set_coords
+import Base.Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
 
 
 # Since we have Tk available, don't force the user to type a filename
@@ -91,23 +91,26 @@ type ImageSlice2d{A<:AbstractImage}
     indexes::Vector{RangeIndex}
     dims::Vector{Int}
     zoombb::BoundingBox
+    zindex::Int
+    tindex::Int
     xdim::Int
     ydim::Int
     zdim::Int
     tdim::Int
 end
-function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
+
+function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
     assert2d(img)
-    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, int(xdim), int(ydim), int(zdim), int(tdim))
+    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, int(zindex), int(tindex), int(xdim), int(ydim), int(zdim), int(tdim))
 end
 
 function show(io::IO, img2::ImageSlice2d)
     print(io, "ImageSlice2d: zoom = ", img2.zoombb)
     if img2.zdim > 0
-        print(io, ", z = ", img2.indexes[img2.zdim])
+        print(io, ", z = ", img2.zindex)
     end
     if img2.tdim > 0
-        print(io, ", t = ", img2.indexes[img2.tdim])
+        print(io, ", t = ", img2.tindex)
     end
 end
 
@@ -136,25 +139,33 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     props[:transpose] = p[1] > p[2]
     # Start at z=1, t=1
     pindexes = parentindexes(data(img))
-    indexes = ntuple(ndims(img), i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)))
-    pindexes = ntuple(length(pindexes), i -> (i == zdim || i == tdim) ? 1 : pindexes[i])
     pdims = parentdims(data(img))
+    indexes = ntuple(ndims(img), i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)))
     imslice = sliceim(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
-    ImageSlice2d(imslice, pdims, pindexes, size(imslice), bb, xdim, ydim, zdim, tdim)
+    sz = size(imslice)
+    ImageSlice2d(imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
 end
 
 parentdims(A::AbstractArray) = [1:ndims(A)]
 parentdims(A::SubArray) = Base.parentdims(A)
 
 function _reslice!(img2::ImageSlice2d)
-    newindexes = RangeIndex[img2.imslice.data.indexes...]
-    newindexes[img2.pdims] = img2.indexes
+    newindexes = copy(img2.indexes)
+    bb = img2.zoombb
+    newindexes[img2.xdim] = newindexes[img2.xdim][ifloor(bb.xmin)+1:iceil(bb.xmax)]
+    newindexes[img2.ydim] = newindexes[img2.ydim][ifloor(bb.ymin)+1:iceil(bb.ymax)]
+    if img2.zdim > 0
+        newindexes[img2.zdim] = newindexes[img2.zdim][img2.zindex]
+    end
+    if img2.tdim > 0
+        newindexes[img2.tdim] = newindexes[img2.tdim][img2.tindex]
+    end
     img2.imslice.data.indexes = tuple(newindexes...)
     j = 1
-    for i = 1:length(img2.indexes)
-        if !isa(img2.indexes[i], Int)
-            img2.dims[j] = length(img2.indexes[i])
+    for i = 1:length(newindexes)
+        if !isa(newindexes[i], Int)
+            img2.dims[j] = length(newindexes[i])
             j += 1
         end
     end
@@ -163,40 +174,32 @@ function _reslice!(img2::ImageSlice2d)
 end
 
 function slice2!(img2::ImageSlice2d, z::Int, t::Int)
-    if img2.zdim != 0
-        img2.indexes[img2.zdim] = z
-    end
-    if img2.tdim != 0
-        img2.indexes[img2.tdim] = t
-    end
+    img2.zindex = z
+    img2.tindex = t
     _reslice!(img2)
 end
 
 function zoom2!(img2::ImageSlice2d, bb::BoundingBox)
     img2.zoombb = bb
-    img2.indexes[img2.xdim] = ifloor(bb.xmin)+1:iceil(bb.xmax)
-    img2.indexes[img2.ydim] = ifloor(bb.ymin)+1:iceil(bb.ymax)
     _reslice!(img2)
 end
 
 function zoom2!(img2::ImageSlice2d)
-    p = img2.imslice.parent
-    img2.indexes[img2.xdim] = 1:size(p, img2.xdim)
-    img2.indexes[img2.ydim] = 1:size(p, img2.ydim)
-    img2.imslice.indexes = tuple(img2.indexes...)
-    resetfirst!(img2.imslice)
+    img2.zoombb = BoundingBox(0,length(img2.indexes[img2.xdim]),0,length(img2.indexes[img2.ydim]))
+    _reslice!(img2)
 end
 
-width(img2::ImageSlice2d) = length(img2.indexes[img2.xdim])
-height(img2::ImageSlice2d) = length(img2.indexes[img2.ydim])
-xmin(img2::ImageSlice2d) = img2.indexes[img2.xdim][1]
-xmax(img2::ImageSlice2d) = img2.indexes[img2.xdim][end]
-ymin(img2::ImageSlice2d) = img2.indexes[img2.ydim][1]
-ymax(img2::ImageSlice2d) = img2.indexes[img2.ydim][end]
-sizex(img2::ImageSlice2d) = size(img2.imslice.data.parent, img2.xdim)
-sizey(img2::ImageSlice2d) = size(img2.imslice.data.parent, img2.ydim)
-sizez(img2::ImageSlice2d) = (img2.zdim > 0) ? size(img2.imslice.data.parent, img2.zdim) : 1
-sizet(img2::ImageSlice2d) = (img2.tdim > 0) ? size(img2.imslice.data.parent, img2.tdim) : 1
+# 
+width(img2::ImageSlice2d)  = iceil(xmax(img2))-ifloor(xmin(img2))
+height(img2::ImageSlice2d) = iceil(ymax(img2))-ifloor(ymin(img2))
+xmin(img2::ImageSlice2d) = xmin(img2.zoombb)
+xmax(img2::ImageSlice2d) = xmax(img2.zoombb)
+ymin(img2::ImageSlice2d) = ymin(img2.zoombb)
+ymax(img2::ImageSlice2d) = ymax(img2.zoombb)
+sizex(img2::ImageSlice2d) = length(img2.indexes[img2.xdim])
+sizey(img2::ImageSlice2d) = length(img2.indexes[img2.ydim])
+sizez(img2::ImageSlice2d) = (img2.zdim > 0) ? length(img2.indexes[img2.zdim]) : 1
+sizet(img2::ImageSlice2d) = (img2.tdim > 0) ? length(img2.indexes[img2.tdim]) : 1
 xrange(img2::ImageSlice2d) = (xmin(img2), xmax(img2))
 yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 
