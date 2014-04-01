@@ -21,12 +21,11 @@ Any typical image format should be fine, it doesn't have to be a jpg. You can al
 ```
 img = imread()
 ```
-Finally, ImageView comes with the ability to retrieve some standard test images:
+Note that the [`TestImages`](https://github.com/timholy/TestImages.jl) package contains several standard images:
 ```
 using TestImages
 img = testimage("mandrill")
 ```
-Currently, `mandrill`, `lighthouse`, `moonsurface`, and `mountainstream` are defined. It's easy to add more.
 
 ## Demonstration of the GUI
 
@@ -161,7 +160,7 @@ Another nice tool is `canvasgrid`:
 ```
 c = canvasgrid(2,2)
 ops = [:pixelspacing => [1,1]]
-display(c[1,1], testimage("lighthouse.png"); ops...)
+display(c[1,1], testimage("lighthouse"); ops...)
 display(c[1,2], testimage("mountainstream"); ops...)
 display(c[2,1], testimage("moonsurface"); ops...)
 display(c[2,2], testimage("mandrill"); ops...)

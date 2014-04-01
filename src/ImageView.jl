@@ -1,5 +1,3 @@
-include(joinpath(Pkg.dir(),"ImageView","test","testimages.jl"))
-
 module ImageView
 
 using Base.Graphics
