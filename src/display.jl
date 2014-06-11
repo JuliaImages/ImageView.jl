@@ -8,6 +8,15 @@ import Base.Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
 import Images.imread
 imread() = imread(GetOpenFile())
 
+import Images.scaleinfo
+function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::ScaleInfo)
+    if cs.min == nothing && cs.max == nothing
+        return scalei
+    else
+        return scaleminmax(img, cs.min, cs.max)
+    end
+end
+
 @linux_only const default_perimeter = RGB(0.85,0.85,0.85)
 @osx_only const default_perimeter = RGB(0.93, 0.93, 0.93)
 @windows_only const default_perimeter = RGB(1,1,1)  # untested
@@ -284,9 +293,14 @@ function display{A<:AbstractArray}(img::A; proplist...)
     c.mouse.motion = (path,x,y) -> updatexylabel(xypos, imgc, x, y)
     if imgc.render! == uint32color! && colorspace(img) == "Gray"
         menu = Menu(framec)
-        clim = climdefault(img)
-        cs = ImageContrast.ContrastSettings(clim[1], clim[2])
-        imgc.render! = (buf,img) -> uint32color!(buf, img, scaleminmax(img, cs.min, cs.max))
+        if haskey(img, "scalei")
+            cs = ImageContrast.ContrastSettings(nothing,nothing)
+            imgc.render! = (buf,img) -> uint32color!(buf, img, scaleinfo(cs, img["scalei"]))
+        else
+            clim = climdefault(img)
+            cs = ImageContrast.ContrastSettings(clim[1], clim[2])
+            imgc.render! = (buf,img) -> uint32color!(buf, img, scaleminmax(img, cs.min, cs.max))
+        end
         menu_contrast = menu_add(menu, "Contrast...", path -> ImageContrast.contrastgui(img2.imslice, cs, x->redraw(imgc, img2)))
         tk_popup(c, menu)
     end
