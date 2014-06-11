@@ -9,7 +9,7 @@ import Images.imread
 imread() = imread(GetOpenFile())
 
 import Images.scaleinfo
-function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::ScaleInfo)
+function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::ScaleInfo, img)
     if cs.min == nothing && cs.max == nothing
         return scalei
     else
@@ -295,7 +295,7 @@ function display{A<:AbstractArray}(img::A; proplist...)
         menu = Menu(framec)
         if haskey(img, "scalei")
             cs = ImageContrast.ContrastSettings(nothing,nothing)
-            imgc.render! = (buf,img) -> uint32color!(buf, img, scaleinfo(cs, img["scalei"]))
+            imgc.render! = (buf,img) -> uint32color!(buf, img, scaleinfo(cs, img["scalei"], img))
         else
             clim = climdefault(img)
             cs = ImageContrast.ContrastSettings(clim[1], clim[2])
