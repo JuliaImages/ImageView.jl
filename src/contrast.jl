@@ -175,7 +175,7 @@ function prepare_histogram(img, nbins, immin, immax)
     e = immin:(immax-immin)/(nbins-1):immax*(1+1e-6)
     dat = img[:]
     e, counts = hist(dat[isfinite(dat)], e)
-    counts += 1   # because of log scaling
+    counts .+= 1   # because of log scaling
     x, y = stairs(e, counts)
     p = FramedPlot()
     setattr(p, "ylog", true)
