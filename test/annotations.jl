@@ -7,5 +7,7 @@ zimg = convert(Image, z)
 imgc, img2 = ImageView.display(zimg,pixelspacing=[1,1]);
 Tk.set_size(ImageView.toplevel(imgc), 200, 200)
 idx = ImageView.annotate!(imgc, img2, ImageView.AnnotationText(x, y, "x", color=RGB(0,0,1)))
+idx2 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+10, y, shape='o', size=1, color=RGB(1,0,0)))
+idx3 = ImageView.annotate!(imgc, img2, ImageView.AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
 # Also test the following:
 # ImageView.delete_annotation!(imgc, idx)
