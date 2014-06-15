@@ -39,14 +39,15 @@ type AnnotationText
     halign::ASCIIString
     valign::ASCIIString
     markup::Bool
+    scale::Bool
 end
 
 function AnnotationText(x::Real, y::Real, str::String;
                         z = NaN, t = NaN,
                         color = RGB(0,0,0), angle = 0.0, fontfamily = "sans", fontsize = 10,
-                        fontoptions = "",  halign = "center", valign = "center", markup = false)
+                        fontoptions = "",  halign = "center", valign = "center", markup = false, scale=true)
     AnnotationText(float64(x), float64(y), float64(z), float64(t), str, color, fontfamily, fontoptions, fontsize, fontdescription(fontfamily, fontoptions, fontsize),
-                   float64(angle), halign, valign, markup)
+                   float64(angle), halign, valign, markup, scale)
 end
 
 fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fontoptions, " ", fontsize)
@@ -152,9 +153,8 @@ end
 
 function draw_anchored(ctx::CairoContext, data::AnnotationText, scale_x, scale_y)
     set_source(ctx, data.color)
-    if scale_x != 1
-        # TODO: Simply remove magical 4?
-        fontdesc = fontdescription(data.fontfamily, data.fontoptions, iround(data.fontsize/(scale_x*4)))
+    if data.scale && scale_x != 1
+        fontdesc = fontdescription(data.fontfamily, data.fontoptions, iround(data.fontsize/scale_x))
     else
         fontdesc = data.fontdesc
     end
