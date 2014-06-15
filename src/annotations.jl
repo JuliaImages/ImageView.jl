@@ -31,6 +31,9 @@ type AnnotationText
     t::Float64
     string::String
     color::ColorValue
+    fontfamily::ASCIIString
+    fontoptions::ASCIIString
+    fontsize::Integer
     fontdesc::ASCIIString
     angle::Float64
     halign::ASCIIString
@@ -42,9 +45,11 @@ function AnnotationText(x::Real, y::Real, str::String;
                         z = NaN, t = NaN,
                         color = RGB(0,0,0), angle = 0.0, fontfamily = "sans", fontsize = 10,
                         fontoptions = "",  halign = "center", valign = "center", markup = false)
-    AnnotationText(float64(x), float64(y), float64(z), float64(t), str, color, string(fontfamily, " ", fontoptions, " ", fontsize),
+    AnnotationText(float64(x), float64(y), float64(z), float64(t), str, color, fontfamily, fontoptions, fontsize, fontdescription(fontfamily, fontoptions, fontsize),
                    float64(angle), halign, valign, markup)
 end
+
+fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fontoptions, " ", fontsize)
 
 type AnnotationScalebarFixed{T}
     width::T   # Probably has units
@@ -65,33 +70,46 @@ type AnnotationPoints{R<:Union(Real,(Real,Real)),T<:Union(R,Vector{R},Matrix{R})
     color::ColorValue
     linewidth::Float64
     linecolor::ColorValue
+    scale::Bool
 end
 
-AnnotationPoints{R<:(Real,Real)}(xys::Vector{R}=(Float64,Float64)[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color) = AnnotationPoints{R,Vector{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor))
+AnnotationPoints{R<:(Real,Real)}(xys::Vector{R}=(Float64,Float64)[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Vector{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color) = AnnotationPoints{R,Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor))
+AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoint(xy::(Real,Real); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color) = AnnotationPoints{Float64,(Float64,Float64)}((float64(xy[1]), float64(xy[2])), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor))
+AnnotationPoint(xy::(Real,Real); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Float64,(Float64,Float64)}((float64(xy[1]), float64(xy[2])), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
 AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((float64(x), float64(y)); args...)
 
 
-type AnnotationLines{R<:Real,T<:Union((R,R,R,R),Vector{(R,R,R,R)},Matrix{R})}
+type AnnotationLines{R<:Union(Real,(Real,Real)),T<:Union((R,R),Vector{(R,R)},Matrix{R})}
     lines::T
     z::Float64
     t::Float64
     linecolor::ColorValue
     linewidth::Float64
+    coordinate_order::Vector{Int}
+
+    function AnnotationLines(lines::T, z, t, linecolor, linewidth, coord_order_str)
+        ord = sortperm(coord_order_str.data)
+        @assert coord_order_str[ord] == "xxyy"
+        new(lines,z,t,linecolor,linewidth,ord)
+    end
 end
 
-AnnotationLines{R<:Real}(lines::Vector{(R,R,R,R)}=((Float64,Float64,Float64,Float64))[]; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) = AnnotationLines{R,Vector{(R,R,R,R)}}(lines, z, t, color, linewidth)
+AnnotationLines{R<:Real}(lines::Vector{((R,R),(R,R))}=(((Float64,Float64),(Float64,Float64)))[]; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy") = AnnotationLines{R,Vector{((R,R),(R,R))}}(lines, z, t, color, linewidth, coord_order)
 
-AnnotationLines{R<:Real}(lines::Matrix{R}; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) = AnnotationLines{R,Matrix{R}}(lines, z, t, color, linewidth)
+AnnotationLines{R<:Real}(lines::Matrix{R}; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy") = AnnotationLines{R,Matrix{R}}(lines, z, t, color, linewidth, coord_order)
 
-AnnotationLine{R<:Real}(line::(R,R,R,R); z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) = AnnotationLines{R,(R,R,R,R)}(line, z, t, color, linewidth)
-#AnnotationLine(pt1::(Real,Real), pt2::(Real,Real); args...) = AnnotationLines((pt1..., pt2...); args...)
-AnnotationLine(x1::Real, y1::Real, x2::Real, y2::Real; args...) = AnnotationLine((float64(x1),float64(y1),float64(x2),float64(y2)); args...)
+AnnotationLine{R<:Real}(line::((R,R),(R,R)); z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) = AnnotationLines{R,((R,R),(R,R))}(line, z, t, color, linewidth, "xyxy")
+AnnotationLine(pt1::(Real,Real), pt2::(Real,Real); args...) = AnnotationLine((pt1, pt2); args...)
 
+function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyxy", args...)
+    ord = sortperm(coord_order.data)
+    @assert coord_order[ord] == "xxyy"
+    (x1,x2,y1,y2) = [c1,c2,c3,c4][ord]
+    AnnotationLine((float64(x1),float64(y1)),(float64(x2),float64(y2)); args...)
+end
 
 function setvalid!(ann::AnchoredAnnotation{AnnotationText}, z, t)
     dat = ann.data
@@ -106,16 +124,15 @@ end
 function setvalid!(ann::FloatingAnnotation, z, t)
 end
 
-function draw(c::Canvas, ann::AnchoredAnnotation{AnnotationText})
+function draw(c::Canvas, ann::AnchoredAnnotation)
     if ann.valid
         ctx = getgc(c)
         save(ctx)
         data = ann.data
         set_coords(ctx, ann.devicebb(data), ann.userbb(data))
-        set_source(ctx, data.color)
-        Cairo.set_font_face(ctx, data.fontdesc)
-        Cairo.text(ctx, data.x-0.5, data.y-0.5, data.string, halign = data.halign, valign = data.valign,
-                angle = data.angle, markup = data.markup)
+        scale_x = width(ann.userbb(data))/width(ann.devicebb(data))
+        scale_y = height(ann.userbb(data))/height(ann.devicebb(data))
+        draw_anchored(ctx, data, scale_x, scale_y)
         restore(ctx)
     end
 end
@@ -133,21 +150,34 @@ function draw{T}(c::Canvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
     restore(ctx)
 end
 
-function draw{R,T}(c::Canvas, ann::AnchoredAnnotation{AnnotationPoints{R,T}})
-    if ann.valid
-        ctx = getgc(c)
-        save(ctx)
-        data = ann.data
-        set_line_width(ctx, data.linewidth)
-        set_source(ctx, data.linecolor)
-        draw_pts(ctx, data.pts, data.size, data.shape, data.color, data.linecolor)
-        restore(ctx)
+function draw_anchored(ctx::CairoContext, data::AnnotationText, scale_x, scale_y)
+    set_source(ctx, data.color)
+    if scale_x != 1
+        # TODO: Simply remove magical 4?
+        fontdesc = fontdescription(data.fontfamily, data.fontoptions, iround(data.fontsize/(scale_x*4)))
+    else
+        fontdesc = data.fontdesc
     end
+    Cairo.set_font_face(ctx, fontdesc)
+    Cairo.text(ctx, data.x-0.5, data.y-0.5, data.string, halign = data.halign, valign = data.valign,
+               angle = data.angle, markup = data.markup)
+end
+
+function draw_anchored(ctx::CairoContext, data::AnnotationPoints, scale_x, scale_y)
+    set_line_width(ctx, data.linewidth)
+    set_source(ctx, data.linecolor)
+    if data.scale
+        sz_x = sz_y = data.size
+    else
+        sz_x =  scale_x * data.size
+        sz_y =  scale_y * data.size
+    end
+    draw_pts(ctx, data.pts, sz_x, sz_y, data.shape, data.color, data.linecolor)
 end
 
 draw_pts(ctx::CairoContext, pt::NTuple{2}, args...) = draw_pt(ctx, pt, args...)
 
-function draw_pts{R<:(Real,Real)}(ctx::CairoContext, pts::Vector{R}, args...)
+function draw_pts{R<:Real}(ctx::CairoContext, pts::Vector{(R,R)}, args...)
     for pt in pts
         draw_pt(ctx, pt, args...)
     end
@@ -162,65 +192,84 @@ function draw_pts(ctx::CairoContext, pts::Matrix, args...)
 end
 
 
-function draw_pt(ctx::CairoContext, pt, sz::Float64, shape::Char, color::ColorValue, linecolor::ColorValue)
+function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::ColorValue, linecolor::ColorValue)
     x::Float64,y::Float64 = pt
-    hsz = sz/2
+    hsz_x = sz_x/2
+    hsz_y = sz_y/2
 
-    if shape == '.' | shape == 'o'
+    if (shape == '.') | (shape == 'o')
         move_to(ctx, x, y)
-        circle(ctx, x, y, sz)
+        if sz_x == sz_y
+            new_sub_path(ctx)
+            circle(ctx, x, y, sz_x)
+        else
+            # draw an ellipse
+            save(ctx)
+            translate(ctx, x + hsz_x, y + hsz_y)
+            scale(ctx, hsz_x, hsz_y)
+            new_sub_path(ctx)
+            circle(ctx, 0, 0, 1);
+            restore(ctx)
+        end
         if shape == '.'
             set_source(ctx, color)
-            fill(ctx)
+            fill_preserve(ctx)
             set_source(ctx, linecolor)
         end
     elseif (shape == 'x') | (shape == '*') | (shape == '+')
         if (shape == 'x') | (shape == '*')
-            move_to(ctx, x-hsz, y-hsz)
-            line_to(ctx, x+hsz, y+hsz)
-            move_to(ctx, x-hsz, y+hsz)
-            line_to(ctx, x+hsz, y-hsz)
+            move_to(ctx, x-hsz_x, y-hsz_y)
+            line_to(ctx, x+hsz_x, y+hsz_y)
+            move_to(ctx, x-hsz_x, y+hsz_y)
+            line_to(ctx, x+hsz_x, y-hsz_y)
         end
         if (shape == '+') | (shape == '*')
-            move_to(ctx, x-hsz, y)
-            line_to(ctx, x+hsz, y)
-            move_to(ctx, x, y-hsz)
-            line_to(ctx, x, y+hsz)
+            move_to(ctx, x-hsz_x, y)
+            line_to(ctx, x+hsz_x, y)
+            move_to(ctx, x, y-hsz_y)
+            line_to(ctx, x, y+hsz_y)
         end
     end
 
     stroke(ctx)
 end
 
-function draw{R,T}(c::Canvas, ann::AnchoredAnnotation{AnnotationLines{R,T}})
-    if ann.valid
-        ctx = getgc(c)
-        save(ctx)
-        data = ann.data
-        set_line_width(ctx, data.linewidth)
-        set_source(ctx, data.linecolor)
-        draw_lines(ctx, data.lines)
-        restore(ctx)
-    end
+function draw_anchored(ctx::CairoContext, data::AnnotationLines, args...)
+    set_line_width(ctx, data.linewidth)
+    set_source(ctx, data.linecolor)
+    draw_lines(ctx, data.lines, data.coordinate_order)
 end
 
-draw_lines(ctx::CairoContext, line::NTuple{4}) = draw_line(ctx, line)
+draw_lines(ctx::CairoContext, line::((Real,Real),(Real,Real)), _) = draw_line(ctx, line)
 
-function draw_lines{R<:Real}(ctx::CairoContext, lines::Vector{(R,R,R,R)})
+function draw_lines{R<:Real}(ctx::CairoContext, lines::Vector{((R,R),(R,R))}, _)
     for line in lines
         draw_line(ctx, line)
     end
 end
 
-function draw_lines(ctx::CairoContext, lines::Matrix)
-    @assert size(lines,1) == 4
+function draw_lines{R<:Real}(ctx::CairoContext, lines::Matrix{R}, coordinate_order)
     for i in size(lines,2)
-        pt = lines[:,i]
+        pt = tuple(lines[coordinate_order,i]...)
         draw_line(ctx, pt)
     end
 end
 
-function draw_line(ctx::CairoContext, line)
+function draw_lines{R<:(Real,Real)}(ctx::CairoContext, lines::Matrix{R}, _)
+    for i in size(lines,2)
+        pt = tuple(lines[:,i]...)
+        draw_line(ctx, pt)
+    end
+end
+
+function draw_line(ctx::CairoContext, line::((Real,Real),(Real,Real)))
+    (x1,y1),(x2,y2) = line
+    move_to(ctx, x1,y1)
+    line_to(ctx, x2,y2)
+    stroke(ctx)
+end
+
+function draw_line(ctx::CairoContext, line::(Real,Real,Real,Real))
     x1,y1,x2,y2 = line
     move_to(ctx, x1,y1)
     line_to(ctx, x2,y2)
