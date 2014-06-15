@@ -167,6 +167,86 @@ display(c[2,2], testimage("mandrill"); ops...)
 ```
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
 
+### Annotations
+
+You can add and remove various annotations to images (currently text, points, and lines):
+
+```julia
+using Images, Color
+import ImageView
+z = ones(10,50);
+y = 8; x = 2;
+z[y,x] = 0
+zimg = convert(Image, z)
+imgc, img2 = ImageView.display(zimg,pixelspacing=[1,1]);
+Tk.set_size(ImageView.toplevel(imgc), 200, 200)
+idx = ImageView.annotate!(imgc, img2, ImageView.AnnotationText(x, y, "x", color=RGB(0,0,1), fontsize=3))
+idx2 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(1,0,0)))
+idx3 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
+idx4 = ImageView.annotate!(imgc, img2, ImageView.AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
+#ImageView.delete_annotation!(imgc, idx)
+```
+
+#### Annotation API
+```
+AnnotationText(x, y, str;
+               z = NaN, t =  NaN,
+               color = RGB(0,0,0), angle = 0.0, fontfamily = "sans", fontsize = 10,
+               fontoptions = "",  halign = "center", valign = "center", markup = false, scale=true)
+```
+Place `str` at position `(x,y)`.
+
+Properties:
+
+* `z` - position on z axis, for 3D images
+* `t` - position on time axis, for movie-like images
+* `color`
+* `angle`
+* `fontfamily`
+* `fontsize` - font size in points
+* `fontoptions`
+* `halign` - "center", "left", or "right"
+* `valign` - "center", "top", or "bottom"
+* `markup`
+* `scale` - scale the text as the image is zoomed (default: `true`)
+
+
+```
+AnnotationPoints([xy | xys | x, y];
+                 z = NaN, t = NaN, size=10.0, shape::Char='x',
+                 color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false)
+```
+
+Annotate the point `xy`, `(x,y)`, or the points `xys`.  `xys` maybe a Vector of tuples `Vector{(Real,Real)}`, or a `2 x N` Matrix.  Points are assumed to be in `(x,y)` order. (TODO: this could be generalized, as with lines.)
+
+Properties:
+
+* `z` - position on z axis, for 3D images
+* `t` - position on time axis, for movie-like images
+* `size` - how large to draw the point
+* `shape` - one of `'.'`, `'x'`, `'o'`, `'+'`, `'*'`
+* `color`
+* `linewidth` - width of lines used to draw the point
+* `linecolor` - line color; defaults to `color`; filled circles (shape=`'.'`) can have a different outline and fill color
+* `scale` - scale the drawn size of the point when the image is scaled (default: `false`)
+
+
+```
+AnnotationLines(line | lines | c1,c2,c3,c4;
+                z = NaN, t = NaN,
+                color = RGB(1,1,1), linewidth=1.0, coord_order="xyxy")
+```
+
+Draw `line`, `lines`, or the line with coordinates `(c1,c2,c3,c4)`.  `line` is specified as a tuple of point tuples, `((x1,y1),(x2,y2))`.  `lines` may be a `Vector` of such lines, or a `4 x N` matrix.  For a matrix or when specifying coordinates independently, the coordinate order is specified by `coord_order`, which defaults to "xyxy".
+
+Properties:
+
+* `z` - position on z axis, for 3D images
+* `t` - position on time axis, for movie-like images
+* `color`
+* `linewidth` - width of the line(s)
+* `coord_order` - for matrix or coordinate inputs, the order of the coordinates (e.g., "xyxy", "xxyy", "yyxx")
+
 
 ## Additional notes
 
@@ -204,4 +284,4 @@ This will stop the julia process from terminating immediately. Note that if we d
 If you are opening more than one window you may need to create more than one `Condition` object.
 
 <br>
-<br> 
+<br>
