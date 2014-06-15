@@ -24,6 +24,16 @@ type FloatingAnnotation{T} <: AbstractAnnotation
 end
 # FloatingAnnotation{T}(devicebb::Function, data::T) = AnchoredAnnotation{T}(devicebb, data)
 
+type AnnotationScalebarFixed{T}
+    width::T   # Probably has units
+    height::T
+    getsize::Function   # syntax w,h = getsize(width,height)
+    centerx::Float64
+    centery::Float64
+    color::ColorValue
+end
+AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, float64(centerx), float64(centery), color)
+
 type AnnotationText
     x::Float64
     y::Float64
@@ -51,16 +61,6 @@ function AnnotationText(x::Real, y::Real, str::String;
 end
 
 fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fontoptions, " ", fontsize)
-
-type AnnotationScalebarFixed{T}
-    width::T   # Probably has units
-    height::T
-    getsize::Function   # syntax w,h = getsize(width,height)
-    centerx::Float64
-    centery::Float64
-    color::ColorValue
-end
-AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, float64(centerx), float64(centery), color)
 
 type AnnotationPoints{R<:Union(Real,(Real,Real)),T<:Union(R,Vector{R},Matrix{R})}
     pts::T
@@ -112,15 +112,12 @@ function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyx
     AnnotationLine((float64(x1),float64(y1)),(float64(x2),float64(y2)); args...)
 end
 
-function setvalid!(ann::AnchoredAnnotation{AnnotationText}, z, t)
-    dat = ann.data
-    ann.valid = (isnan(dat.z) || round(dat.z) == z) &&
-        (isnan(dat.t) || round(dat.t) == t)
-end
+setvalid!(ann::AnchoredAnnotation, z, t) = (ann.valid = annotation_isvalid(ann.data, z, t))
 
-function setvalid!(ann::AnchoredAnnotation, z, t)
-    ann.valid = true
-end
+annotation_isvalid(x::Union(AnnotationText, AnnotationPoints, AnnotationLines), z, t) = 
+    (isnan(dat.z) || round(dat.z) == z) && (isnan(dat.t) || round(dat.t) == t)
+
+annotation_isvalid(x, z, t) = true
 
 function setvalid!(ann::FloatingAnnotation, z, t)
 end
