@@ -205,8 +205,8 @@ function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::ColorVal
         else
             # draw an ellipse
             save(ctx)
-            translate(ctx, x + hsz_x, y + hsz_y)
-            scale(ctx, hsz_x, hsz_y)
+            translate(ctx, x, y)
+            scale(ctx, sz_x, sz_y)
             new_sub_path(ctx)
             circle(ctx, 0, 0, 1);
             restore(ctx)
