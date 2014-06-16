@@ -182,7 +182,7 @@ end
 
 function draw_pts(ctx::CairoContext, pts::Matrix, args...)
     @assert size(pts,1) == 2
-    for i in size(pts,2)
+    for i in 1:size(pts,2)
         pt = pts[:,i]
         draw_pt(ctx, pt, args...)
     end
@@ -246,14 +246,14 @@ function draw_lines{R<:Real}(ctx::CairoContext, lines::Vector{((R,R),(R,R))}, _)
 end
 
 function draw_lines{R<:Real}(ctx::CairoContext, lines::Matrix{R}, coordinate_order)
-    for i in size(lines,2)
+    for i in 1:size(lines,2)
         pt = tuple(lines[coordinate_order,i]...)
         draw_line(ctx, pt)
     end
 end
 
 function draw_lines{R<:(Real,Real)}(ctx::CairoContext, lines::Matrix{R}, _)
-    for i in size(lines,2)
+    for i in 1:size(lines,2)
         pt = tuple(lines[:,i]...)
         draw_line(ctx, pt)
     end
