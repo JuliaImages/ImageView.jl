@@ -252,7 +252,7 @@ Properties:
 
 ### Calling display from a script file
 
-If you call Julia from a script file, the julia process will terminate towards the end of the program. This will cause any windows opened with `display()` to terminate (Which is probably not what you intend). We want to make it only terminate the process when the image window changes. Bellow is some example code to do this:
+If you call Julia from a script file, the julia process will terminate at the end of the program. This will cause any windows opened with `display()` to terminate, which is probably not what you intend. We want to make it only terminate the process when the image window is closed. Below is some example code to do this:
 
 ```
 using Tk
@@ -265,7 +265,7 @@ imgc, imgslice = display(img);
 #If we are not in a REPL
 if (!isinteractive())
 
-	# Create a condition object
+    # Create a condition object
     c = Condition()
 
     # Get the main window (A Tk toplevel object)
@@ -279,9 +279,9 @@ if (!isinteractive())
 end
 ```
 
-This will stop the julia process from terminating immediately. Note that if we did not add the `bind` function, the process will keep waiting even after the image window has closed, and you will have to manually close it with `CTRL + C`.
+This will prevent the julia process from terminating immediately. Note that if we did not add the `bind` function, the process will keep waiting even after the image window has closed, and you will have to manually close it with `CTRL + C`.
 
-If you are opening more than one window you may need to create more than one `Condition` object.
+If you are opening more than one window you will need to create more than one `Condition` object, if you wish to wait until the last one is closed.
 
 <br>
 <br>
