@@ -32,7 +32,7 @@ type AnnotationScalebarFixed{T}
     centery::Float64
     color::ColorValue
 end
-AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, float64(centerx), float64(centery), color)
+# AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, float64(centerx), float64(centery), color)
 
 type AnnotationText
     x::Float64

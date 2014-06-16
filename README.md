@@ -169,7 +169,26 @@ display(c[2,2], testimage("mandrill"); ops...)
 
 ### Annotations
 
-You can add and remove various annotations to images (currently text, points, and lines):
+You can add and remove various annotations to images (currently text, points, and lines).
+There are two basic styles of annotation: "anchored" and "floating."
+An "anchored" annotation is positioned at a particular pixel location within the image;
+if you zoom or pan, the annotation will move with the image, and may not even be shown if the corresponding position is off-screen.
+In contrast, a "floating" annotation is not tied to a particular location in the image,
+and will always be displayed at approximately the same position within the window even if you zoom or pan.
+As a consequence, "anchored" annotations are best for labeling particular features in the image,
+and "floating" annotations are best for things like scalebars.
+
+Here's an example of adding a scale bar to an image:
+```julia
+imgc, imsl = ImageView.display(img)
+length = 30
+ImageView.scalebar(imgc, imsl, length; x = 0.1, y = 0.05)
+```
+`x` and `y` describe the center of the scale bar in normalized coordinates, with `(0,0)` in the upper left.
+In this example, the length of the scale bar is in pixels, but if you're using the SIUnits package for `pixelspacing`,
+then use something like `length = 50Micro*Meter`.
+
+The remaining examples are for fixed annotations. Here is a demonstration:
 
 ```julia
 using Images, Color
