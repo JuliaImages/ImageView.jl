@@ -10,7 +10,7 @@ using Images
 
 import Base: parent, show, delete!, empty!
 import Base.Graphics: width, height, fill, set_coords
-import Gtk: toplevel, draw
+
 # include("config.jl")
 # include("external.jl")
 include("rubberband.jl")
