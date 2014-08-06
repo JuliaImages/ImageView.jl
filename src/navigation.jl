@@ -13,7 +13,7 @@ type NavigationState
     z::Int             # current position in z-stack
     t::Int             # current moment in time
     # Other state data:
-    timer              # nothing if not playing, TimeoutAsyncWork if we are
+    timer              # nothing if not playing, Timer if we are
     fps::Float64       # playback speed in frames per second
 end
 
@@ -235,7 +235,7 @@ function playz(inc, ctrls, state, showframe)
     end
     stop_playing!(state)
     dt = 1/state.fps
-    state.timer = TimeoutAsyncWork(VERSION >= v"0.3-" ? timer -> stepz(inc, ctrls, state, showframe) : (timer, status) -> stepz(inc, ctrls, state, showframe))
+    state.timer = VERSION >= v"0.3-" ? Timer(timer -> stepz(inc, ctrls, state, showframe)) : TimeoutAsyncWork((timer, status) -> stepz(inc, ctrls, state, showframe))
     start_timer(state.timer, dt, dt)
 end
 
@@ -277,7 +277,7 @@ function playt(inc, ctrls, state, showframe)
     end
     stop_playing!(state)
     dt = 1/state.fps
-    state.timer = TimeoutAsyncWork(VERSION >= v"0.3-" ? timer -> stept(inc, ctrls, state, showframe) : (timer, status) -> stept(inc, ctrls, state, showframe))
+    state.timer = VERSION >= v"0.3-" ? Timer(timer -> stept(inc, ctrls, state, showframe)) : TimeoutAsyncWork((timer, status) -> stept(inc, ctrls, state, showframe))
     start_timer(state.timer, dt, dt)
 end
 
