@@ -42,7 +42,7 @@ type ImageCanvas
     canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
     navigationstate
     navigationctrls
-    
+
     function ImageCanvas(fmt::Int32, props::Dict)
         ps = get(props, :pixelspacing, nothing)
         aspect_x_per_y = is(ps, nothing) ? nothing : ps[1]/ps[2]
@@ -290,7 +290,7 @@ function view{A<:AbstractArray}(img::A; proplist...)
 #     ctx = getgc(c)  # force initialization of canvas
     allocate_surface!(imgc, w, h)
     create_callbacks(imgc, img2)
-    c.mouse.motion = (path,x,y) -> updatexylabel(xypos, imgc, x, y)
+    c.mouse.motion = (path,x,y) -> updatexylabel(xypos, imgc, img2, x, y)
     if imgc.render! == uint32color! && colorspace(img) == "Gray"
         menu = Menu(framec)
         if haskey(img, "scalei")
@@ -496,12 +496,18 @@ function resize(imgc::ImageCanvas, img2::ImageSlice2d)
     redraw(imgc)
 end
 
-function updatexylabel(xypos, imgc, x, y)
+function updatexylabel(xypos, imgc, img2, x, y)
+    xu,yu = device_to_user(getgc(imgc.c), x, y)
+    # Image-coordinates
+    xi,yi = ifloor(1+xu), ifloor(1+yu)
+
     if isinside(imgc.canvasbb, x, y)
-        xu,yu = device_to_user(getgc(imgc.c), x, y)
-        set_value(xypos, string(iceil(xu), ", ", iceil(yu)))
+        # Slice-coordinates (different from above when zoom is active.)
+        xs,ys = ifloor(1+xu-xmin(img2)), ifloor(1+yu-ymin(img2))
+        val = img2.imslice["x", xs, "y", ys]
+        set_value(xypos, "$xi, $yi: $val")
     else
-        set_value(xypos, "")
+        set_value(xypos, "$xi, $yi")
     end
 end
 
