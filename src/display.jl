@@ -36,6 +36,7 @@ type ImageCanvas
     flipy::Bool
     surfaceformat::Int32     # The Cairo format (e.g., Cairo.FORMAT_ARGB32)
     annotations::Dict{Uint, AbstractAnnotation}
+    handles::Dict{Symbol, Any}
     c::Canvas                # canvas for rendering image
     surface::CairoSurface    # source surface of the image (changes with zoom region)
     renderbuf::Array{Uint32} # intermediate used if transpose is true
@@ -63,7 +64,7 @@ type ImageCanvas
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
-        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Dict{Uint,AbstractAnnotation}())
+        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Dict{Uint,AbstractAnnotation}(), Dict{Symbol,Any}())
         # c, surface, renderbuf, and canvasbb will be initialized later
     end
 end
@@ -180,6 +181,7 @@ function _reslice!(img2::ImageSlice2d)
     end
     img2.imslice.data.dims = tuple(img2.dims...)
     resetfirst!(img2.imslice.data)
+    img2
 end
 
 function slice2!(img2::ImageSlice2d, z::Int, t::Int)
@@ -284,6 +286,7 @@ function view{A<:AbstractArray}(img::A; proplist...)
     fnotify = Frame(win)
     grid(fnotify, lastrow+=1, 1, sticky="ew")
     xypos = Label(fnotify)
+    imgc.handles[:pointerlabel] = xypos
     grid(xypos, 1, 1, sticky="ne")
     # Set up the rendering
     set_visible(win, true)
@@ -310,6 +313,20 @@ function view{A<:AbstractArray}(img::A; proplist...)
     Tk.configure(imgc.c)
     imgc, img2
 end
+
+# Display a labeled image: in the status bar that shows information about the pixel under the mouse pointer,
+# display the label value rather than the pixel value.
+function viewlabeled(img::AbstractArray, label::AbstractArray; proplist...)
+    imgc, imsl = view(img, proplist...)
+    props = Dict{Symbol,Any}()
+    for (k,v) in proplist
+        props[k] = v
+    end
+    lblsl = ImageSlice2d(label, props)
+    imgc.c.mouse.motion = (path,x,y) -> updatexylabel(imgc.handles[:pointerlabel], imgc, slice2!(lblsl, imsl.zindex, imsl.tindex), x, y)
+    imgc, imsl
+end
+
 
 # Display a new image in an old ImageCanvas, preserving properties
 function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; proplist...)

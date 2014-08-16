@@ -34,6 +34,7 @@ export # types
     scalebar,
     toplevel,
     view,
+    viewlabeled,
     write_to_png
 
 @deprecate delete_annotations! empty!

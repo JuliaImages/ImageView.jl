@@ -1,4 +1,5 @@
 include("tile.jl")
 include("annotations.jl")
+include("statusbar.jl")
 include("test4d.jl")
 ImageView.view(img)
