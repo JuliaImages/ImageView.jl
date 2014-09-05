@@ -13,7 +13,7 @@ function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::ScaleInfo, img)
     if cs.min == nothing && cs.max == nothing
         return scalei
     else
-        return scaleminmax(img, cs.min, cs.max)
+        return ScaleMinMax(RGB24, img, cs.min, cs.max)
     end
 end
 
@@ -52,7 +52,7 @@ type ImageCanvas
         else
             if haskey(props, :clim)
                 clim = props[:clim]
-                render! = (buf, img) -> uint32color!(buf, img, scaleminmax(img, clim[1], clim[2]))
+                render! = (buf, img) -> uint32color!(buf, img, ScaleMinMax(RGB24, img, clim[1], clim[2]))
             elseif haskey(props, :scalei)
                 render! = (buf, img) -> uint32color!(buf, img, props[:scalei])
             else
@@ -300,9 +300,9 @@ function view{A<:AbstractArray}(img::A; proplist...)
             cs = ImageContrast.ContrastSettings(nothing,nothing)
             imgc.render! = (buf,img) -> uint32color!(buf, img, scaleinfo(cs, img["scalei"], img))
         else
-            clim = climdefault(img)
+            clim = (zero(eltype(img)), one(eltype(img)))
             cs = ImageContrast.ContrastSettings(clim[1], clim[2])
-            imgc.render! = (buf,img) -> uint32color!(buf, img, scaleminmax(img, cs.min, cs.max))
+            imgc.render! = (buf,img) -> uint32color!(buf, img, ScaleMinMax(RGB24, img, cs.min, cs.max))
         end
         menu_contrast = menu_add(menu, "Contrast...", path -> ImageContrast.contrastgui(img2.imslice, cs, x->redraw(imgc, img2)))
         tk_popup(c, menu)
