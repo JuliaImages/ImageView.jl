@@ -329,7 +329,7 @@ end
 
 
 # Display a new image in an old ImageCanvas, preserving properties
-function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; proplist...)
+function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint(props, length(proplist))
@@ -341,7 +341,7 @@ function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; proplist...)
     w = width(img2)
     h = height(img2)
     allocate_surface!(imgc, w, h)
-    create_callbacks(imgc, img2)
+    interactive && create_callbacks(imgc, img2)
     rerender(imgc, img2)
     resize(imgc, img2)
     Tk.configure(imgc.c)
@@ -349,7 +349,7 @@ function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; proplist...)
 end
 
 # Display an image in a Canvas. Do not create controls.
-function view{A<:AbstractArray}(c::Canvas, img::A; proplist...)
+function view{A<:AbstractArray}(c::Canvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint(props, length(proplist))
@@ -363,7 +363,7 @@ function view{A<:AbstractArray}(c::Canvas, img::A; proplist...)
     w = width(img2)
     h = height(img2)
     allocate_surface!(imgc, w, h)
-    create_callbacks(imgc, img2)
+    interactive && create_callbacks(imgc, img2)
     rerender(imgc, img2)
     resize(imgc, img2)
     Tk.configure(imgc.c)
