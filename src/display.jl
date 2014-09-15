@@ -114,6 +114,20 @@ function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb:
     ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, int(zindex), int(tindex), int(xdim), int(ydim), int(zdim), int(tdim))
 end
 
+function getindex(img2::ImageSlice2d, x::Real, y::Real)
+    P = parent(data(img2.imslice))
+    indexes = RangeIndex[1:size(P,d) for d = 1:ndims(P)]
+    indexes[img2.xdim] = clamp(int(x), 1, size(P,img2.xdim))
+    indexes[img2.ydim] = clamp(int(y), 1, size(P,img2.ydim))
+    if img2.zdim > 0
+        indexes[img2.zdim] = img2.zindex
+    end
+    if img2.tdim > 0
+        indexes[img2.tdim] = img2.tindex
+    end
+    P[indexes...]
+end
+
 function show(io::IO, img2::ImageSlice2d)
     print(io, "ImageSlice2d: zoom = ", img2.zoombb)
     if img2.zdim > 0
@@ -317,6 +331,10 @@ end
 # Display a labeled image: in the status bar that shows information about the pixel under the mouse pointer,
 # display the label value rather than the pixel value.
 function viewlabeled(img::AbstractArray, label::AbstractArray; proplist...)
+    size(img) == size(label) || throw(DimensionMismatch("size $(size(label)) of label array disagrees with size $(size(img)) of the image"))
+    if isa(img, AbstractImage) && !isa(label, AbstractImage)
+        label = share(img, label)
+    end
     imgc, imsl = view(img, proplist...)
     props = Dict{Symbol,Any}()
     for (k,v) in proplist
@@ -517,11 +535,8 @@ function updatexylabel(xypos, imgc, img2, x, y)
     xu,yu = device_to_user(getgc(imgc.c), x, y)
     # Image-coordinates
     xi,yi = ifloor(1+xu), ifloor(1+yu)
-
     if isinside(imgc.canvasbb, x, y)
-        # Slice-coordinates (different from above when zoom is active.)
-        xs,ys = ifloor(1+xu-xmin(img2)), ifloor(1+yu-ymin(img2))
-        val = img2.imslice["x", xs, "y", ys]
+        val = img2[xi,yi]
         set_value(xypos, "$xi, $yi: $val")
     else
         set_value(xypos, "$xi, $yi")
