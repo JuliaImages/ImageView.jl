@@ -177,8 +177,10 @@ parentdims(A::SubArray) = Base.parentdims(A)
 function _reslice!(img2::ImageSlice2d)
     newindexes = copy(img2.indexes)
     bb = img2.zoombb
-    newindexes[img2.xdim] = newindexes[img2.xdim][ifloor(bb.xmin)+1:iceil(bb.xmax)]
-    newindexes[img2.ydim] = newindexes[img2.ydim][ifloor(bb.ymin)+1:iceil(bb.ymax)]
+    xindx = newindexes[img2.xdim]
+    yindx = newindexes[img2.ydim]
+    newindexes[img2.xdim] = xindx[max(1,ifloor(bb.xmin)+1):min(length(xindx),iceil(bb.xmax))]
+    newindexes[img2.ydim] = yindx[max(1,ifloor(bb.ymin)+1):min(length(yindx),iceil(bb.ymax))]
     if img2.zdim > 0
         newindexes[img2.zdim] = newindexes[img2.zdim][img2.zindex]
     end
