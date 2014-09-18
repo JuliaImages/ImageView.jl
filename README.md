@@ -203,6 +203,7 @@ idx = ImageView.annotate!(imgc, img2, ImageView.AnnotationText(x, y, "x", color=
 idx2 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(1,0,0)))
 idx3 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
 idx4 = ImageView.annotate!(imgc, img2, ImageView.AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
+idx5 = ImageView.annotate!(imgc, img2, ImageView.AnnotationBox(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,0,1)))
 ImageView.delete!(imgc, idx)
 ```
 
@@ -265,6 +266,22 @@ Properties:
 * `color`
 * `linewidth` - width of the line(s)
 * `coord_order` - for matrix or coordinate inputs, the order of the coordinates (e.g., "xyxy", "xxyy", "yyxx")
+
+
+```
+AnnotationBox(left, top, right, bottom | (x1,y1), (x2,y2) | bb::Base.Graphics.BoundingBox;
+              z = NaN, t = NaN,
+              color = RGB(1,1,1), linewidth=1.0, coord_order="xyxy")
+```
+
+Draw a box.  Box can be specified using four values for `(left, top, right, bottom)`, as a pair of tuples, `(x1,y1),(x2,y2)`, or as a `BoundingBox`.  The coordinate order the pair of tuples may be specified by `coord_order`, which defaults to "xyxy".
+
+Properties:
+
+* `z` - position on z axis, for 3D images
+* `t` - position on time axis, for movie-like images
+* `color`
+* `linewidth` - width of the lines
 
 
 ## Additional notes

@@ -34,6 +34,8 @@ type AnnotationScalebarFixed{T}
 end
 # AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, float64(centerx), float64(centery), color)
 
+## Text annotations
+
 type AnnotationText
     x::Float64
     y::Float64
@@ -62,6 +64,9 @@ end
 
 fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fontoptions, " ", fontsize)
 
+
+## Point annotations
+
 type AnnotationPoints{R<:Union(Real,(Real,Real)),T<:Union(R,Vector{R},Matrix{R})}
     pts::T
     z::Float64
@@ -82,6 +87,7 @@ AnnotationPoint(xy::(Real,Real); z = NaN, t = NaN, size=10.0, shape::Char='x', c
 
 AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((float64(x), float64(y)); args...)
 
+## Line annotations
 
 type AnnotationLines{R<:Union(Real,(Real,Real)),T<:Union((R,R),Vector{(R,R)},Matrix{R})}
     lines::T
@@ -112,9 +118,36 @@ function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyx
     AnnotationLine((float64(x1),float64(y1)),(float64(x2),float64(y2)); args...)
 end
 
+## Box annotations
+
+type AnnotationBox
+    left::Float64
+    top::Float64
+    right::Float64
+    bottom::Float64
+    z::Float64
+    t::Float64
+    linecolor::ColorValue
+    linewidth::Float64
+end
+
+function AnnotationBox(c1::Real, c2::Real, c3::Real, c4::Real; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy")
+    ord = sortperm(coord_order.data)
+    @assert coord_order[ord] == "xxyy"
+    (x1,x2,y1,y2) = [c1,c2,c3,c4][ord]
+    (x1,x2) = minmax(x1,x2)
+    (y1,y2) = minmax(y1,y2)
+    AnnotationBox(x1,y1,x2,y2, z, t, color, linewidth)
+end
+
+AnnotationBox(pt1::(Real,Real), pt2::(Real,Real); coord_order="xyxy", args...) = AnnotationBox(pt1..., pt2...; coord_order=coord_order, args...)
+AnnotationBox(bb::Base.Graphics.BoundingBox; args...) = AnnotationBox(bb.xmin, bb.ymin, bb.xmax, bb.ymax; args...)
+
+##############
+
 setvalid!(ann::AnchoredAnnotation, z, t) = (ann.valid = annotation_isvalid(ann.data, z, t))
 
-annotation_isvalid(dat::Union(AnnotationText, AnnotationPoints, AnnotationLines), z, t) =
+annotation_isvalid(dat::Union(AnnotationText, AnnotationPoints, AnnotationLines, AnnotationBox), z, t) =
     (isnan(dat.z) || round(dat.z) == z) && (isnan(dat.t) || round(dat.t) == t)
 
 annotation_isvalid(x, z, t) = true
@@ -270,5 +303,22 @@ function draw_line(ctx::CairoContext, line::(Real,Real,Real,Real))
     x1,y1,x2,y2 = line
     move_to(ctx, x1,y1)
     line_to(ctx, x2,y2)
+    stroke(ctx)
+end
+
+## Box
+
+function draw_anchored(ctx::CairoContext, data::AnnotationBox, args...)
+    set_line_width(ctx, data.linewidth)
+    set_source(ctx, data.linecolor)
+    draw_box(ctx, data.top, data.bottom, data.left, data.right)
+end
+
+function draw_box(ctx::CairoContext, top, bottom, left, right)
+    move_to(ctx, left, top)
+    line_to(ctx, right, top)
+    line_to(ctx, right, bottom)
+    line_to(ctx, left, bottom)
+    line_to(ctx, left, top)
     stroke(ctx)
 end
