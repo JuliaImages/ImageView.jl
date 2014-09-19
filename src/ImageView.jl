@@ -20,6 +20,11 @@ include("contrast.jl")
 include("display.jl")
 
 export # types
+    AnnotationPoint,
+    AnnotationPoints,
+    AnnotationLine,
+    AnnotationLines,
+    AnnotationBox,
     AnnotationText,
     AnnotationScalebarFixed,
     # display functions
