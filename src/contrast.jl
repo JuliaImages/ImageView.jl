@@ -5,6 +5,7 @@ using Cairo
 using Tk
 using Winston
 using Images
+import Color.Fractional
 
 type ContrastSettings
     min
@@ -37,8 +38,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     if is(cs.max, nothing)
         cs.max = immax
     end
-    cs.min = convert(T, cs.min)
-    cs.max = convert(T, cs.max)
+    cs.min = oftype(immin, cs.min)
+    cs.max = oftype(immax, cs.max)
 
     # Set up GUI
     fwin = Frame(win)
@@ -46,11 +47,14 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     h = height(win.w)
     pack(fwin, expand=true, fill="both")
 
-    max_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(max_slider, int(ceil(cs.max)))
+    dimg = immax-immin
+    rmin = isa(immin, Fractional) ? immin - dimg/10^4 : ifloor(immin)
+    rmax = isa(immax, Fractional) ? immax + dimg/10^4 : iceil(immax)
+    max_slider = Slider(fwin, rmin, rmax)
+    set_value(max_slider, cs.max)
     chist = Canvas(fwin, 2w/3, h)
-    min_slider = Slider(fwin, int(floor(immin)):int(ceil(immax))) # won't work for small float ranges
-    set_value(min_slider, int(floor(cs.min)))
+    min_slider = Slider(fwin, rmin, rmax)
+    set_value(min_slider, cs.min)
 
     grid(max_slider, 1, 1, sticky="ew", padx=5)
     grid(chist, 2, 1, sticky="nsew", padx=5)
@@ -60,8 +64,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     
     emax = Entry(fwin, width=10)
     emin = Entry(fwin, width=10)
-    set_value(emax, string(float64(cs.max)))
-    set_value(emin, string(float64(cs.min)))
+    set_value(emax, string(float32(cs.max)))
+    set_value(emin, string(float32(cs.min)))
 #    emax[:textvariable] = max_slider[:variable]
 #    emin[:textvariable] = min_slider[:variable]
     
@@ -108,10 +112,10 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     # All bindings
     bind(emin, "<Return>") do path
         try
-            my_min = float64(get_value(emin))
-            my_max = float64(get_value(emax))
+            my_min = float32(get_value(emin))
+            my_max = float32(get_value(emax))
             # Don't let values cross
-            my_max = my_max < my_min ? my_min + 0.01 : my_max # offset is arbitrary
+            my_max = my_max < my_min ? my_min + 0.01f0 : my_max # offset is arbitrary
             cs.min = convertsafely(typeof(cs.min), my_min)
             cs.max = convertsafely(typeof(cs.max), my_max)
             set_value(emax, string(my_max)) # caution: each widget gets it's own type
@@ -124,10 +128,10 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     end
     bind(emax, "<Return>") do path
         try
-            my_min = float64(get_value(emin))
-            my_max = float64(get_value(emax))
+            my_min = float32(get_value(emin))
+            my_max = float32(get_value(emax))
             # Don't let values cross
-            my_min = my_min > my_max ? my_max - 0.01 : my_min # offset is arbitrary
+            my_min = my_min > my_max ? my_max - 0.01f0 : my_min # offset is arbitrary
             cs.min = convertsafely(typeof(cs.min), my_min)
             cs.max = convertsafely(typeof(cs.max), my_max)
             set_value(emin, string(my_min))
@@ -139,10 +143,10 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         end
     end
     bind(min_slider, "command") do path
-        my_min = float64(min_slider[:value])
-        my_max = float64(max_slider[:value])
+        my_min = float32(min_slider[:value])
+        my_max = float32(max_slider[:value])
         # Don't let values cross
-        my_max = my_max < my_min ? my_min + 0.01 : my_max # offset is arbitrary
+        my_max = my_max < my_min ? my_min + 0.01f0 : my_max # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
         cs.max = convertsafely(typeof(cs.max), my_max)
         set_value(emin, string(my_min))
@@ -151,10 +155,10 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         rerender()
     end
     bind(max_slider, "command") do path
-        my_min = float64(min_slider[:value])
-        my_max = float64(max_slider[:value])
+        my_min = float32(min_slider[:value])
+        my_max = float32(max_slider[:value])
         # Don't let values cross
-        my_min = my_min > my_max ? my_max - 0.01 : my_min # offset is arbitrary
+        my_min = my_min > my_max ? my_max - 0.01f0 : my_min # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
         cs.max = convertsafely(typeof(cs.max), my_max)
         set_value(emin, string(my_min))
@@ -172,7 +176,8 @@ convertsafely{T<:Integer}(::Type{T}, val) = convert(T, round(val))
 convertsafely{T}(::Type{T}, val) = convert(T, val)
 
 function prepare_histogram(img, nbins, immin, immax)
-    e = immin:(immax-immin)/(nbins-1):immax*(1+1e-6)
+    w = (immax-immin)/10^5
+    e = immin-w:(immax-immin)/(nbins-1):immax+w
     dat = img[:]
     e, counts = hist(dat[isfinite(dat)], e)
     counts .+= 1   # because of log scaling
