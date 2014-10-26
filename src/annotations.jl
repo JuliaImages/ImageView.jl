@@ -67,7 +67,7 @@ fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fon
 
 ## Point annotations
 
-type AnnotationPoints{R<:Union(Real,(Real,Real)),T<:Union(R,Vector{R},Matrix{R})}
+type AnnotationPoints{R<:Union(Real,(Real,Real)), T}
     pts::T
     z::Float64
     t::Float64
@@ -89,7 +89,7 @@ AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((float64(x), float6
 
 ## Line annotations
 
-type AnnotationLines{R<:Union(Real,(Real,Real)),T<:Union((R,R),Vector{(R,R)},Matrix{R})}
+type AnnotationLines{R<:Union(Real,(Real,Real)), T}
     lines::T
     z::Float64
     t::Float64
