@@ -639,7 +639,7 @@ function panvert(imgc::ImageCanvas, img2::ImageSlice2d, delta)
     h = size(imgc.surface.data, 2)
     local dy
     if delta < 0
-        dy = -min(ymin(img2)-1, h/10)
+        dy = -min(ymin(img2), h/10)
     else
         dy = min(sizey(img2)-ymax(img2), h/10)
     end
@@ -657,7 +657,7 @@ function panhorz(imgc::ImageCanvas, img2::ImageSlice2d, delta)
     w = size(imgc.surface.data, 1)
     local dx
     if delta < 0
-        dx = -min(xmin(img2)-1, w/10)
+        dx = -min(xmin(img2), w/10)
     else
         dx = min(sizex(img2)-xmax(img2), w/10)
     end
