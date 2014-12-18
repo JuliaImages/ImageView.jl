@@ -184,7 +184,7 @@ end
 function draw_anchored(ctx::CairoContext, data::AnnotationText, scale_x, scale_y)
     set_source(ctx, data.color)
     if data.scale && scale_x != 1
-        fontdesc = fontdescription(data.fontfamily, data.fontoptions, iround(data.fontsize/scale_x))
+        fontdesc = fontdescription(data.fontfamily, data.fontoptions, round(Int,data.fontsize/scale_x))
     else
         fontdesc = data.fontdesc
     end

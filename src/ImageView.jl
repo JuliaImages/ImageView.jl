@@ -7,6 +7,7 @@ using Color
 using Tk
 using Cairo
 using Images
+using Compat
 
 import Base: parent, show, delete!, empty!
 import Base.Graphics: width, height, fill, set_coords

@@ -144,7 +144,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
         error("Only two or three spatial dimensions are permitted")
     end
     if !isa(img, AbstractImage)
-        img = Image(img, ["colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)])
+        img = Image(img, @compat Dict("colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)))
     end
     # Determine how dimensions map to x, y, z, t
     xy = get(props, :xy, Images.xy)
@@ -179,8 +179,8 @@ function _reslice!(img2::ImageSlice2d)
     bb = img2.zoombb
     xindx = newindexes[img2.xdim]
     yindx = newindexes[img2.ydim]
-    newindexes[img2.xdim] = xindx[max(1,ifloor(bb.xmin)+1):min(length(xindx),iceil(bb.xmax))]
-    newindexes[img2.ydim] = yindx[max(1,ifloor(bb.ymin)+1):min(length(yindx),iceil(bb.ymax))]
+    newindexes[img2.xdim] = xindx[max(1,floor(Integer, bb.xmin)+1):min(length(xindx),ceil(Integer, bb.xmax))]
+    newindexes[img2.ydim] = yindx[max(1,floor(Integer, bb.ymin)+1):min(length(yindx),ceil(Integer, bb.ymax))]
     if img2.zdim > 0
         newindexes[img2.zdim] = newindexes[img2.zdim][img2.zindex]
     end
@@ -217,8 +217,8 @@ function zoom2!(img2::ImageSlice2d)
 end
 
 # 
-width(img2::ImageSlice2d)  = iceil(xmax(img2))-ifloor(xmin(img2))
-height(img2::ImageSlice2d) = iceil(ymax(img2))-ifloor(ymin(img2))
+width(img2::ImageSlice2d)  = ceil(Integer, xmax(img2))-floor(Integer, xmin(img2))
+height(img2::ImageSlice2d) = ceil(Integer, ymax(img2))-floor(Integer, ymin(img2))
 xmin(img2::ImageSlice2d) = xmin(img2.zoombb)
 xmax(img2::ImageSlice2d) = xmax(img2.zoombb)
 ymin(img2::ImageSlice2d) = ymin(img2.zoombb)
@@ -241,7 +241,7 @@ yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 function view{A<:AbstractArray}(img::A; proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
-    sizehint(props, length(proplist))
+    sizehint!(props, length(proplist))
     for (k,v) in proplist
         props[k] = v
     end
@@ -352,7 +352,7 @@ end
 function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
-    sizehint(props, length(proplist))
+    sizehint!(props, length(proplist))
     for (k,v) in proplist
         props[k] = v
     end
@@ -372,7 +372,7 @@ end
 function view{A<:AbstractArray}(c::Canvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
-    sizehint(props, length(proplist))
+    sizehint!(props, length(proplist))
     for (k,v) in proplist
         props[k] = v
     end
@@ -536,7 +536,7 @@ end
 function updatexylabel(xypos, imgc, img2, x, y)
     xu,yu = device_to_user(getgc(imgc.c), x, y)
     # Image-coordinates
-    xi,yi = ifloor(1+xu), ifloor(1+yu)
+    xi,yi = floor(Integer, 1+xu), floor(Integer, 1+yu)
     if isinside(imgc.canvasbb, x, y)
         val = img2[xi,yi]
         set_value(xypos, "$xi, $yi: $val")
@@ -725,9 +725,9 @@ function rendersize(w::Integer, h::Integer, r)
     wh = h
     if !is(r, nothing)
         if r > 1
-            ww = iround(w*r)
+            ww = round(Integer, w*r)
         else
-            wh = iround(h/r)
+            wh = round(Integer, h/r)
         end
     end
     ww, wh
