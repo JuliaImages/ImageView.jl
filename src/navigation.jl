@@ -2,7 +2,7 @@
 
 module Navigation
 
-using Tk
+using Tk, Compat
 
 ## Type for holding GUI state
 # This specifies a particular 2d slice from a possibly-4D image
@@ -159,7 +159,7 @@ function arrowheads(sz, vert::Bool)
 end
 
 function icondata(iconsize, frac)
-    center = iceil(iconsize[1]/2)
+    center = ceil(Integer, iconsize[1]/2)
     data = Bool[ 2abs(i-center)< iconsize[2]-(j-1)/frac for i = 1:iconsize[1], j = 1:iconsize[2] ]
     data .== true
 end

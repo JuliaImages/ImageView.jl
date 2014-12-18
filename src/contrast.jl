@@ -6,6 +6,7 @@ using Tk
 using Winston
 using Images
 import Color.Fractional
+using Compat
 
 type ContrastSettings
     min
@@ -48,8 +49,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     pack(fwin, expand=true, fill="both")
 
     dimg = immax-immin
-    rmin = isa(immin, Fractional) ? immin - dimg/10^4 : ifloor(immin)
-    rmax = isa(immax, Fractional) ? immax + dimg/10^4 : iceil(immax)
+    rmin = isa(immin, Fractional) ? immin - dimg/10^4 : floor(Integer, immin)
+    rmax = isa(immax, Fractional) ? immax + dimg/10^4 : ceil(Integer, immax)
     max_slider = Slider(fwin, rmin, rmax)
     set_value(max_slider, cs.max)
     chist = Canvas(fwin, 2w/3, h)
