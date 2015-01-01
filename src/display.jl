@@ -187,16 +187,7 @@ function _reslice!(img2::ImageSlice2d)
     if img2.tdim > 0
         newindexes[img2.tdim] = newindexes[img2.tdim][img2.tindex]
     end
-    img2.imslice.data.indexes = tuple(newindexes...)
-    j = 1
-    for i = 1:length(newindexes)
-        if !isa(newindexes[i], Int)
-            img2.dims[j] = length(newindexes[i])
-            j += 1
-        end
-    end
-    img2.imslice.data.dims = tuple(img2.dims...)
-    resetfirst!(img2.imslice.data)
+    img2.imslice.data = slice(img2.imslice.data.parent, newindexes...)
     img2
 end
 
