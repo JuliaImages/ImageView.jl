@@ -326,7 +326,7 @@ end
 function viewlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     size(img) == size(label) || throw(DimensionMismatch("size $(size(label)) of label array disagrees with size $(size(img)) of the image"))
     if isa(img, AbstractImage) && !isa(label, AbstractImage)
-        label = share(img, label)
+        label = shareproperties(img, label)
     end
     imgc, imsl = view(img, proplist...)
     props = Dict{Symbol,Any}()
