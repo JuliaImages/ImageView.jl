@@ -1,6 +1,6 @@
-# Once this stabilizes, migrate to a Base.Graphics layer? Only if that supports text, which seems unlikely.
+# Once this stabilizes, migrate to a Graphics layer? Only if that supports text, which seems unlikely.
 using Color
-using Base.Graphics
+using Graphics
 
 abstract AbstractAnnotation
 
@@ -141,7 +141,7 @@ function AnnotationBox(c1::Real, c2::Real, c3::Real, c4::Real; z = NaN, t = NaN,
 end
 
 AnnotationBox(pt1::(Real,Real), pt2::(Real,Real); coord_order="xyxy", args...) = AnnotationBox(pt1..., pt2...; coord_order=coord_order, args...)
-AnnotationBox(bb::Base.Graphics.BoundingBox; args...) = AnnotationBox(bb.xmin, bb.ymin, bb.xmax, bb.ymax; args...)
+AnnotationBox(bb::Graphics.BoundingBox; args...) = AnnotationBox(bb.xmin, bb.ymin, bb.xmax, bb.ymax; args...)
 
 ##############
 
