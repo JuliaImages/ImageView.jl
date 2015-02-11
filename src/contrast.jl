@@ -1,6 +1,6 @@
 module ImageContrast
 
-# using Base.Graphics
+# using Graphics
 using Cairo
 using Tk
 using Winston
@@ -62,31 +62,31 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     grid(min_slider, 3, 1, sticky="ew", padx=5)
     grid_columnconfigure(fwin, 1, weight=1)
     grid_rowconfigure(fwin, 2, weight=1)
-    
+
     emax = Entry(fwin, width=10)
     emin = Entry(fwin, width=10)
     set_value(emax, string(float32(cs.max)))
     set_value(emin, string(float32(cs.min)))
 #    emax[:textvariable] = max_slider[:variable]
 #    emin[:textvariable] = min_slider[:variable]
-    
+
     fbuttons = Frame(fwin)
     zoom = Button(fbuttons, "Zoom")
     full = Button(fbuttons, "Full range")
     grid(zoom, 1, 1, sticky="we")
     grid(full, 2, 1, sticky="we")
-    
+
     grid(emax, 1, 2, sticky="nw")
     grid(fbuttons, 2, 2, sticky="nw")
     grid(emin, 3, 2, sticky="nw")
-    
+
     # Prepare the histogram
     nbins = iceil(min(sqrt(length(img)), 200))
     p = prepare_histogram(dat, nbins, immin, immax)
-    
+
     # Store data we'll need for updating
     cdata = ContrastData(immin, immax, p, chist)
-    
+
     function rerender()
         pcopy = deepcopy(cdata.phist)
         bb = Winston.limits(cdata.phist)
@@ -108,7 +108,7 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     end
 
     # Set initial histogram scale
-    setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender) 
+    setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender)
 
     # All bindings
     bind(emin, "<Return>") do path
@@ -220,5 +220,5 @@ function setrange(c::Canvas, p, minval, maxval, render::Function)
     setattr(p, "xrange", (minval, maxval))
     render()
 end
-    
+
 end

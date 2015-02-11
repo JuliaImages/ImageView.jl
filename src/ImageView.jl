@@ -1,6 +1,6 @@
 module ImageView
 
-using Base.Graphics
+using Graphics
 # import Base.show
 
 using Color
@@ -10,7 +10,7 @@ using Images
 using Compat
 
 import Base: parent, show, delete!, empty!
-import Base.Graphics: width, height, fill, set_coords
+import Graphics: width, height, fill, set_coords
 
 # include("config.jl")
 # include("external.jl")

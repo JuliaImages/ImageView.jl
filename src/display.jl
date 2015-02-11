@@ -1,7 +1,7 @@
 using ImageView.Navigation
 
 import Base: show
-import Base.Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
+import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
 
 
 # Since we have Tk available, don't force the user to type a filename
@@ -207,7 +207,7 @@ function zoom2!(img2::ImageSlice2d)
     _reslice!(img2)
 end
 
-# 
+#
 width(img2::ImageSlice2d)  = ceil(Integer, xmax(img2))-floor(Integer, xmin(img2))
 height(img2::ImageSlice2d) = ceil(Integer, ymax(img2))-floor(Integer, ymin(img2))
 xmin(img2::ImageSlice2d) = xmin(img2.zoombb)
@@ -432,7 +432,7 @@ function validate_annotations!(imgc::ImageCanvas)
     for (h,ann) in imgc.annotations
         setvalid!(ann, state.z, state.t)
     end
-end    
+end
 
 function delete!(imgc::ImageCanvas, h::AnnotationHandle)
     delete!(imgc.annotations, h.hash)
