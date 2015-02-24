@@ -171,7 +171,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     ImageSlice2d(imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
 end
 
-parentdims(A::AbstractArray) = [1:ndims(A)]
+parentdims(A::AbstractArray) = [1:ndims(A);]
 parentdims(A::SubArray) = Base.parentdims(A)
 
 function _reslice!(img2::ImageSlice2d)

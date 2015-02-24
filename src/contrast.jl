@@ -57,9 +57,9 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     min_slider = Slider(fwin, rmin, rmax)
     set_value(min_slider, cs.min)
 
-    grid(max_slider, 1, 1, sticky="ew", padx=5)
-    grid(chist, 2, 1, sticky="nsew", padx=5)
-    grid(min_slider, 3, 1, sticky="ew", padx=5)
+    Tk.grid(max_slider, 1, 1, sticky="ew", padx=5)
+    Tk.grid(chist, 2, 1, sticky="nsew", padx=5)
+    Tk.grid(min_slider, 3, 1, sticky="ew", padx=5)
     grid_columnconfigure(fwin, 1, weight=1)
     grid_rowconfigure(fwin, 2, weight=1)
 
@@ -73,15 +73,15 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     fbuttons = Frame(fwin)
     zoom = Button(fbuttons, "Zoom")
     full = Button(fbuttons, "Full range")
-    grid(zoom, 1, 1, sticky="we")
-    grid(full, 2, 1, sticky="we")
+    Tk.grid(zoom, 1, 1, sticky="we")
+    Tk.grid(full, 2, 1, sticky="we")
 
-    grid(emax, 1, 2, sticky="nw")
-    grid(fbuttons, 2, 2, sticky="nw")
-    grid(emin, 3, 2, sticky="nw")
+    Tk.grid(emax, 1, 2, sticky="nw")
+    Tk.grid(fbuttons, 2, 2, sticky="nw")
+    Tk.grid(emin, 3, 2, sticky="nw")
 
     # Prepare the histogram
-    nbins = iceil(min(sqrt(length(img)), 200))
+    nbins = ceil(Int, min(sqrt(length(img)), 200))
     p = prepare_histogram(dat, nbins, immin, immax)
 
     # Store data we'll need for updating
@@ -199,8 +199,8 @@ function stairs(xin::AbstractVector, yin::Vector)
     end
     xout = zeros(0)
     yout = zeros(0)
-    sizehint(xout, 2nbins)
-    sizehint(yout, 2nbins)
+    sizehint!(xout, 2nbins)
+    sizehint!(yout, 2nbins)
     push!(xout, xin[1])
     for i = 2:nbins
         xtmp = xin[i]
