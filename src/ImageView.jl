@@ -1,16 +1,20 @@
 module ImageView
 
-using Graphics
-# import Base.show
+if VERSION < v"0.4.0-dev+3275"
+    using Base.Graphics
+    import Base.Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
+else
+    using Graphics
+    import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
+end
 
-using Color
-using Tk
 using Cairo
+using Tk
+using Color
 using Images
 using Compat
 
 import Base: parent, show, delete!, empty!
-import Graphics: width, height, fill, set_coords
 
 # include("config.jl")
 # include("external.jl")

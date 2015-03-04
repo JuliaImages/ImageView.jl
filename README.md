@@ -269,7 +269,7 @@ Properties:
 
 
 ```
-AnnotationBox(left, top, right, bottom | (x1,y1), (x2,y2) | bb::Base.Graphics.BoundingBox;
+AnnotationBox(left, top, right, bottom | (x1,y1), (x2,y2) | bb::Graphics.BoundingBox;
               z = NaN, t = NaN,
               color = RGB(1,1,1), linewidth=1.0, coord_order="xyxy")
 ```

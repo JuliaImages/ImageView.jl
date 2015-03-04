@@ -1,8 +1,6 @@
 using ImageView.Navigation
 
 import Base: show
-import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
-
 
 # Since we have Tk available, don't force the user to type a filename
 import Images.imread
