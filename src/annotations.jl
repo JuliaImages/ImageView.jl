@@ -36,7 +36,7 @@ type AnnotationScalebarFixed{T}
     centery::Float64
     color::ColorValue
 end
-# AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, float64(centerx), float64(centery), color)
+# AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, @compat(Float64(centerx)), @compat(Float64(centery)), color)
 
 ## Text annotations
 
@@ -62,8 +62,8 @@ function AnnotationText(x::Real, y::Real, str::String;
                         z = NaN, t = NaN,
                         color = RGB(0,0,0), angle = 0.0, fontfamily = "sans", fontsize = 10,
                         fontoptions = "",  halign = "center", valign = "center", markup = false, scale=true)
-    AnnotationText(float64(x), float64(y), float64(z), float64(t), str, color, fontfamily, fontoptions, fontsize, fontdescription(fontfamily, fontoptions, fontsize),
-                   float64(angle), halign, valign, markup, scale)
+    AnnotationText(@compat(Float64(x)), @compat(Float64(y)), @compat(Float64(z)), @compat(Float64(t)), str, color, fontfamily, fontoptions, fontsize, fontdescription(fontfamily, fontoptions, fontsize),
+                   @compat(Float64(angle)), halign, valign, markup, scale)
 end
 
 fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fontoptions, " ", fontsize)
@@ -87,9 +87,9 @@ AnnotationPoints{R<:(Real,Real)}(xys::Vector{R}=(Float64,Float64)[]; z = NaN, t 
 
 AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoint(xy::(Real,Real); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Float64,(Float64,Float64)}((float64(xy[1]), float64(xy[2])), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoint(xy::(Real,Real); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Float64,(Float64,Float64)}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((float64(x), float64(y)); args...)
+AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((@compat(Float64(x)), @compat(Float64(y))); args...)
 
 ## Line annotations
 
@@ -119,7 +119,7 @@ function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyx
     ord = sortperm(coord_order.data)
     @assert coord_order[ord] == "xxyy"
     (x1,x2,y1,y2) = [c1,c2,c3,c4][ord]
-    AnnotationLine((float64(x1),float64(y1)),(float64(x2),float64(y2)); args...)
+    AnnotationLine((@compat(Float64(x1)),@compat(Float64(y1))),(@compat(Float64(x2)),@compat(Float64(y2))); args...)
 end
 
 ## Box annotations

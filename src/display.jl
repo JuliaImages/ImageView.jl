@@ -7,7 +7,7 @@ import Images.imread
 imread() = imread(GetOpenFile())
 
 import Images.scaleinfo
-function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::ScaleInfo, img)
+function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     if cs.min == nothing && cs.max == nothing
         return scalei
     else
@@ -109,14 +109,14 @@ end
 
 function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
     assert2d(img)
-    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, int(zindex), int(tindex), int(xdim), int(ydim), int(zdim), int(tdim))
+    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
 end
 
 function getindex(img2::ImageSlice2d, x::Real, y::Real)
     P = parent(data(img2.imslice))
     indexes = RangeIndex[1:size(P,d) for d = 1:ndims(P)]
-    indexes[img2.xdim] = clamp(int(x), 1, size(P,img2.xdim))
-    indexes[img2.ydim] = clamp(int(y), 1, size(P,img2.ydim))
+    indexes[img2.xdim] = clamp(convert(Int, x), 1, size(P,img2.xdim))
+    indexes[img2.ydim] = clamp(convert(Int, y), 1, size(P,img2.ydim))
     if img2.zdim > 0
         indexes[img2.zdim] = img2.zindex
     end
@@ -284,8 +284,8 @@ function view{A<:AbstractArray}(img::A; proplist...)
         imgc.navigationstate = state
         imgc.navigationctrls = ctrls
         # Bind mousewheel events to navigation
-        bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,int(delta)))
-        bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,int(delta)))
+        bindwheel(c, "Alt", (path,delta)->reslicet(imgc,img2,ctrls,state,parse(Int, delta)))
+        bindwheel(c, "Alt-Control", (path,delta)->reslicez(imgc,img2,ctrls,state,parse(Int, delta)))
     end
     # Create the x,y position reporter
     fnotify = Frame(win)
@@ -450,14 +450,14 @@ function create_callbacks(imgc, img2)
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoombb(imgc, img2, bb))
     bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(imgc, img2))
     # Bind mousewheel events to zoom
-    bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,int(delta),int(x),int(y)), "%x %y")
+    bindwheel(c, "Control", (path,delta,x,y)->zoomwheel(imgc,img2,parse(Int, delta),parse(Int, x),parse(Int, y)), "%x %y")
     # Bind keys to zoom
     win = Tk.toplevel(c)
     bind(win, "<Control-Up>", path->zoomwheel(imgc,img2,-1,pointerxy(win)...))
     bind(win, "<Control-Down>", path->zoomwheel(imgc,img2,1,pointerxy(win)...))
     # Bind mousewheel events to pan
-    bindwheel(c, "", (path,delta)->panvert(imgc,img2,int(delta)))
-    bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,int(delta)))
+    bindwheel(c, "", (path,delta)->panvert(imgc,img2,parse(Int, delta)))
+    bindwheel(c, "Shift", (path,delta)->panhorz(imgc,img2,parse(Int, delta)))
     # Bind arrow keys to pan
     bind(win, "<Up>", path->panvert(imgc,img2,-1))
     bind(win, "<Down>", path->panvert(imgc,img2,1))
@@ -587,8 +587,8 @@ function zoombb(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     w = sizex(img2)
     h = sizey(img2)
     bb = bb & BoundingBox(0, w, 0, h)
-    w = int(width(bb))
-    h = int(height(bb))
+    w = convert(Int, width(bb))
+    h = convert(Int, height(bb))
     if w > 0 && h > 0
         allocate_surface!(imgc, w, h)
         panzoom(imgc, img2, bb)
