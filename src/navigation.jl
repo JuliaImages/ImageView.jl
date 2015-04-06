@@ -17,7 +17,7 @@ type NavigationState
     fps::Float64       # playback speed in frames per second
 end
 
-NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(int(zmax), int(tmax), int(z), int(t), nothing, 30.0)
+NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(@compat(Int(zmax)), @compat(Int(tmax)), @compat(Int(z)), @compat(Int(t)), nothing, 30.0)
 NavigationState(zmax::Integer, tmax::Integer) = NavigationState(zmax, tmax, 1, 1)
 
 function stop_playing!(state::NavigationState)
@@ -242,7 +242,7 @@ end
 function setz(ctrls,state, showframe)
     zstr = get_value(ctrls.editz)
     try
-        val = int(zstr)
+        val = parse(Int, zstr)
         state.z = val
         updatez(ctrls, state)
         showframe(state)
@@ -252,7 +252,7 @@ function setz(ctrls,state, showframe)
 end
 
 function scalez(ctrls, state, showframe)
-    state.z = int(get_value(ctrls.scalez))
+    state.z = round(Int, get_value(ctrls.scalez))
     updatez(ctrls, state)
     showframe(state)
 end
@@ -284,7 +284,7 @@ end
 function sett(ctrls,state, showframe)
     tstr = get_value(ctrls.editt)
     try
-        val = int(tstr)
+        val = parse(Int, tstr)
         state.t = val
         updatet(ctrls, state)
         showframe(state)
@@ -294,7 +294,7 @@ function sett(ctrls,state, showframe)
 end
 
 function scalet(ctrls, state, showframe)
-    state.t = int(get_value(ctrls.scalet))
+    state.t = round(Int, get_value(ctrls.scalet))
     updatet(ctrls, state)
     showframe(state)
 end
