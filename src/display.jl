@@ -142,7 +142,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
         error("Only two or three spatial dimensions are permitted")
     end
     if !isa(img, AbstractImage)
-        img = Image(img, @compat Dict("colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)))
+        img = Images.Image(img, @compat Dict("colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)))
     end
     # Determine how dimensions map to x, y, z, t
     xy = get(props, :xy, Images.xy)
