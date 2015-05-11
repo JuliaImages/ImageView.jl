@@ -71,7 +71,7 @@ fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fon
 
 ## Point annotations
 
-type AnnotationPoints{R<:Union(Real,(Real,Real)), T}
+type AnnotationPoints{R<:Union(Real,@compat Tuple{Real,Real}), T}
     pts::T
     z::Float64
     t::Float64
@@ -83,17 +83,17 @@ type AnnotationPoints{R<:Union(Real,(Real,Real)), T}
     scale::Bool
 end
 
-AnnotationPoints{R<:(Real,Real)}(xys::Vector{R}=(Float64,Float64)[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Vector{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoints{R<:(@compat Tuple{Real,Real})}(xys::Vector{R}=(@compat Tuple{Float64,Float64})[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Vector{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
 AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoint(xy::(Real,Real); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Float64,(Float64,Float64)}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoint(xy::(@compat Tuple{Real,Real}); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Float64,(Float64,Float64)}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
 AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((@compat(Float64(x)), @compat(Float64(y))); args...)
 
 ## Line annotations
 
-type AnnotationLines{R<:Union(Real,(Real,Real)), T}
+type AnnotationLines{R<:Union(Real,(@compat Tuple{Real,Real})), T}
     lines::T
     z::Float64
     t::Float64
@@ -108,12 +108,12 @@ type AnnotationLines{R<:Union(Real,(Real,Real)), T}
     end
 end
 
-AnnotationLines{R<:Real}(lines::Vector{((R,R),(R,R))}=(((Float64,Float64),(Float64,Float64)))[]; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy") = AnnotationLines{R,Vector{((R,R),(R,R))}}(lines, z, t, color, linewidth, coord_order)
+AnnotationLines{R<:Real}(lines::Vector{(@compat Tuple{(@compat Tuple{R,R}),(@compat Tuple{R,R})})}=(@compat Tuple{(@compat Tuple{Float64,Float64}),(@compat Tuple{Float64,Float64})})[]; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy") = AnnotationLines{R,Vector{(@compat Tuple{(@compat Tuple{R,R}),(@compat Tuple{R,R})})}}(lines, z, t, color, linewidth, coord_order)
 
 AnnotationLines{R<:Real}(lines::Matrix{R}; z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy") = AnnotationLines{R,Matrix{R}}(lines, z, t, color, linewidth, coord_order)
 
-AnnotationLine{R<:Real}(line::((R,R),(R,R)); z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) = AnnotationLines{R,((R,R),(R,R))}(line, z, t, color, linewidth, "xyxy")
-AnnotationLine(pt1::(Real,Real), pt2::(Real,Real); args...) = AnnotationLine((pt1, pt2); args...)
+AnnotationLine{R<:Real}(line::(@compat Tuple{(@compat Tuple{R,R}),(@compat Tuple{R,R})}); z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) = AnnotationLines{R,(@compat Tuple{(@compat Tuple{R,R}),(@compat Tuple{R,R})})}(line, z, t, color, linewidth, "xyxy")
+AnnotationLine(pt1::(@compat Tuple{Real,Real}), pt2::(@compat Tuple{Real,Real}); args...) = AnnotationLine((pt1, pt2); args...)
 
 function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyxy", args...)
     ord = sortperm(coord_order.data)
@@ -144,7 +144,7 @@ function AnnotationBox(c1::Real, c2::Real, c3::Real, c4::Real; z = NaN, t = NaN,
     AnnotationBox(x1,y1,x2,y2, z, t, color, linewidth)
 end
 
-AnnotationBox(pt1::(Real,Real), pt2::(Real,Real); coord_order="xyxy", args...) = AnnotationBox(pt1..., pt2...; coord_order=coord_order, args...)
+AnnotationBox(pt1::(@compat Tuple{Real,Real}), pt2::(@compat Tuple{Real,Real}); coord_order="xyxy", args...) = AnnotationBox(pt1..., pt2...; coord_order=coord_order, args...)
 AnnotationBox(bb::BoundingBox; args...) = AnnotationBox(bb.xmin, bb.ymin, bb.xmax, bb.ymax; args...)
 
 ##############
@@ -211,7 +211,7 @@ end
 
 draw_pts(ctx::CairoContext, pt::NTuple{2}, args...) = draw_pt(ctx, pt, args...)
 
-function draw_pts{R<:Real}(ctx::CairoContext, pts::Vector{(R,R)}, args...)
+function draw_pts{R<:Real}(ctx::CairoContext, pts::Vector{(@compat Tuple{R,R})}, args...)
     for pt in pts
         draw_pt(ctx, pt, args...)
     end
@@ -274,9 +274,9 @@ function draw_anchored(ctx::CairoContext, data::AnnotationLines, args...)
     draw_lines(ctx, data.lines, data.coordinate_order)
 end
 
-draw_lines(ctx::CairoContext, line::((Real,Real),(Real,Real)), _) = draw_line(ctx, line)
+draw_lines(ctx::CairoContext, line::(@compat Tuple{(@compat Tuple{Real,Real}),(@compat Tuple{Real,Real})}), _) = draw_line(ctx, line)
 
-function draw_lines{R<:Real}(ctx::CairoContext, lines::Vector{((R,R),(R,R))}, _)
+function draw_lines{R<:Real}(ctx::CairoContext, lines::Vector{(@compat Tuple{(@compat Tuple{R,R}),(@compat Tuple{R,R})})}, _)
     for line in lines
         draw_line(ctx, line)
     end
@@ -289,21 +289,21 @@ function draw_lines{R<:Real}(ctx::CairoContext, lines::Matrix{R}, coordinate_ord
     end
 end
 
-function draw_lines{R<:(Real,Real)}(ctx::CairoContext, lines::Matrix{R}, _)
+function draw_lines{R<:(@compat Tuple{Real,Real})}(ctx::CairoContext, lines::Matrix{R}, _)
     for i in 1:size(lines,2)
         pt = tuple(lines[:,i]...)
         draw_line(ctx, pt)
     end
 end
 
-function draw_line(ctx::CairoContext, line::((Real,Real),(Real,Real)))
+function draw_line(ctx::CairoContext, line::(@compat Tuple{(@compat Tuple{Real,Real}),(@compat Tuple{Real,Real})}))
     (x1,y1),(x2,y2) = line
     move_to(ctx, x1,y1)
     line_to(ctx, x2,y2)
     stroke(ctx)
 end
 
-function draw_line(ctx::CairoContext, line::(Real,Real,Real,Real))
+function draw_line(ctx::CairoContext, line::(@compat Tuple{Real,Real,Real,Real}))
     x1,y1,x2,y2 = line
     move_to(ctx, x1,y1)
     line_to(ctx, x2,y2)
