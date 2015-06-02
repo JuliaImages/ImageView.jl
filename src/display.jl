@@ -162,7 +162,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     # Start at z=1, t=1
     pindexes = parentindexes(data(img))
     pdims = parentdims(data(img))
-    indexes = ntuple(ndims(img), i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)))
+    indexes = ntuple(i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)), ndims(img))
     imslice = sliceim(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
     sz = size(imslice)

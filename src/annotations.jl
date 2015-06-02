@@ -71,7 +71,7 @@ fontdescription(fontfamily, fontoptions, fontsize) = string(fontfamily, " ", fon
 
 ## Point annotations
 
-type AnnotationPoints{R<:Union(Real,@compat Tuple{Real,Real}), T}
+type AnnotationPoints{T}
     pts::T
     z::Float64
     t::Float64
@@ -83,11 +83,11 @@ type AnnotationPoints{R<:Union(Real,@compat Tuple{Real,Real}), T}
     scale::Bool
 end
 
-AnnotationPoints{R<:(@compat Tuple{Real,Real})}(xys::Vector{R}=(@compat Tuple{Float64,Float64})[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Vector{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoints{R<:Real}(xys::Vector{Type{@compat(Tuple{R,R})}}=Type{@compat(Tuple{Float64,Float64})}[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{typeof(xys)}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{R,Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
-AnnotationPoint(xy::(@compat Tuple{Real,Real}); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Float64,(Float64,Float64)}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoint(xy::(@compat Tuple{Real,Real}); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{@compat(Tuple{Float64,Float64})}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
 
 AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((@compat(Float64(x)), @compat(Float64(y))); args...)
 
