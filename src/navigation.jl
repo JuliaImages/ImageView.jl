@@ -20,12 +20,7 @@ end
 NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(@compat(Int(zmax)), @compat(Int(tmax)), @compat(Int(z)), @compat(Int(t)), nothing, 30.0)
 NavigationState(zmax::Integer, tmax::Integer) = NavigationState(zmax, tmax, 1, 1)
 
-function stop_playing!(state::NavigationState)
-    if !is(state.timer, nothing)
-        stop_timer(state.timer)
-        state.timer = nothing
-    end
-end
+stop_playing!(state::NavigationState) = close(state.timer)
 
 ## Type for holding "handles" to GUI controls
 type NavigationControls
@@ -235,8 +230,7 @@ function playz(inc, ctrls, state, showframe)
     end
     stop_playing!(state)
     dt = 1/state.fps
-    state.timer = VERSION >= v"0.3-" ? Timer(timer -> stepz(inc, ctrls, state, showframe)) : TimeoutAsyncWork((timer, status) -> stepz(inc, ctrls, state, showframe))
-    start_timer(state.timer, dt, dt)
+    state.timer = Timer(timer -> stepz(inc, ctrls, state, showframe), dt, dt)
 end
 
 function setz(ctrls,state, showframe)
@@ -277,8 +271,7 @@ function playt(inc, ctrls, state, showframe)
     end
     stop_playing!(state)
     dt = 1/state.fps
-    state.timer = VERSION >= v"0.3-" ? Timer(timer -> stept(inc, ctrls, state, showframe)) : TimeoutAsyncWork((timer, status) -> stept(inc, ctrls, state, showframe))
-    start_timer(state.timer, dt, dt)
+    state.timer = Timer(timer -> stept(inc, ctrls, state, showframe), dt, dt)
 end
 
 function sett(ctrls,state, showframe)
