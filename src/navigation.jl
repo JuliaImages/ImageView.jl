@@ -20,7 +20,12 @@ end
 NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(@compat(Int(zmax)), @compat(Int(tmax)), @compat(Int(z)), @compat(Int(t)), nothing, 30.0)
 NavigationState(zmax::Integer, tmax::Integer) = NavigationState(zmax, tmax, 1, 1)
 
-stop_playing!(state::NavigationState) = close(state.timer)
+function stop_playing!(state::NavigationState)
+    if state.timer != nothing
+        close(state.timer)
+        state.timer = nothing
+    end
+end
 
 ## Type for holding "handles" to GUI controls
 type NavigationControls
