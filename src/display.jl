@@ -112,6 +112,7 @@ function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb:
     ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
 end
 
+import Base.getindex
 function getindex(img2::ImageSlice2d, x::Real, y::Real)
     P = parent(data(img2.imslice))
     indexes = RangeIndex[1:size(P,d) for d = 1:ndims(P)]
