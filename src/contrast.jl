@@ -150,10 +150,14 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         my_max = my_max < my_min ? my_min + 0.01f0 : my_max # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
         cs.max = convertsafely(typeof(cs.max), my_max)
-        set_value(emin, string(my_min))
-        set_value(emax, string(my_max))
         set_value(max_slider, my_max)
-        rerender()
+        set_value(emax, string(my_max))
+        set_value(emin, string(my_min))
+        try
+            rerender()
+        catch
+            set_value(max_slider, my_max)
+        end
     end
     bind(max_slider, "command") do path
         my_min = float32(min_slider[:value])
@@ -162,10 +166,14 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         my_min = my_min > my_max ? my_max - 0.01f0 : my_min # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
         cs.max = convertsafely(typeof(cs.max), my_max)
+        set_value(min_slider, my_min)
         set_value(emin, string(my_min))
         set_value(emax, string(my_max))
-        set_value(min_slider, my_min)
-        rerender()
+        try
+            rerender()
+        catch
+            set_value(min_slider, my_min)
+        end
     end
     bind(zoom, "command", path -> setrange(cdata.chist, cdata.phist, cdata.imgmin, cdata.imgmax, rerender))
     bind(full, "command", path -> setrange(cdata.chist, cdata.phist, min(cdata.imgmin, cs.min), max(cdata.imgmax, cs.max), rerender))
