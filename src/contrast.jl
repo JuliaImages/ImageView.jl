@@ -5,7 +5,7 @@ using Cairo
 using Tk
 using Winston
 using Images
-import Color.Fractional
+import Colors.Fractional
 using Compat
 
 type ContrastSettings

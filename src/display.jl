@@ -686,7 +686,7 @@ function redraw(imgc::ImageCanvas, img2::ImageSlice2d)
 end
 
 # Fill the entire canvas with a color
-function fill(r::GraphicsContext, col::ColorValue)
+function fill(r::GraphicsContext, col::Color)
     rgb = convert(RGB, col)
     save(r)
     reset_clip(r)
@@ -767,7 +767,7 @@ function scalebarsize(imsl::ImageSlice2d, width, height)
     w, h
 end
 
-AnnotationScalebarFixed{T}(width::T, height::T, imsl::ImageSlice2d, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) =
+AnnotationScalebarFixed{T}(width::T, height::T, imsl::ImageSlice2d, centerx::Real, centery::Real, color::Color = RGB(1,1,1)) =
     AnnotationScalebarFixed{T}(width, height, (wp,hp) -> scalebarsize(imsl,wp,hp), float64(centerx), float64(centery), color)
 
 scalebar(imgc::ImageCanvas, imsl::ImageSlice2d, length; x = 0.8, y = 0.1, color = RGB(1,1,1)) = annotate!(imgc, imsl, AnnotationScalebarFixed(length/1, length/10, (width,height)->scalebarsize(imsl, width, height), x, y, color), anchored=false)

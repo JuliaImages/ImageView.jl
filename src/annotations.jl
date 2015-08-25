@@ -1,5 +1,5 @@
 # Once this stabilizes, migrate to a Graphics layer? Only if that supports text, which seems unlikely.
-using Color
+using Colors
 if VERSION < v"0.4.0-dev+3275"
     using Base.Graphics
 else
@@ -34,9 +34,9 @@ type AnnotationScalebarFixed{T}
     getsize::Function   # syntax w,h = getsize(width,height)
     centerx::Float64
     centery::Float64
-    color::ColorValue
+    color::Color
 end
-# AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::ColorValue = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, @compat(Float64(centerx)), @compat(Float64(centery)), color)
+# AnnotationScalebar{T}(width::T, height::T, getsize::Function, centerx::Real, centery::Real, color::Color = RGB(1,1,1)) = AnnotationScalebar{T}(width, height, getsize, @compat(Float64(centerx)), @compat(Float64(centery)), color)
 
 ## Text annotations
 
@@ -46,7 +46,7 @@ type AnnotationText
     z::Float64
     t::Float64
     string::String
-    color::ColorValue
+    color::Color
     fontfamily::ASCIIString
     fontoptions::ASCIIString
     fontsize::Integer
@@ -77,17 +77,17 @@ type AnnotationPoints{T}
     t::Float64
     size::Float64
     shape::Char
-    color::ColorValue
+    color::Color
     linewidth::Float64
-    linecolor::ColorValue
+    linecolor::Color
     scale::Bool
 end
 
-AnnotationPoints{R<:Real}(xys::Vector{Type{@compat(Tuple{R,R})}}=Type{@compat(Tuple{Float64,Float64})}[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{typeof(xys)}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoints{R<:Real}(xys::Vector{Type{@compat(Tuple{R,R})}}=Type{@compat(Tuple{Float64,Float64})}[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{typeof(xys)}(xys, z, t, float(size), shape, to_colorant(color), float(linewidth), to_colorant(linecolor), scale)
 
-AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Matrix{R}}(xys, z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Matrix{R}}(xys, z, t, float(size), shape, to_colorant(color), float(linewidth), to_colorant(linecolor), scale)
 
-AnnotationPoint(xy::(@compat Tuple{Real,Real}); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{@compat(Tuple{Float64,Float64})}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, Color.color(color), float(linewidth), Color.color(linecolor), scale)
+AnnotationPoint(xy::(@compat Tuple{Real,Real}); z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{@compat(Tuple{Float64,Float64})}((@compat(Float64(xy[1])), @compat(Float64(xy[2]))), z, t, float(size), shape, to_colorant(color), float(linewidth), to_colorant(linecolor), scale)
 
 AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((@compat(Float64(x)), @compat(Float64(y))); args...)
 
@@ -97,7 +97,7 @@ type AnnotationLines{R<:Union(Real,(@compat Tuple{Real,Real})), T}
     lines::T
     z::Float64
     t::Float64
-    linecolor::ColorValue
+    linecolor::Color
     linewidth::Float64
     coordinate_order::Vector{Int}
 
@@ -131,7 +131,7 @@ type AnnotationBox
     bottom::Float64
     z::Float64
     t::Float64
-    linecolor::ColorValue
+    linecolor::Color
     linewidth::Float64
 end
 
@@ -226,7 +226,7 @@ function draw_pts(ctx::CairoContext, pts::Matrix, args...)
 end
 
 
-function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::ColorValue, linecolor::ColorValue)
+function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::Color, linecolor::Color)
     x::Float64,y::Float64 = pt
     hsz_x = sz_x/2
     hsz_y = sz_y/2
@@ -326,3 +326,6 @@ function draw_box(ctx::CairoContext, top, bottom, left, right)
     line_to(ctx, left, top)
     stroke(ctx)
 end
+
+to_colorant(c::Colorant) = c
+to_colorant(str::AbstractString) = parse(Colorant, str)

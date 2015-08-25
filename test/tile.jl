@@ -1,5 +1,5 @@
 import ImageView
-using Color
+using Colors
 using TestImages
 
 c = ImageView.canvasgrid(2,2)

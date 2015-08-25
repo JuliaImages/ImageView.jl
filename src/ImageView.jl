@@ -10,7 +10,7 @@ end
 
 using Cairo
 using Tk
-using Color
+using Colors
 using Images
 using Compat
 
