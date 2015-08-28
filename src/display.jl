@@ -524,12 +524,18 @@ function resize(imgc::ImageCanvas, img2::ImageSlice2d)
 end
 
 function updatexylabel(xypos, imgc, img2, x, y)
+    w = width(imgc.c)
     xu,yu = device_to_user(getgc(imgc.c), x, y)
     # Image-coordinates
     xi,yi = floor(Integer, 1+xu), floor(Integer, 1+yu)
     if isinside(imgc.canvasbb, x, y)
         val = img2[xi,yi]
-        set_value(xypos, "$xi, $yi: $val")
+        str = "$xi, $yi: $val"
+        if length(str)*10>w
+            set_value(xypos, "$xi, $yi")
+        else
+            set_value(xypos, str)
+        end
     else
         set_value(xypos, "$xi, $yi")
     end
