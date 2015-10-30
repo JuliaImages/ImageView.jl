@@ -162,7 +162,7 @@ end
 function draw(c::Canvas, ann::AnchoredAnnotation)
     if ann.valid
         ctx = getgc(c)
-        save(ctx)
+        Graphics.save(ctx)
         data = ann.data
         set_coords(ctx, ann.devicebb(data), ann.userbb(data))
         scale_x = width(ann.userbb(data))/width(ann.devicebb(data))
@@ -174,7 +174,7 @@ end
 
 function draw{T}(c::Canvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
     ctx = getgc(c)
-    save(ctx)
+    Graphics.save(ctx)
     data = ann.data
     set_coords(ctx, ann.devicebb(data), BoundingBox(0,1,0,1))
     set_source(ctx, data.color)
@@ -238,7 +238,7 @@ function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::Color, l
             circle(ctx, x, y, sz_x)
         else
             # draw an ellipse
-            save(ctx)
+            Graphics.save(ctx)
             translate(ctx, x, y)
             scale(ctx, sz_x, sz_y)
             new_sub_path(ctx)
