@@ -1,17 +1,12 @@
-language: cpp
-compiler:
-  - clang
+language: julia
+os:
+    - linux
+julia:
+    - 0.3
+    - release
 notifications:
   email: false
-env:
-  matrix: 
-    - JULIAVERSION="juliareleases" 
-    - JULIAVERSION="julianightlies" 
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-  - sudo apt-get update -qq -y
-  - sudo apt-get install curl libpcre3-dev julia -y
-  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 script:
-  - xvfb-run julia -e 'versioninfo(); Pkg.init(); Pkg.add("TestImages"); Pkg.clone(pwd()); Pkg.build("ImageView"); Pkg.test("ImageView")'
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'versioninfo(); Pkg.clone(pwd()); Pkg.build("ImageView")'
+  - xvfb-run julia -e 'Pkg.test("ImageView")'
