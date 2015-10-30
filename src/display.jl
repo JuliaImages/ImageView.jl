@@ -473,7 +473,7 @@ function redraw(imgc::ImageCanvas)
     # Define the path that encloses the image
     bb = imgc.canvasbb
     w, h = size(imgc.surface.data)  # the image width, height
-    save(r)
+    Graphics.save(r)
     reset_clip(r)
     reset_transform(r)
     wbb = width(bb)
@@ -694,7 +694,7 @@ end
 # Fill the entire canvas with a color
 function fill(r::GraphicsContext, col::Color)
     rgb = convert(RGB, col)
-    save(r)
+    Graphics.save(r)
     reset_clip(r)
     reset_transform(r)
     set_source_rgb(r, rgb.r, rgb.g, rgb.b)
