@@ -25,7 +25,7 @@ end
 # render has syntax
 #    render!(buf, img)
 type ImageCanvas
-    render!::Function        # function to fill a Uint32 buffer with image data
+    render!::Function        # function to fill a UInt32 buffer with image data
     aspect_x_per_y           # relative scaling of the two axes (unconstrained = nothing)
     background               # nothing, RGB color, or checkerboard pattern
     perimeter                # RGB color
@@ -33,11 +33,11 @@ type ImageCanvas
     flipx::Bool
     flipy::Bool
     surfaceformat::Int32     # The Cairo format (e.g., Cairo.FORMAT_ARGB32)
-    annotations::Dict{Uint, AbstractAnnotation}
+    annotations::Dict{UInt, AbstractAnnotation}
     handles::Dict{Symbol, Any}
     c::Canvas                # canvas for rendering image
     surface::CairoSurface    # source surface of the image (changes with zoom region)
-    renderbuf::Array{Uint32} # intermediate used if transpose is true
+    renderbuf::Array{UInt32} # intermediate used if transpose is true
     canvasbb::BoundingBox    # drawing region within canvas, in device coordinates
     navigationstate
     navigationctrls
@@ -62,7 +62,7 @@ type ImageCanvas
         transpose = props[:transpose]
         flipx = get(props, :flipx, false)
         flipy = get(props, :flipy, false)
-        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Dict{Uint,AbstractAnnotation}(), Dict{Symbol,Any}())
+        new(render!, aspect_x_per_y, background, perimeter, transpose, flipx, flipy, fmt, Dict{UInt,AbstractAnnotation}(), Dict{Symbol,Any}())
         # c, surface, renderbuf, and canvasbb will be initialized later
     end
 end
@@ -221,7 +221,7 @@ xrange(img2::ImageSlice2d) = (xmin(img2), xmax(img2))
 yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 
 # Valid properties:
-#   render!: supply a function render!(buf, imgslice) that fills Uint32 buffer for display
+#   render!: supply a function render!(buf, imgslice) that fills UInt32 buffer for display
 #   xy: {"y", "x"} chooses orientation of display (which dims are horizontal, vertical)
 #   flipx, flipy: set to true if you want to invert one or both axes
 #   pixelspacing: [1,1] enforces uniform aspect ratio (will default to use from img if available)
@@ -411,7 +411,7 @@ end
 
 immutable AnnotationHandle{T}
     ann::T
-    hash::Uint
+    hash::UInt
 end
 
 function annotate_nodraw!(imgc::ImageCanvas, img2::ImageSlice2d, ann; anchored::Bool=true)
@@ -669,14 +669,14 @@ end
 
 ### Utilities ###
 function allocate_surface!(imgc::ImageCanvas, w, h)
-    buf = Array(Uint32, w, h)
+    buf = Array(UInt32, w, h)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, flipxy = false)
     if imgc.transpose
-        imgc.renderbuf = Array(Uint32, h, w)
+        imgc.renderbuf = Array(UInt32, h, w)
     end
 end
 
-# Convert the raw image data to the Uint32 buffer that Cairo paints
+# Convert the raw image data to the UInt32 buffer that Cairo paints
 function rerender(imgc::ImageCanvas, img2::ImageSlice2d)
     if imgc.transpose
         imgc.render!(imgc.renderbuf, img2.imslice)
@@ -704,7 +704,7 @@ end
 
 # Create a checkerboard pattern (for use with transparency)
 function checker(checkersize::Int; light = 0xffb0b0b0, dark = 0xff404040)
-    buf = Array(Uint32, 2checkersize, 2checkersize)
+    buf = Array(UInt32, 2checkersize, 2checkersize)
     fill!(buf, light)
     buf[1:checkersize,checkersize+1:2checkersize] = dark
     buf[checkersize+1:2checkersize,1:checkersize] = dark
