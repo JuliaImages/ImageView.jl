@@ -45,7 +45,7 @@ type AnnotationText
     y::Float64
     z::Float64
     t::Float64
-    string::String
+    string::AbstractString
     color::Color
     fontfamily::ASCIIString
     fontoptions::ASCIIString
@@ -58,7 +58,7 @@ type AnnotationText
     scale::Bool
 end
 
-function AnnotationText(x::Real, y::Real, str::String;
+function AnnotationText(x::Real, y::Real, str::AbstractString;
                         z = NaN, t = NaN,
                         color = RGB(0,0,0), angle = 0.0, fontfamily = "sans", fontsize = 10,
                         fontoptions = "",  halign = "center", valign = "center", markup = false, scale=true)
@@ -93,7 +93,7 @@ AnnotationPoint(x::Real, y::Real; args...) = AnnotationPoint((@compat(Float64(x)
 
 ## Line annotations
 
-type AnnotationLines{R<:Union(Real,(@compat Tuple{Real,Real})), T}
+@compat type AnnotationLines{R<:Union{Real,Tuple{Real,Real}}, T}
     lines::T
     z::Float64
     t::Float64
@@ -151,7 +151,7 @@ AnnotationBox(bb::BoundingBox; args...) = AnnotationBox(bb.xmin, bb.ymin, bb.xma
 
 setvalid!(ann::AnchoredAnnotation, z, t) = (ann.valid = annotation_isvalid(ann.data, z, t))
 
-annotation_isvalid(dat::Union(AnnotationText, AnnotationPoints, AnnotationLines, AnnotationBox), z, t) =
+annotation_isvalid(dat::@compat(Union{AnnotationText, AnnotationPoints, AnnotationLines, AnnotationBox}), z, t) =
     (isnan(dat.z) || round(dat.z) == z) && (isnan(dat.t) || round(dat.t) == t)
 
 annotation_isvalid(x, z, t) = true
