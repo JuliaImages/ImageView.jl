@@ -6,7 +6,6 @@ import Base: show
 import Images.imread
 imread() = imread(GetOpenFile())
 
-import Images.scaleinfo
 function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     if cs.min == nothing && cs.max == nothing
         return scalei
