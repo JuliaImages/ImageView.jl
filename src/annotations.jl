@@ -83,7 +83,7 @@ type AnnotationPoints{T}
     scale::Bool
 end
 
-AnnotationPoints{R<:Real}(xys::Vector{Type{@compat(Tuple{R,R})}}=Type{@compat(Tuple{Float64,Float64})}[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{typeof(xys)}(xys, z, t, float(size), shape, to_colorant(color), float(linewidth), to_colorant(linecolor), scale)
+AnnotationPoints{R<:Real}(xys::Vector{@compat(Tuple{R,R})}=@compat(Tuple{Float64,Float64})[]; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{typeof(xys)}(xys, z, t, float(size), shape, to_colorant(color), float(linewidth), to_colorant(linecolor), scale)
 
 AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1), linewidth=1.0, linecolor=color, scale::Bool=false) = AnnotationPoints{Matrix{R}}(xys, z, t, float(size), shape, to_colorant(color), float(linewidth), to_colorant(linecolor), scale)
 
