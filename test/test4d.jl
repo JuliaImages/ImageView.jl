@@ -1,5 +1,5 @@
 import Images
-using Compat
+using Compat; import Compat.String
 
 # Create a cone in 3d that changes color over time
 sz = [201, 301, 31]
