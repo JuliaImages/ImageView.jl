@@ -14,7 +14,7 @@ using Cairo
 using Tk
 using Colors
 using Images
-using Compat
+using Compat; import Compat.String
 
 import Base: parent, show, delete!, empty!
 

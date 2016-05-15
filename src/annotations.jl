@@ -48,13 +48,13 @@ type AnnotationText
     t::Float64
     string::AbstractString
     color::Color
-    fontfamily::ASCIIString
-    fontoptions::ASCIIString
+    fontfamily::String
+    fontoptions::String
     fontsize::Integer
-    fontdesc::ASCIIString
+    fontdesc::String
     angle::Float64
-    halign::ASCIIString
-    valign::ASCIIString
+    halign::String
+    valign::String
     markup::Bool
     scale::Bool
 end
