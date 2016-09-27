@@ -14,9 +14,9 @@ function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     end
 end
 
-@linux_only const default_perimeter = RGB(0.85,0.85,0.85)
-@osx_only const default_perimeter = RGB(0.93, 0.93, 0.93)
-@windows_only const default_perimeter = RGB(1,1,1)  # untested
+@compat is_linux() && const default_perimeter = RGB(0.85,0.85,0.85)
+@compat is_apple() && const default_perimeter = RGB(0.93, 0.93, 0.93)
+@compat is_windows() && const default_perimeter = RGB(1,1,1)  # untested
 
 ## Type for storing information about the rendering canvas
 # perimeter is the color used around the edges of the image; background is used
@@ -252,7 +252,7 @@ function view{A<:AbstractArray}(img::A; proplist...)
     end
     # Create the window and the canvas for displaying the image
     win = Toplevel(get(props, :name, "ImageView"), ww, whfull, false)
-    framec = OS_NAME == :Darwin ? Frame(win, padding = 30) : Frame(win) # helps with accidental rubberband on resize
+    framec = is_apple() ? Frame(win, padding = 30) : Frame(win) # helps with accidental rubberband on resize
     grid(framec, 1, 1, sticky="nsew")
     grid_rowconfigure(win, 1, weight=1) # scale this cell when the window resizes
     grid_columnconfigure(win, 1, weight=1)
