@@ -3,8 +3,7 @@ using ImageView.Navigation
 import Base: show
 
 # Since we have Tk available, don't force the user to type a filename
-import Images.imread
-imread() = imread(GetOpenFile())
+imread() = load(GetOpenFile())
 
 function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     if cs.min == nothing && cs.max == nothing
@@ -92,7 +91,8 @@ function setbb!(imgc::ImageCanvas, w, h)
 end
 
 # Handle z and t slicing, and zooming in x and y
-type ImageSlice2d{A<:AbstractImage}
+type ImageSlice2d{A<:AbstractArray}
+    imorig
     imslice::A
     pdims::Vector{Int}
     indexes::Vector{RangeIndex}
@@ -106,14 +106,14 @@ type ImageSlice2d{A<:AbstractImage}
     tdim::Int
 end
 
-function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
+function ImageSlice2d(imorig, img::AbstractArray, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
     assert2d(img)
-    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
+    ImageSlice2d{typeof(img)}(imorig, img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
 end
 
 import Base.getindex
 function getindex(img2::ImageSlice2d, x::Real, y::Real)
-    P = parent(data(img2.imslice))
+    P = img2.imorig
     indexes = RangeIndex[1:size(P,d) for d = 1:ndims(P)]
     indexes[img2.xdim] = clamp(convert(Int, x), 1, size(P,img2.xdim))
     indexes[img2.ydim] = clamp(convert(Int, y), 1, size(P,img2.ydim))
@@ -141,32 +141,25 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     if !(2 <= sd <= 3)
         error("Only two or three spatial dimensions are permitted")
     end
-    if !isa(img, AbstractImage)
-        img = Images.Image(img, @compat Dict("colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)))
-    end
-    # Determine how dimensions map to x, y, z, t
-    xy = get(props, :xy, Images.xy)
-    cs = coords_spatial(img)
-    p = spatialpermutation(xy, img)
-    xdim = cs[p[1]]
-    ydim = cs[p[2]]
-    zdim = (sd == 2) ? 0 : cs[p[3]]
+    xdim = 2
+    ydim = 1
+    zdim = (sd == 2) ? 0 : 3
     tdim = timedim(img)
     # Deal with pixelspacing here
     if !haskey(props, :pixelspacing)
-        if haskey(img, "pixelspacing")
-            props[:pixelspacing] = img["pixelspacing"][p]
+        if hasaxes(img)
+            props[:pixelspacing] = pixelspacing(img)
         end
     end
-    props[:transpose] = p[1] > p[2]
+    props[:transpose] = xdim > ydim
     # Start at z=1, t=1
-    pindexes = parentindexes(data(img))
-    pdims = parentdims(data(img))
+    pindexes = parentindexes(img)
+    pdims = parentdims(img)
     indexes = ntuple(i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)), ndims(img))
-    imslice = sliceim(img, indexes...)
+    imslice = viewim(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
     sz = size(imslice)
-    ImageSlice2d(imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
+    ImageSlice2d(img, imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
 end
 
 parentdims(A::AbstractArray) = [1:ndims(A);]
@@ -185,7 +178,7 @@ function _reslice!(img2::ImageSlice2d)
     if img2.tdim > 0
         newindexes[img2.tdim] = newindexes[img2.tdim][img2.tindex]
     end
-    img2.imslice.data = slice(img2.imslice.data.parent, newindexes...)
+    img2.imslice = slice(parent(img2.imorig), newindexes...)
     img2
 end
 

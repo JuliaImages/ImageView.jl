@@ -10,13 +10,18 @@ else
     import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
 end
 
+using FileIO
 using Cairo
 using Tk
 using Colors
-using Images
+using Images, AxisArrays
 using Compat; import Compat.String
 
 import Base: parent, show, delete!, empty!
+
+hasaxes(img) = hasaxes(AxisArrays.HasAxes(img))
+hasaxes(::AxisArrays.HasAxes{true})  = true
+hasaxes(::AxisArrays.HasAxes{false}) = false
 
 # include("config.jl")
 # include("external.jl")
