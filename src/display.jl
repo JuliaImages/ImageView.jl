@@ -48,11 +48,12 @@ type ImageCanvas
         else
             if haskey(props, :clim)
                 clim = props[:clim]
-                render! = (buf, img) -> uint32color!(buf, img, ScaleMinMax(RGB24, img, clim[1], clim[2]))
+                f = scaleminmax(Gray24, clim[1], clim[2])
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, f(x)), buf, img)
             elseif haskey(props, :scalei)
                 render! = (buf, img) -> uint32color!(buf, img, props[:scalei])
             else
-                render! = uint32color!
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(x)), buf, img)
             end
         end
         background = get(props, :background, fmt == Cairo.FORMAT_ARGB32 ? checker(32) : nothing)
@@ -106,8 +107,7 @@ type ImageSlice2d{A<:AbstractArray}
     tdim::Int
 end
 
-function ImageSlice2d(imorig, img::AbstractArray, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
-    assert2d(img)
+function ImageSlice2d(imorig, img::AbstractMatrix, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
     ImageSlice2d{typeof(img)}(imorig, img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
 end
 
@@ -144,7 +144,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     xdim = 2
     ydim = 1
     zdim = (sd == 2) ? 0 : 3
-    tdim = timedim(img)
+    tdim = hasaxes(img) ? timedim(img) : 0
     # Deal with pixelspacing here
     if !haskey(props, :pixelspacing)
         if hasaxes(img)
@@ -156,7 +156,7 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     pindexes = parentindexes(img)
     pdims = parentdims(img)
     indexes = ntuple(i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)), ndims(img))
-    imslice = viewim(img, indexes...)
+    imslice = Base.view(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
     sz = size(imslice)
     ImageSlice2d(img, imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
@@ -178,7 +178,7 @@ function _reslice!(img2::ImageSlice2d)
     if img2.tdim > 0
         newindexes[img2.tdim] = newindexes[img2.tdim][img2.tindex]
     end
-    img2.imslice = slice(parent(img2.imorig), newindexes...)
+    img2.imslice = Base.view(parent(img2.imorig), newindexes...)
     img2
 end
 
@@ -316,7 +316,7 @@ end
 # display the label value rather than the pixel value.
 function viewlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     size(img) == size(label) || throw(DimensionMismatch("size $(size(label)) of label array disagrees with size $(size(img)) of the image"))
-    if isa(img, AbstractImage) && !isa(label, AbstractImage)
+    if isa(img, ImageMeta) && !isa(label, ImageMeta)
         label = shareproperties(img, label)
     end
     imgc, imsl = view(img, proplist...)
@@ -748,14 +748,8 @@ function resetfirst!(s::SubArray)
     s
 end
 
-function cairo_format(img::AbstractArray)
-    format = Cairo.FORMAT_RGB24
-    cs = colorspace(img)
-    if cs == "ARGB" || cs == "ARGB32" || cs == "RGBA" || cs == "GrayAlpha"
-        format = Cairo.FORMAT_ARGB32
-    end
-    format
-end
+cairo_format{C<:TransparentColor}(::AbstractArray{C}) = Cairo.FORMAT_ARGB32
+cairo_format(::AbstractArray) = Cairo.FORMAT_RGB24
 
 function scalebarsize(imsl::ImageSlice2d, width, height)
     indx = findin([imsl.xdim,imsl.ydim], coords_spatial(imsl.imslice))

@@ -1,11 +1,10 @@
 using Images
 import ImageView
 
-imgdy = grayim(UInt8[y for y=0x00:0xff, x=0:100])
-imgdx = grayim(UInt8[x for y=1:100, x=0x00:0xff])
+imgdy = normedview(UInt8[y for y=0x00:0xff, x=0:100])
+imgdx = normedview(UInt8[x for y=1:100, x=0x00:0xff])
 ImageView.view(imgdy)
 ImageView.view(imgdx)
-
 
 A = zeros(300, 200)
 lbl = similar(A, Int)
