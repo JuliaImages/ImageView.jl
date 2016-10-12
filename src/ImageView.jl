@@ -46,18 +46,14 @@ export # types
     delete_annotations!,
     destroy,
 #     ftshow,
-#     imshow,
+    imshow,
+    imshowlabeled,
     parent,
     scalebar,
     toplevel,
-    view,
-    viewlabeled,
     write_to_png
 
-@deprecate delete_annotations! empty!
-@deprecate delete_annotation! delete!
-@deprecate display(c::Canvas, img::AbstractArray; proplist...) view(c, img; proplist...)
-@deprecate display(imgc::ImageCanvas, img::AbstractArray; proplist...) view(imgc, img; proplist...)
-@deprecate display(img::AbstractArray; proplist...) view(img; proplist...)
+@deprecate view imshow
+@deprecate viewlabeled imshowlabeled
 
 end

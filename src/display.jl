@@ -220,7 +220,7 @@ yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 #   name: a string giving the window name
 #   background, perimeter: colors
 
-function view{A<:AbstractArray}(img::A; proplist...)
+function imshow{A<:AbstractArray}(img::A; proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint!(props, length(proplist))
@@ -314,12 +314,12 @@ end
 
 # Display a labeled image: in the status bar that shows information about the pixel under the mouse pointer,
 # display the label value rather than the pixel value.
-function viewlabeled(img::AbstractArray, label::AbstractArray; proplist...)
+function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     size(img) == size(label) || throw(DimensionMismatch("size $(size(label)) of label array disagrees with size $(size(img)) of the image"))
     if isa(img, ImageMeta) && !isa(label, ImageMeta)
         label = shareproperties(img, label)
     end
-    imgc, imsl = view(img, proplist...)
+    imgc, imsl = imshow(img, proplist...)
     props = Dict{Symbol,Any}()
     for (k,v) in proplist
         props[k] = v
@@ -331,7 +331,7 @@ end
 
 
 # Display a new image in an old ImageCanvas, preserving properties
-function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, proplist...)
+function imshow{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint!(props, length(proplist))
@@ -351,7 +351,7 @@ function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, pro
 end
 
 # Display an image in a Canvas. Do not create controls.
-function view{A<:AbstractArray}(c::Canvas, img::A; interactive=true, proplist...)
+function imshow{A<:AbstractArray}(c::Canvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint!(props, length(proplist))

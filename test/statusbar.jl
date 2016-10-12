@@ -3,8 +3,8 @@ import ImageView
 
 imgdy = normedview(UInt8[y for y=0x00:0xff, x=0:100])
 imgdx = normedview(UInt8[x for y=1:100, x=0x00:0xff])
-ImageView.view(imgdy)
-ImageView.view(imgdx)
+ImageView.imshow(imgdy)
+ImageView.imshow(imgdx)
 
 A = zeros(300, 200)
 lbl = similar(A, Int)
@@ -18,4 +18,4 @@ for j = -30:30, i = -30:30
         lbl[cx+i,cy+j] = 2
     end
 end
-ImageView.viewlabeled(A, lbl)
+ImageView.imshowlabeled(A, lbl)
