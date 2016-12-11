@@ -65,8 +65,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
 
     emax = Entry(fwin, width=10)
     emin = Entry(fwin, width=10)
-    set_value(emax, string(float32(cs.max)))
-    set_value(emin, string(float32(cs.min)))
+    set_value(emax, string(Float32(cs.max)))
+    set_value(emin, string(Float32(cs.min)))
 #    emax[:textvariable] = max_slider[:variable]
 #    emin[:textvariable] = min_slider[:variable]
 
@@ -144,8 +144,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         end
     end
     bind(min_slider, "command") do path
-        my_min = float32(min_slider[:value])
-        my_max = float32(max_slider[:value])
+        my_min = parse(Float32,min_slider[:value])
+        my_max = parse(Float32,max_slider[:value])
         # Don't let values cross
         my_max = my_max < my_min ? my_min + 0.01f0 : my_max # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
@@ -160,8 +160,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         end
     end
     bind(max_slider, "command") do path
-        my_min = float32(min_slider[:value])
-        my_max = float32(max_slider[:value])
+        my_min = parse(Float32,min_slider[:value])
+        my_max = parse(Float32,max_slider[:value])
         # Don't let values cross
         my_min = my_min > my_max ? my_max - 0.01f0 : my_min # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
