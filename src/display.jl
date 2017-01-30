@@ -13,9 +13,9 @@ function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     end
 end
 
-@compat is_linux() && const default_perimeter = RGB(0.85,0.85,0.85)
-@compat is_apple() && const default_perimeter = RGB(0.93, 0.93, 0.93)
-@compat is_windows() && const default_perimeter = RGB(1,1,1)  # untested
+is_linux() && const default_perimeter = RGB(0.85,0.85,0.85)
+is_apple() && const default_perimeter = RGB(0.93, 0.93, 0.93)
+is_windows() && const default_perimeter = RGB(1,1,1)  # untested
 
 ## Type for storing information about the rendering canvas
 # perimeter is the color used around the edges of the image; background is used

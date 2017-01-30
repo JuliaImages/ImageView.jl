@@ -1,21 +1,15 @@
-VERSION >= v"0.4.0-dev+6521" && __precompile__(false)
+__precompile__(false)
 
 module ImageView
 
-if VERSION < v"0.4.0-dev+3275"
-    using Base.Graphics
-    import Base.Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
-else
-    using Graphics
-    import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
-end
+using Graphics
+import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
 
 using FileIO
 using Cairo
 using Tk
 using Colors
 using Images, AxisArrays
-using Compat; import Compat.String
 
 import Base: parent, show, delete!, empty!
 

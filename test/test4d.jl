@@ -1,6 +1,5 @@
 import Images
 using AxisArrays, Colors
-using Compat; import Compat.String
 
 # Create a cone in 3d that changes color over time
 sz = [201, 301, 31]
@@ -16,6 +15,5 @@ for i = 1:length(cmap)
     C4[:,:,:,i] = C3*cmap[i]
 end
 img = AxisArray(reinterpret(RGB24, C4), Axis{:x}(1:size(C4,1)), Axis{:y}(1:size(C4,2)), Axis{:z}(range(1,3,size(C4,3))), Axis{:time}(1:size(C4,4)))
-# img = Images.Image(C4, @compat Dict("spatialorder" => ["x", "y", "z"], "timedim" => 4, "colorspace" => "RGB24", "pixelspacing" => [1,1,3]))
 
 nothing

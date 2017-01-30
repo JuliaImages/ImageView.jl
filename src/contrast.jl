@@ -6,7 +6,6 @@ using Tk
 using Winston
 using Images
 import Colors.Fractional
-using Compat; import Compat.String
 
 type ContrastSettings
     min

@@ -17,7 +17,7 @@ type NavigationState
     fps::Float64       # playback speed in frames per second
 end
 
-NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(@compat(Int(zmax)), @compat(Int(tmax)), @compat(Int(z)), @compat(Int(t)), nothing, 30.0)
+NavigationState(zmax::Integer, tmax::Integer, z::Integer, t::Integer) = NavigationState(Int(zmax), Int(tmax), Int(z), Int(t), nothing, 30.0)
 NavigationState(zmax::Integer, tmax::Integer) = NavigationState(zmax, tmax, 1, 1)
 
 function stop_playing!(state::NavigationState)
@@ -79,10 +79,10 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
         bind(win, "<space>", path->stop_playing!(state))
     end
     if havez
-        callback = (path->stepz(1,ctrls,state,showframe), path->playz(1,ctrls,state,showframe), 
+        callback = (path->stepz(1,ctrls,state,showframe), path->playz(1,ctrls,state,showframe),
             path->playz(-1,ctrls,state,showframe), path->stepz(-1,ctrls,state,showframe),
             path->setz(ctrls,state,showframe), path->scalez(ctrls,state,showframe))
-        ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz, ctrls.scalez = 
+        ctrls.stepup, ctrls.playup, ctrls.playdown, ctrls.stepdown, ctrls.textz, ctrls.editz, ctrls.scalez =
             addbuttons(f, btnsz, bkg, pad, zindex, "z", callback, 1:state.zmax)
         bind(win, "<Alt-Up>", path->stepz(1,ctrls,state,showframe))
         bind(win, "<Alt-Down>", path->stepz(-1,ctrls,state,showframe))
@@ -91,10 +91,10 @@ function init_navigation!(f, ctrls::NavigationControls, state::NavigationState, 
         updatez(ctrls, state)
     end
     if havet
-        callback = (path->stept(-1,ctrls,state,showframe), path->playt(-1,ctrls,state,showframe), 
+        callback = (path->stept(-1,ctrls,state,showframe), path->playt(-1,ctrls,state,showframe),
             path->playt(1,ctrls,state,showframe), path->stept(1,ctrls,state,showframe),
             path->sett(ctrls,state,showframe), path->scalet(ctrls,state,showframe))
-        ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt, ctrls.scalet = 
+        ctrls.stepback, ctrls.playback, ctrls.playfwd, ctrls.stepfwd, ctrls.textt, ctrls.editt, ctrls.scalet =
             addbuttons(f, btnsz, bkg, pad, tindex, "t", callback, 1:state.tmax)
         bind(win, "<Alt-Right>", path->stept(1,ctrls,state,showframe))
         bind(win, "<Alt-Left>", path->stept(-1,ctrls,state,showframe))
@@ -113,18 +113,18 @@ function set_fps!(state::NavigationState)
     win = Toplevel()
     f = Frame(win)
     pack(f, expand=true, fill="both")
-    
+
     l = Label(f, "Frames per second:")
     e = Entry(f, width=5)
     set_value(e, string(state.fps))
     ok = Button(f, "OK")
     cancel = Button(f, "Cancel")
-    
+
     grid(l, 1, 1)
     grid(e, 1, 2, pady=5)
     grid(cancel, 2, 1)
     grid(ok, 2, 2)
-    
+
     function set_close!(state::NavigationState)
         try
             fps = float64(get_value(e))
