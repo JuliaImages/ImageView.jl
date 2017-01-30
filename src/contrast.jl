@@ -6,7 +6,6 @@ using Tk
 using Winston
 using Images
 import Colors.Fractional
-using Compat; import Compat.String
 
 type ContrastSettings
     min
@@ -113,8 +112,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     # All bindings
     bind(emin, "<Return>") do path
         try
-            my_min = float32(get_value(emin))
-            my_max = float32(get_value(emax))
+            my_min = parse(Float32, get_value(emin))
+            my_max = parse(Float32, get_value(emax))
             # Don't let values cross
             my_max = my_max < my_min ? my_min + 0.01f0 : my_max # offset is arbitrary
             cs.min = convertsafely(typeof(cs.min), my_min)
@@ -129,8 +128,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
     end
     bind(emax, "<Return>") do path
         try
-            my_min = float32(get_value(emin))
-            my_max = float32(get_value(emax))
+            my_min = parse(Float32, get_value(emin))
+            my_max = parse(Float32, get_value(emax))
             # Don't let values cross
             my_min = my_min > my_max ? my_max - 0.01f0 : my_min # offset is arbitrary
             cs.min = convertsafely(typeof(cs.min), my_min)
@@ -144,8 +143,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         end
     end
     bind(min_slider, "command") do path
-        my_min = parse(Float32,min_slider[:value])
-        my_max = parse(Float32,max_slider[:value])
+        my_min = parse(Float32, min_slider[:value])
+        my_max = parse(Float32, max_slider[:value])
         # Don't let values cross
         my_max = my_max < my_min ? my_min + 0.01f0 : my_max # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)
@@ -160,8 +159,8 @@ function contrastgui{T}(win::Tk.TTk_Container, img::AbstractArray{T}, cs::Contra
         end
     end
     bind(max_slider, "command") do path
-        my_min = parse(Float32,min_slider[:value])
-        my_max = parse(Float32,max_slider[:value])
+        my_min = parse(Float32, min_slider[:value])
+        my_max = parse(Float32, max_slider[:value])
         # Don't let values cross
         my_min = my_min > my_max ? my_max - 0.01f0 : my_min # offset is arbitrary
         cs.min = convertsafely(typeof(cs.min), my_min)

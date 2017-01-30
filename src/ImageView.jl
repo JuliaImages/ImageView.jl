@@ -1,22 +1,21 @@
-VERSION >= v"0.4.0-dev+6521" && __precompile__(false)
+__precompile__(false)
 
 module ImageView
 
-if VERSION < v"0.4.0-dev+3275"
-    using Base.Graphics
-    import Base.Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
-else
-    using Graphics
-    import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
-end
+using Graphics
+import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
 
+using FileIO
 using Cairo
 using Tk
 using Colors
-using Images
-using Compat; import Compat.String
+using Images, AxisArrays
 
 import Base: parent, show, delete!, empty!
+
+hasaxes(img) = hasaxes(AxisArrays.HasAxes(img))
+hasaxes(::AxisArrays.HasAxes{true})  = true
+hasaxes(::AxisArrays.HasAxes{false}) = false
 
 # include("config.jl")
 # include("external.jl")
@@ -41,18 +40,14 @@ export # types
     delete_annotations!,
     destroy,
 #     ftshow,
-#     imshow,
+    imshow,
+    imshowlabeled,
     parent,
     scalebar,
     toplevel,
-    view,
-    viewlabeled,
     write_to_png
 
-@deprecate delete_annotations! empty!
-@deprecate delete_annotation! delete!
-@deprecate display(c::Canvas, img::AbstractArray; proplist...) view(c, img; proplist...)
-@deprecate display(imgc::ImageCanvas, img::AbstractArray; proplist...) view(imgc, img; proplist...)
-@deprecate display(img::AbstractArray; proplist...) view(img; proplist...)
+@deprecate view imshow
+@deprecate viewlabeled imshowlabeled
 
 end

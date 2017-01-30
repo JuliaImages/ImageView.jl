@@ -3,8 +3,7 @@ using ImageView.Navigation
 import Base: show
 
 # Since we have Tk available, don't force the user to type a filename
-import Images.imread
-imread() = imread(GetOpenFile())
+imread() = load(GetOpenFile())
 
 function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     if cs.min == nothing && cs.max == nothing
@@ -14,9 +13,9 @@ function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
     end
 end
 
-@compat is_linux() && const default_perimeter = RGB(0.85,0.85,0.85)
-@compat is_apple() && const default_perimeter = RGB(0.93, 0.93, 0.93)
-@compat is_windows() && const default_perimeter = RGB(1,1,1)  # untested
+is_linux() && const default_perimeter = RGB(0.85,0.85,0.85)
+is_apple() && const default_perimeter = RGB(0.93, 0.93, 0.93)
+is_windows() && const default_perimeter = RGB(1,1,1)  # untested
 
 ## Type for storing information about the rendering canvas
 # perimeter is the color used around the edges of the image; background is used
@@ -49,11 +48,12 @@ type ImageCanvas
         else
             if haskey(props, :clim)
                 clim = props[:clim]
-                render! = (buf, img) -> uint32color!(buf, img, ScaleMinMax(RGB24, img, clim[1], clim[2]))
+                f = scaleminmax(Gray24, clim[1], clim[2])
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, f(x)), buf, img)
             elseif haskey(props, :scalei)
                 render! = (buf, img) -> uint32color!(buf, img, props[:scalei])
             else
-                render! = uint32color!
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(x)), buf, img)
             end
         end
         background = get(props, :background, fmt == Cairo.FORMAT_ARGB32 ? checker(32) : nothing)
@@ -92,7 +92,8 @@ function setbb!(imgc::ImageCanvas, w, h)
 end
 
 # Handle z and t slicing, and zooming in x and y
-type ImageSlice2d{A<:AbstractImage}
+type ImageSlice2d{A<:AbstractArray}
+    imorig
     imslice::A
     pdims::Vector{Int}
     indexes::Vector{RangeIndex}
@@ -106,14 +107,13 @@ type ImageSlice2d{A<:AbstractImage}
     tdim::Int
 end
 
-function ImageSlice2d(img::AbstractImage, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
-    assert2d(img)
-    ImageSlice2d{typeof(img)}(img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
+function ImageSlice2d(imorig, img::AbstractMatrix, pdims::Vector{Int}, indexes, dims, bb::BoundingBox, zindex::Integer, tindex::Integer, xdim::Integer, ydim::Integer, zdim::Integer, tdim::Integer)
+    ImageSlice2d{typeof(img)}(imorig, img, pdims, RangeIndex[indexes...], Int[dims...], bb, convert(Int, zindex), convert(Int, tindex), convert(Int, xdim), convert(Int, ydim), convert(Int, zdim), convert(Int, tdim))
 end
 
 import Base.getindex
 function getindex(img2::ImageSlice2d, x::Real, y::Real)
-    P = parent(data(img2.imslice))
+    P = img2.imorig
     indexes = RangeIndex[1:size(P,d) for d = 1:ndims(P)]
     indexes[img2.xdim] = clamp(convert(Int, x), 1, size(P,img2.xdim))
     indexes[img2.ydim] = clamp(convert(Int, y), 1, size(P,img2.ydim))
@@ -141,32 +141,25 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     if !(2 <= sd <= 3)
         error("Only two or three spatial dimensions are permitted")
     end
-    if !isa(img, AbstractImage)
-        img = Images.Image(img, @compat Dict("colordim" => colordim(img), "spatialorder" => spatialorder(img), "colorspace" => colorspace(img)))
-    end
-    # Determine how dimensions map to x, y, z, t
-    xy = get(props, :xy, Images.xy)
-    cs = coords_spatial(img)
-    p = spatialpermutation(xy, img)
-    xdim = cs[p[1]]
-    ydim = cs[p[2]]
-    zdim = (sd == 2) ? 0 : cs[p[3]]
-    tdim = timedim(img)
+    xdim = 2
+    ydim = 1
+    zdim = (sd == 2) ? 0 : 3
+    tdim = hasaxes(img) ? timedim(img) : 0
     # Deal with pixelspacing here
     if !haskey(props, :pixelspacing)
-        if haskey(img, "pixelspacing")
-            props[:pixelspacing] = img["pixelspacing"][p]
+        if hasaxes(img)
+            props[:pixelspacing] = pixelspacing(img)
         end
     end
-    props[:transpose] = p[1] > p[2]
+    props[:transpose] = xdim > ydim
     # Start at z=1, t=1
-    pindexes = parentindexes(data(img))
-    pdims = parentdims(data(img))
+    pindexes = parentindexes(img)
+    pdims = parentdims(img)
     indexes = ntuple(i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)), ndims(img))
-    imslice = sliceim(img, indexes...)
+    imslice = Base.view(img, indexes...)
     bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
     sz = size(imslice)
-    ImageSlice2d(imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
+    ImageSlice2d(img, imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
 end
 
 parentdims(A::AbstractArray) = [1:ndims(A);]
@@ -185,7 +178,7 @@ function _reslice!(img2::ImageSlice2d)
     if img2.tdim > 0
         newindexes[img2.tdim] = newindexes[img2.tdim][img2.tindex]
     end
-    img2.imslice.data = slice(img2.imslice.data.parent, newindexes...)
+    img2.imslice = Base.view(parent(img2.imorig), newindexes...)
     img2
 end
 
@@ -227,7 +220,7 @@ yrange(img2::ImageSlice2d) = (ymin(img2), ymax(img2))
 #   name: a string giving the window name
 #   background, perimeter: colors
 
-function view{A<:AbstractArray}(img::A; proplist...)
+function imshow{A<:AbstractArray}(img::A; proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint!(props, length(proplist))
@@ -321,12 +314,12 @@ end
 
 # Display a labeled image: in the status bar that shows information about the pixel under the mouse pointer,
 # display the label value rather than the pixel value.
-function viewlabeled(img::AbstractArray, label::AbstractArray; proplist...)
+function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     size(img) == size(label) || throw(DimensionMismatch("size $(size(label)) of label array disagrees with size $(size(img)) of the image"))
-    if isa(img, AbstractImage) && !isa(label, AbstractImage)
+    if isa(img, ImageMeta) && !isa(label, ImageMeta)
         label = shareproperties(img, label)
     end
-    imgc, imsl = view(img, proplist...)
+    imgc, imsl = imshow(img, proplist...)
     props = Dict{Symbol,Any}()
     for (k,v) in proplist
         props[k] = v
@@ -338,7 +331,7 @@ end
 
 
 # Display a new image in an old ImageCanvas, preserving properties
-function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, proplist...)
+function imshow{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint!(props, length(proplist))
@@ -358,7 +351,7 @@ function view{A<:AbstractArray}(imgc::ImageCanvas, img::A; interactive=true, pro
 end
 
 # Display an image in a Canvas. Do not create controls.
-function view{A<:AbstractArray}(c::Canvas, img::A; interactive=true, proplist...)
+function imshow{A<:AbstractArray}(c::Canvas, img::A; interactive=true, proplist...)
     # Convert keyword list to dictionary
     props = Dict{Symbol,Any}()
     sizehint!(props, length(proplist))
@@ -755,14 +748,8 @@ function resetfirst!(s::SubArray)
     s
 end
 
-function cairo_format(img::AbstractArray)
-    format = Cairo.FORMAT_RGB24
-    cs = colorspace(img)
-    if cs == "ARGB" || cs == "ARGB32" || cs == "RGBA" || cs == "GrayAlpha"
-        format = Cairo.FORMAT_ARGB32
-    end
-    format
-end
+cairo_format{C<:TransparentColor}(::AbstractArray{C}) = Cairo.FORMAT_ARGB32
+cairo_format(::AbstractArray) = Cairo.FORMAT_RGB24
 
 function scalebarsize(imsl::ImageSlice2d, width, height)
     indx = findin([imsl.xdim,imsl.ydim], coords_spatial(imsl.imslice))
