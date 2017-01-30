@@ -53,7 +53,7 @@ type ImageCanvas
             elseif haskey(props, :scalei)
                 render! = (buf, img) -> uint32color!(buf, img, props[:scalei])
             else
-                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(x)), buf, img)
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(clamp01nan(x))), buf, img)
             end
         end
         background = get(props, :background, fmt == Cairo.FORMAT_ARGB32 ? checker(32) : nothing)

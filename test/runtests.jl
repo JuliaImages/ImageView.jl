@@ -1,3 +1,4 @@
+include("simple.jl")
 include("tile.jl")
 include("annotations.jl")
 include("statusbar.jl")
