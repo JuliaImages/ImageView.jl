@@ -2,7 +2,7 @@
 
 module Navigation
 
-using Tk, Compat
+using Tk
 
 ## Type for holding GUI state
 # This specifies a particular 2d slice from a possibly-4D image
