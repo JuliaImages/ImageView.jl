@@ -5,11 +5,11 @@ import Base: show
 # Since we have Tk available, don't force the user to type a filename
 imread() = load(GetOpenFile())
 
-function scaleinfo(cs::ImageContrast.ContrastSettings, scalei::MapInfo, img)
+function scaleinfo(cs::ImageContrast.ContrastSettings, scalei)
     if cs.min == nothing && cs.max == nothing
         return scalei
     else
-        return ScaleMinMax(RGB24, img, cs.min, cs.max)
+        return scaleminmax(RGB24, cs.min, cs.max)
     end
 end
 
@@ -292,16 +292,17 @@ function imshow{A<:AbstractArray}(img::A; proplist...)
     allocate_surface!(imgc, w, h)
     create_callbacks(imgc, img2)
     c.mouse.motion = (path,x,y) -> updatexylabel(xypos, imgc, img2, x, y)
-    if imgc.render! == uint32color! && colorspace(img) == "Gray"
+    if eltype(img) <: Gray || eltype(img) <: Number
         menu = Menu(framec)
-        if haskey(img, "scalei")
+        if isa(img, ImageMeta) && haskey(img, "scalei")
             cs = ImageContrast.ContrastSettings(nothing,nothing)
-            imgc.render! = (buf,img) -> uint32color!(buf, img, scaleinfo(cs, img["scalei"], img))
+            f = scaleinfo(cs, img["scalei"])
         else
             clim = (zero(eltype(img)), one(eltype(img)))
             cs = ImageContrast.ContrastSettings(clim[1], clim[2])
-            imgc.render! = (buf,img) -> uint32color!(buf, img, ScaleMinMax(RGB24, img, cs.min, cs.max))
+            f = x->(scaleminmax(RGB24, cs.min, cs.max)(x))
         end
+        imgc.render! = (buf,img) -> map!(x->reinterpret(UInt32, f(x)), buf, img)
         menu_contrast = menu_add(menu, "Contrast...", path -> ImageContrast.contrastgui(img2.imslice, cs, x->redraw(imgc, img2)))
         tk_popup(c, menu)
     end
