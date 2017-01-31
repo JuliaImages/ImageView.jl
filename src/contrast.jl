@@ -6,6 +6,7 @@ using Tk
 using Winston
 using Images
 import Colors.Fractional
+using StatsBase
 
 type ContrastSettings
     min
@@ -184,10 +185,11 @@ convertsafely{T<:Integer}(::Type{T}, val) = convert(T, round(val))
 convertsafely{T}(::Type{T}, val) = convert(T, val)
 
 function prepare_histogram(img, nbins, immin, immax)
-    w = (immax-immin)/10^5
-    e = immin-w:(immax-immin)/(nbins-1):immax+w
+    w = (Float64(immax)-Float64(immin))/10^5
+    e = immin-w:(Float64(immax)-Float64(immin))/(nbins-1):immax+w
     dat = img[:]
-    e, counts = hist(dat[isfinite(dat)], e)
+    h = fit(StatsBase.Histogram, dat[isfinite(dat)], e)
+    counts = h.weights
     counts .+= 1   # because of log scaling
     x, y = stairs(e, counts)
     p = FramedPlot()
