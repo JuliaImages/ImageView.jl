@@ -1,3 +1,5 @@
+include("simple.jl")
+include("scalesigned.jl")
 include("tile.jl")
 include("annotations.jl")
 include("statusbar.jl")

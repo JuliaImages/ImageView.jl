@@ -51,9 +51,10 @@ type ImageCanvas
                 f = scaleminmax(Gray24, clim[1], clim[2])
                 render! = (buf, img) -> map!(x->reinterpret(UInt32, f(x)), buf, img)
             elseif haskey(props, :scalei)
-                render! = (buf, img) -> uint32color!(buf, img, props[:scalei])
+                f = props[:scalei]
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(f(x))), buf, img)
             else
-                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(x)), buf, img)
+                render! = (buf, img) -> map!(x->reinterpret(UInt32, ARGB32(clamp01nan(x))), buf, img)
             end
         end
         background = get(props, :background, fmt == Cairo.FORMAT_ARGB32 ? checker(32) : nothing)
