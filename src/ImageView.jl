@@ -3,7 +3,7 @@ __precompile__(false)
 module ImageView
 
 using Graphics
-import Graphics: width, height, fill, set_coords, xmin, xmax, ymin, ymax
+import Graphics: width, height, fill, set_coordinates, xmin, xmax, ymin, ymax
 
 using FileIO
 using Cairo
