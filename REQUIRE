@@ -5,7 +5,7 @@ Tk
 Winston
 Graphics 0.1
 Cairo
-Graphics
+Graphics 0.2
 FileIO
 AxisArrays
 StatsBase

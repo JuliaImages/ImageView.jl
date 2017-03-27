@@ -509,7 +509,7 @@ end
 function resize(imgc::ImageCanvas, img2::ImageSlice2d)
     w, h = size(imgc.surface.data)
     setbb!(imgc, w, h)
-    set_coords(imgc, img2.zoombb)
+    set_coordinates(imgc, img2.zoombb)
     r = getgc(imgc.c)
     if !is(imgc.aspect_x_per_y, nothing)
         fill(r, imgc.perimeter)
@@ -612,7 +612,7 @@ function panzoom(imgc::ImageCanvas, img2::ImageSlice2d, bb::BoundingBox)
     rerender(imgc, img2)
 end
 
-function set_coords(imgc::ImageCanvas, bb::BoundingBox)
+function set_coordinates(imgc::ImageCanvas, bb::BoundingBox)
     l, r = bb.xmin, bb.xmax
     if imgc.flipx
         l, r = r, l
@@ -622,7 +622,7 @@ function set_coords(imgc::ImageCanvas, bb::BoundingBox)
         t, b = b, t
     end
     bb = imgc.canvasbb
-    set_coords(getgc(imgc.c), bb.xmin, bb.ymin, width(bb), height(bb), l, r, t, b)
+    set_coordinates(getgc(imgc.c), bb.xmin, bb.ymin, width(bb), height(bb), l, r, t, b)
 end
 
 function panvert(imgc::ImageCanvas, img2::ImageSlice2d, delta)
@@ -638,7 +638,7 @@ function panvert(imgc::ImageCanvas, img2::ImageSlice2d, delta)
         bb = img2.zoombb
         bb = BoundingBox(bb.xmin, bb.xmax, bb.ymin+dy, bb.ymax+dy)
         panzoom(imgc, img2, bb)
-        set_coords(imgc, bb)
+        set_coordinates(imgc, bb)
         redraw(imgc)
     end
 end
@@ -656,7 +656,7 @@ function panhorz(imgc::ImageCanvas, img2::ImageSlice2d, delta)
         bb = img2.zoombb
         bb = BoundingBox(bb.xmin+dx, bb.xmax+dx, bb.ymin, bb.ymax)
         panzoom(imgc, img2, bb)
-        set_coords(imgc, bb)
+        set_coordinates(imgc, bb)
         redraw(imgc)
     end
 end

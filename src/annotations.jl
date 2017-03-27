@@ -7,7 +7,7 @@ abstract AbstractAnnotation
 # Use this type when you want your annotation to be linked to particular data-coordinates
 # (for example, to highlight a particular data point)
 # devicebb(data) returns a BoundingBox in device coordinates, userbb(data) returns one in user coordinates.
-# It's up to the draw() function to decide how to exploit these (most commonly, with set_coords())
+# It's up to the draw() function to decide how to exploit these (most commonly, with set_coordinates())
 type AnchoredAnnotation{T} <: AbstractAnnotation
     devicebb::Function
     userbb::Function
@@ -207,7 +207,7 @@ function draw(c::Canvas, ann::AnchoredAnnotation)
         ctx = getgc(c)
         Graphics.save(ctx)
         data = ann.data
-        set_coords(ctx, ann.devicebb(data), ann.userbb(data))
+        set_coordinates(ctx, ann.devicebb(data), ann.userbb(data))
         scale_x = width(ann.userbb(data))/width(ann.devicebb(data))
         scale_y = height(ann.userbb(data))/height(ann.devicebb(data))
         draw_anchored(ctx, data, scale_x, scale_y)
@@ -219,7 +219,7 @@ function draw{T}(c::Canvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
     ctx = getgc(c)
     Graphics.save(ctx)
     data = ann.data
-    set_coords(ctx, ann.devicebb(data), BoundingBox(0,1,0,1))
+    set_coordinates(ctx, ann.devicebb(data), BoundingBox(0,1,0,1))
     set_source(ctx, data.color)
     w, h = data.getsize(data.width, data.height)
     bb = BoundingBox(-w/2+data.centerx, w/2+data.centerx, -h/2+data.centery, h/2+data.centery)
