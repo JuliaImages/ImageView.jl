@@ -47,7 +47,4 @@ export # types
     toplevel,
     write_to_png
 
-@deprecate view imshow
-@deprecate viewlabeled imshowlabeled
-
 end
