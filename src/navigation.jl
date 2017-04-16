@@ -169,7 +169,7 @@ end
 # callback is an array of 5 entries, the 5th being the edit box
 function addbuttons(f, sz, bkg, pad, index, orientation, callback, rng)
     rotflag = orientation == "z"
-    ctrl = Array(Any, 7)
+    ctrl = Array{Any}(7)
     ctrl[1], ctrl[2], ctrl[3], ctrl[4] = arrowheads(sz, rotflag)
     mask = trues(sz)
     const color = ("black", "green", "green", "black")

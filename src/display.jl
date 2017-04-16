@@ -42,7 +42,7 @@ type ImageCanvas
 
     function ImageCanvas(fmt::Int32, props::Dict)
         ps = get(props, :pixelspacing, nothing)
-        aspect_x_per_y = is(ps, nothing) ? nothing : ps[1]/ps[2]
+        aspect_x_per_y = ps == nothing ? nothing : ps[1]/ps[2]
         if haskey(props, :render!)
             render! = props[:render!]
         else
@@ -76,7 +76,7 @@ parent(imgc::ImageCanvas) = Tk.parent(imgc.c)
 toplevel(imgc::ImageCanvas) = Tk.toplevel(canvas(imgc))
 
 function setbb!(imgc::ImageCanvas, w, h)
-    if !is(imgc.aspect_x_per_y, nothing)
+    if imgc.aspect_x_per_y != nothing
         wc = width(imgc.c)
         hc = height(imgc.c)
         sx = min(wc/w, imgc.aspect_x_per_y*hc/h)
@@ -383,7 +383,7 @@ function canvasgrid(ny, nx; w = 800, h = 600, pad=0, name="ImageView")
     grid(frame, 1, 1, sticky="nsew")
     grid_rowconfigure(win, 1, weight=1)
     grid_columnconfigure(win, 1, weight=1)
-    c = Array(Canvas, ny, nx)
+    c = Array{Canvas}(ny, nx)
     for j = 1:nx
         for i = 1:ny
             c1 = Canvas(frame, w/nx, h/ny)
@@ -477,7 +477,7 @@ function redraw(imgc::ImageCanvas)
     hbb = height(bb)
     rectangle(r, bb.xmin, bb.ymin, wbb, hbb)
     # In cases of transparency, paint the background color
-    if imgc.surfaceformat == Cairo.FORMAT_ARGB32 && !is(imgc.background, nothing)
+    if imgc.surfaceformat == Cairo.FORMAT_ARGB32 && imgc.background != nothing
         if isa(imgc.background, CairoPattern)
             set_source(r, imgc.background)
         else
@@ -514,7 +514,7 @@ function resize(imgc::ImageCanvas, img2::ImageSlice2d)
     setbb!(imgc, w, h)
     set_coordinates(imgc, img2.zoombb)
     r = getgc(imgc.c)
-    if !is(imgc.aspect_x_per_y, nothing)
+    if imgc.aspect_x_per_y != nothing
         fill(r, imgc.perimeter)
     end
     redraw(imgc)
@@ -667,10 +667,10 @@ end
 
 ### Utilities ###
 function allocate_surface!(imgc::ImageCanvas, w, h)
-    buf = Array(UInt32, w, h)
+    buf = Array{UInt32}(w, h)
     imgc.surface = CairoImageSurface(buf, imgc.surfaceformat, flipxy = false)
     if imgc.transpose
-        imgc.renderbuf = Array(UInt32, h, w)
+        imgc.renderbuf = Array{UInt32}(h, w)
     end
 end
 
@@ -702,7 +702,7 @@ end
 
 # Create a checkerboard pattern (for use with transparency)
 function checker(checkersize::Int; light = 0xffb0b0b0, dark = 0xff404040)
-    buf = Array(UInt32, 2checkersize, 2checkersize)
+    buf = Array{UInt32}(2checkersize, 2checkersize)
     fill!(buf, light)
     buf[1:checkersize,checkersize+1:2checkersize] = dark
     buf[checkersize+1:2checkersize,1:checkersize] = dark
@@ -717,7 +717,7 @@ end
 function rendersize(w::Integer, h::Integer, r)
     ww = w
     wh = h
-    if !is(r, nothing)
+    if r != nothing
         if r > 1
             ww = round(Integer, w*r)
         else
