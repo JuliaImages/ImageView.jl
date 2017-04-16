@@ -115,9 +115,11 @@ end
 import Base.getindex
 function getindex(img2::ImageSlice2d, x::Real, y::Real)
     P = img2.imorig
-    indexes = RangeIndex[1:size(P,d) for d = 1:ndims(P)]
-    indexes[img2.xdim] = clamp(convert(Int, x), 1, size(P,img2.xdim))
-    indexes[img2.ydim] = clamp(convert(Int, y), 1, size(P,img2.ydim))
+    indsP = indices(P)
+    indsx, indsy = indsP[img2.xdim], indsP[img2.ydim]
+    indexes = RangeIndex[map(UnitRange, indsP)...]
+    indexes[img2.xdim] = clamp(convert(Int, x), first(indsx), last(indsx))
+    indexes[img2.ydim] = clamp(convert(Int, y), first(indsy), last(indsy))
     if img2.zdim > 0
         indexes[img2.zdim] = img2.zindex
     end
@@ -154,13 +156,14 @@ function ImageSlice2d(img::AbstractArray, props::Dict)
     end
     props[:transpose] = xdim > ydim
     # Start at z=1, t=1
-    pindexes = parentindexes(img)
+    pindexes = map(UnitRange, _parentindexes(img))
     pdims = parentdims(img)
-    indexes = ntuple(i -> (i == zdim || i == tdim) ? 1 : (1:size(img, i)), ndims(img))
+    inds = map(UnitRange, indices(img))
+    indexes = ntuple(i -> (i == zdim || i == tdim) ? 1 : inds[i], ndims(img))
     imslice = Base.view(img, indexes...)
-    bb = BoundingBox(0, size(img, xdim), 0, size(img, ydim))
-    sz = size(imslice)
-    ImageSlice2d(img, imslice, pdims, pindexes, size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
+    indsx, indsy = inds[xdim], inds[ydim]
+    bb = BoundingBox(first(indsx)-1, last(indsx), first(indsy)-1, last(indsy))
+    ImageSlice2d(img, imslice, pdims, pindexes, _size(imslice), bb, 1, 1, xdim, ydim, zdim, tdim)
 end
 
 parentdims(A::AbstractArray) = [1:ndims(A);]
@@ -179,7 +182,7 @@ function _reslice!(img2::ImageSlice2d)
     if img2.tdim > 0
         newindexes[img2.tdim] = newindexes[img2.tdim][img2.tindex]
     end
-    img2.imslice = Base.view(parent(img2.imorig), newindexes...)
+    img2.imslice = Base.view(_parent(img2.imorig), newindexes...)
     img2
 end
 
@@ -317,7 +320,7 @@ end
 # Display a labeled image: in the status bar that shows information about the pixel under the mouse pointer,
 # display the label value rather than the pixel value.
 function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
-    size(img) == size(label) || throw(DimensionMismatch("size $(size(label)) of label array disagrees with size $(size(img)) of the image"))
+    indices(img) == indices(label) || throw(DimensionMismatch("indices $(indices(label)) of label array disagree with indices $(indices(img)) of the image"))
     if isa(img, ImageMeta) && !isa(label, ImageMeta)
         label = shareproperties(img, label)
     end
@@ -577,8 +580,9 @@ function zoomwheel(imgc::ImageCanvas, img2::ImageSlice2d, delta, x, y)
         xmn, xmx = centeredclip(xu, width(img2)/2, xrange(img2))
         ymn, ymx = centeredclip(yu, height(img2)/2, yrange(img2))
     else
-        xmn, xmx = centeredclip(xu, 2*width(img2), (1,sizex(img2)), xrange(img2))
-        ymn, ymx = centeredclip(yu, 2*height(img2), (1,sizey(img2)), yrange(img2))
+        indsx, indsy = indicesx(img2), indicesy(img2)
+        xmn, xmx = centeredclip(xu, 2*width(img2), (first(indsx),last(indsx)), xrange(img2))
+        ymn, ymx = centeredclip(yu, 2*height(img2), (first(indsy),last(indsy)), yrange(img2))
     end
     zoombb(imgc, img2, BoundingBox(floor(xmn)-1, ceil(xmx), floor(ymn)-1, ceil(ymx)))
 end
@@ -744,7 +748,7 @@ function resetfirst!(s::SubArray)
     pstride = 1
     for j = 1:length(s.indexes)
         newfirst += (first(s.indexes[j])-1)*pstride
-        pstride *= size(s.parent, j)
+        pstride *= length(indices(s.parent, j))
     end
     s.first_index = newfirst
     s
@@ -772,3 +776,12 @@ function write_to_png(imgc::ImageCanvas, filename)
     ctx = copy(imgc.c.backcc, imgc.canvasbb)
     Cairo.write_to_png(ctx.surface, filename)
 end
+
+# Non-1 index utilities
+_parentindexes(V::SubArray) = V.indexes
+_parentindexes(a::AbstractArray) = indices(a)
+_size(a::AbstractArray) = map(length, indices(a))
+indicesx(img2::ImageSlice2d) = img2.indexes[img2.xdim]
+indicesy(img2::ImageSlice2d) = img2.indexes[img2.ydim]
+_parent(a::AbstractArray) = parent(a)
+_parent(a::AxisArray) = a
