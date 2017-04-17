@@ -1,5 +1,5 @@
 import ImageView
-using Images
+using Images, OffsetArrays
 
 # Grayscale
 ImageView.imshow(rand(Gray{N0f8}, 10, 10))
@@ -21,3 +21,7 @@ A[1,2,2] = NaN
 A[1,3,3] = -Inf
 A[1,4,4] = Inf
 ImageView.imshow(colorview(RGB, A))
+
+# Non-1 indices
+A = OffsetArray(rand(11, 10), -5:5, 0:9)
+ret = ImageView.imshow(A)

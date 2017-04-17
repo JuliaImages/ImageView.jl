@@ -121,7 +121,7 @@ type AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
     coordinate_order::Vector{Int}
 
     function AnnotationLines(lines::T, z, t, linecolor, linewidth, coord_order_str)
-        ord = sortperm(coord_order_str.data)
+        ord = sortperm(Vector{UInt8}(coord_order_str))
         @assert coord_order_str[ord] == "xxyy"
         new(lines, z, t, linecolor, linewidth, ord)
     end
@@ -149,7 +149,7 @@ AnnotationLine(pt1::Tuple{Real,Real}, pt2::Tuple{Real,Real}; args...) =
     AnnotationLine((pt1, pt2); args...)
 
 function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyxy", args...)
-    ord = sortperm(coord_order.data)
+    ord = sortperm(Vector{UInt8}(coord_order))
     @assert coord_order[ord] == "xxyy"
     (x1,x2,y1,y2) = [c1,c2,c3,c4][ord]
     AnnotationLine((Float64(x1), Float64(y1)),
@@ -171,7 +171,7 @@ end
 
 function AnnotationBox(c1::Real, c2::Real, c3::Real, c4::Real; z = NaN, t = NaN,
                        color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy")
-    ord = sortperm(coord_order.data)
+    ord = sortperm(Vector{UInt8}(coord_order))
     @assert coord_order[ord] == "xxyy"
     (x1, x2, y1, y2) = [c1, c2, c3, c4][ord]
     (x1, x2) = minmax(x1, x2)
