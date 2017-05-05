@@ -1,9 +1,10 @@
 import ImageView
-using Colors
+using Colors, Gtk.ShortNames
 using TestImages
 
-c = ImageView.canvasgrid(2,2)
-ImageView.imshow(c[1,1], testimage("lighthouse"), pixelspacing=[1,1])
-ImageView.imshow(c[1,2], testimage("mountainstream"), pixelspacing=[1,1])
-ImageView.imshow(c[2,1], testimage("moonsurface"), pixelspacing=[1,1])
-ImageView.imshow(c[2,2], testimage("mandrill"), pixelspacing=[1,1])
+grid, frames, c = ImageView.canvasgrid((2,2))
+showall(Window("canvasgrid", 800, 600) |> grid)
+ImageView.imshow(c[1,1], testimage("lighthouse"))
+ImageView.imshow(c[1,2], testimage("mountainstream"))
+ImageView.imshow(c[2,1], testimage("moonsurface"))
+ImageView.imshow(c[2,2], testimage("mandrill"))

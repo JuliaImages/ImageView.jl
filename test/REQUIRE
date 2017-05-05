@@ -1,3 +1,5 @@
 TestImages
-ImageMagick
+@linux ImageMagick
+@windows ImageMagick
+@osx QuartzImageIO
 OffsetArrays
