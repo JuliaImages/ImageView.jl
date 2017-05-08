@@ -118,16 +118,15 @@ if Gtk.libgtk_version >= v"3.10"
         zr = guidata["roi"]["zoomregion"]
         slicedata = guidata["roi"]["slicedata"]
         guidata2 = imshow(mriseg, nothing, zr, slicedata)
-        sleep(1)
-        destroy(guidata["gui"]["window"])
-        destroy(guidata2["gui"]["window"])
-        sleep(0.5)
+        @test guidata2["roi"]["zoomregion"] === zr
+
         # version 2
         zr, slicedata = roi(img, (1,2))
         gd = imshow_gui((200, 200), slicedata, (1,2))
-        imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
-        imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
+        guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
+        guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
         showall(gd["window"])
+        @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
     end
 
     @testset "Non-AbstractArrays" begin

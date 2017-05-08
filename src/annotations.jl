@@ -47,7 +47,7 @@ function zoombb(zr)
     BoundingBox(first(inds[2]), last(inds[2]), first(inds[1]), last(inds[1]))
 end
 
-abstract AbstractAnnotation
+@compat abstract type AbstractAnnotation end
 
 # Use this type when you want your annotation to be linked to particular data-coordinates
 # (for example, to highlight a particular data point)
@@ -171,10 +171,10 @@ type AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
     linewidth::Float64
     coordinate_order::Vector{Int}
 
-    function AnnotationLines(lines::T, z, t, linecolor, linewidth, coord_order_str)
+    function (::Type{AnnotationLines{R,T}}){R,T}(lines::T, z, t, linecolor, linewidth, coord_order_str)
         ord = sortperm(Vector{UInt8}(coord_order_str))
         @assert coord_order_str[ord] == "xxyy"
-        new(lines, z, t, linecolor, linewidth, ord)
+        new{R,T}(lines, z, t, linecolor, linewidth, ord)
     end
 end
 

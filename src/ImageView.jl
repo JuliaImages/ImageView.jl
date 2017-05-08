@@ -428,8 +428,11 @@ function prep_contrast{T}(img::Signal, clim::Signal{CLim{T}})
     enabled = Signal(false; name="contrast_enabled") # skip hist calculation if the contrast gui isn't open
     histsig = map(filterwhen(enabled, value(img), img); name="histsig") do image
         cl = value(clim)
-        smin = min(minfinite(image), cl.min)
-        smax = max(maxfinite(image), cl.max)
+        smin = nanz(min(minfinite(image), cl.min))
+        smax = nanz(max(maxfinite(image), cl.max))
+        if smax == smin
+            smax = smin+1
+        end
         rng = linspace(smin, smax, 300)
         fit(Histogram, mappedarray(nanz, vec(channelview(image))), rng; closed=:right)
     end

@@ -97,7 +97,7 @@ end
 
 # Infer whether we're using positional or named axes. This allows us
 # to use positional labels even with AxisArrays.
-abstract TagType
+@compat abstract type TagType end
 immutable Positional <: TagType end
 immutable Named <: TagType end
 
