@@ -438,7 +438,11 @@ function prep_contrast{T}(img::Signal, clim::Signal{CLim{T}})
     end
     # Return a signal corresponding to the scaled image
     imgc = map(img, clim; name="clim-mapped image") do image, cl
-        smm = scaleminmax(Gray{N0f8}, cl.min, cl.max)
+        cmin, cmax = cl.min, cl.max
+        if !(cmin < cmax)
+            cmax = cmin+1
+        end
+        smm = scaleminmax(Gray{N0f8}, cmin, cmax)
         mappedarray(smm, image)
     end
     enabled, histsig, imgc

@@ -5,8 +5,15 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal)
     T = eltype(vclim)
     Δ = T <: Integer ? T(1) : eps(T)
     rng = vhist.edges[1]
-    smin = Signal(convert(eltype(rng), vclim.min))
-    smax = Signal(convert(eltype(rng), vclim.max))
+    cmin, cmax = vclim.min, vclim.max
+    if !(cmin < cmax)
+        cmin, cmax = first(rng), last(rng)
+        if !(cmin < cmax)
+            cmin, cmax = zero(cmin), one(cmax)
+        end
+    end
+    smin = Signal(convert(eltype(rng), cmin))
+    smax = Signal(convert(eltype(rng), cmax))
     cgui = contrast_gui_layout(smin, smax, rng)
     signal_connect(cgui["window"], :destroy) do widget
         push!(enabled, false)
@@ -38,7 +45,7 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal)
     # TODO: we might want to throttle this?
     redraw = draw(cgui["canvas"], hist) do cnvs, hst
         if getproperty(cgui["window"], :visible, Bool) # protects against window destruction
-            rng, cl = value(hist).edges[1], value(clim)
+            rng, cl = hst.edges[1], value(clim)
             mn, mx = minimum(rng), maximum(rng)
             push!(cgui["slider_min"], rng, clamp(cl.min, mn, mx))
             push!(cgui["slider_max"], rng, clamp(cl.max, mn, mx))
