@@ -90,9 +90,13 @@ makeslices(sd::SliceData) = makeslices(sd.axs, sd.signals)
 makeslices{N}(axs::NTuple{N,Axis}, sigs::NTuple{N,Signal}) =
     map((ax,s) -> ax(value(s)), axs, sigs)
 
-function slice2d(img, roi, slices::Axis...)
+function slice2d(img::AbstractArray, roi, slices::Axis...)
     inds = sliceinds(img, roi, slices...)
     view(img, inds...)
+end
+function slice2d(img, roi, slices::Axis...)
+    inds = sliceinds(img, roi, slices...)
+    img[inds...]
 end
 
 # Infer whether we're using positional or named axes. This allows us

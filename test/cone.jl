@@ -4,6 +4,7 @@
 module ConeModule
 
 using FixedPointNumbers, Colors, ImageCore, Cairo, Reactive, ImageView
+using Base: tail
 
 export Cone
 
@@ -23,54 +24,53 @@ Cone{C<:Colorant}(sz3::Tuple{Int,Int,Int}, colort::Vector{C}) = Cone{C}(sz3, col
 ## These define the interface that an object needs to support in order
 ## to be displayable with imshow
 
+Base.eltype{C}(::Type{Cone{C}}) = C
+
 # What you actually need to implement is `indices(c)`, but we can do that here via `size`
 Base.size(c::Cone) = (c.sz3..., length(c.colort))
-Base.view(c::Cone, x, y, z, t) = ConeView(c, map(normalize_inds, indices(c), (x, y, z, t)))
 
-# You must support `view` and three functions (`size`, `pixelspacing`,
-# and `copy!`) on whatever kind of object `view` returns.  How you do
-# that is up to you; here is one example.
-immutable ConeView{C<:Colorant,I}
-    cone::Cone{C}
-    indices::I
+# c[x, y, z, t]
+function Base.getindex(c::Cone, y::Real, x::Real, z::Real, t::Real)
+    ((x-c.center2[2])^2 + (y-c.center2[1])^2 <= (c.sz3[3] - z + 1)^2)*c.colort[t]
 end
-
-Base.size(cv::ConeView) = mapvec(length, cv.indices...)
-
-function ImageCore.pixelspacing(cv::ConeView)
-    filterby(x->isa(x, AbstractVector), cv.indices[1:3], (1, 1, 5))
-end
-
-# copy! is what gets called when it's time to paint pixels on the canvas.
-# You could alternatively provide `getindex`-style functionality.
-function Base.copy!(canvas::Cairo.CairoContext, cv::ConeView)
-    img = similar(Array{RGB{N0f8}}, indices(cv))
-    fill!(img, zero(eltype(img)))
-    c = cv.cone
-    for (idest, isrc) in zip(CartesianRange(indices(img)), CartesianRange(cv.indices))
-        x, y, z, t = isrc.I
-        img[idest] =
-            ((x-c.center2[1])^2 + (y-c.center2[2])^2 <= (c.sz3[3] - z + 1)^2)*c.colort[t]
+function Base.getindex(c::Cone, y, x, z, t)
+    # indexing with vectors or colons
+    inds = map(normalize_inds, indices(c), (y, x, z, t))
+    sz = map(length, filtervec(inds, inds))
+    yn, xn, zn, tn = inds
+    ps = filtervec((1.0, 1.0, 5.0), (yn, xn, zn))  # to get the pixelspacing correct
+    out = Array{eltype(c)}(sz)
+    k = 0
+    for ti in tn, zi in zn, xi in xn, yi in yn
+        out[k+=1] = c[yi,xi,zi,ti]
     end
-    copy!(canvas, img)
+    SpacedArray(out, ps)
 end
 
 ## Helper functions
 # You don't need to implement these specific functions: they're here
 # only to support the specific implementations above.
+
+# An array with custom pixelspacing. If you don't need to customize
+# ps, then you could just use a plain Array in the getindex method
+# above.
+immutable SpacedArray{T,N} <: AbstractArray{T,N}
+    a::Array{T,N}
+    ps::NTuple{N,Float64}
+end
+ImageCore.pixelspacing(A::SpacedArray) = A.ps
+@inline Base.getindex(A::SpacedArray, inds...) = A.a[inds...]
+@inline Base.setindex!(A::SpacedArray, val, inds...) = A.a[inds...] = val
+Base.size(A::SpacedArray) = size(A.a)
+
+# Replace colons with explicit range vectors
 normalize_inds(ref, ind) = ind
 normalize_inds(ref, ::Colon) = ref
 
-function filterby(f, test, ret)
-    fbtail = filterby(f, test[2:end], ret[2:end])
-    f(test[1]) ? (ret[1], fbtail...) : fbtail
-end
-filterby(f, ::Tuple{}, ::Tuple{}) = ()
-
-# map f over the indices, keeping only the AbstractVectors
-mapvec(f, i::Real, I...) = mapvec(f, I...)
-mapvec(f, i, I...) = (f(i), mapvec(f, I...)...)
-mapvec(f) = ()
+# Choose elements from the first tuple based on vector entries in the second
+@inline filtervec(t1, t2::Tuple{AbstractVector,Vararg{Any}}) = (t1[1], filtervec(tail(t1), tail(t2))...)
+@inline filtervec(t1, t2::Tuple{Real,Vararg{Any}}) = filtervec(tail(t1), tail(t2))
+filtervec(::Tuple{}, ::Tuple{}) = ()
 
 end
 
