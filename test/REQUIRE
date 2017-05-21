@@ -3,3 +3,5 @@ TestImages
 @windows ImageMagick
 @osx QuartzImageIO
 OffsetArrays
+ImageCore
+Reactive
