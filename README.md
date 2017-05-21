@@ -4,170 +4,190 @@ An image display GUI for [Julia](http://julialang.org/).
 
 ## Installation
 
-You'll need the `ImageView` package:
+To install the `ImageView` package:
 
-```
+```julia
 Pkg.add("ImageView")
 ```
 
 ## Preparation
 
-First let's try it with a photograph. Load one this way:
-```
+First let's try it with a photograph. If you have an image on your computer, load it this way:
+
+```julia
 using ImageView, Images
-img = imread("my_photo.jpg")
+img = load("my_photo.jpg")
 ```
-Any typical image format should be fine, it doesn't have to be a jpg. You can also use a GUI file-picker if you omit the filename:
-```
-img = imread()
-```
-Note that the [`TestImages`](https://github.com/timholy/TestImages.jl) package contains several standard images:
-```
+
+Any typical image format should be fine, it doesn't have to be a jpg. The [`TestImages`](https://github.com/timholy/TestImages.jl) package contains several standard images:
+
+```julia
 using TestImages
 img = testimage("mandrill")
 ```
 
 ## Demonstration of the GUI
 
-Now view the image:
-```
-imshow(img, pixelspacing = [1,1])
-```
-The basic command to view the image is `imshow`.
-The optional `pixelspacing` input tells `imshow` that this image has a fixed aspect ratio, and that this needs to be honored when displaying the image. (Alternatively, you could set `img["pixelspacing"] = [1,1]` and then you wouldn't have to tell this to the `imshow` function.)
+For simplicity, you should first test ImageView at the REPL prompt or in an IDE;
+script usage is discussed later below.
 
-**Note:** If you are running Julia from a script file, the julia process will terminate towards the end of the program. This will cause any windows opened with `imshow()` to terminate (Which is probably not what you intend). Refer to [calling imshow from a script file](#calling-imshow-from-a-script-file) section for more information on how to avoid this behavior.
+You can view the image using `imshow`:
 
+```julia
+imshow(img)
+```
 You should get a window with your image:
 
 ![photo](readme_images/photo1.jpg)
 
-OK, nice.
-But we can start to have some fun if we resize the window, which causes the image to get bigger or smaller:
+You can use `imshow()` if you want to choose an image using a file
+dialog.
 
-![photo](readme_images/photo2.jpg)
+Try resizing the image window by dragging one of its corners; you'll
+see that the aspect ratio of the image is preserved when you
+resize. If instead you want the image to fill the pane, try
+`imshow(img, aspect=:none)`. Here's a comparison of the two:
 
-Note the black perimeter; that's because we've specified the aspect ratio through the `pixelspacing` input, and when the window doesn't have the same aspect ratio as the image you'll have a perimeter either horizontally or vertically.
-Try it without specifying `pixelspacing`, and you'll see that the image stretches to fill the window, but it looks distorted:
+| aspect=:auto (default) | aspect=:none |
+|:----------------------:|:------------:|
+| ![photo](readme_images/photo2.jpg) | ![photo](readme_images/photo3.jpg) |
 
-```
-imshow(img)
-```
 
-![photo](readme_images/photo3.jpg)
-
-(This won't work if you've already defined `"pixelspacing"` for `img`; if necessary, use `delete!(img, "pixelspacing")` to remove that setting.)
-
-Next, click and drag somewhere inside the image.
-You'll see the typical rubberband selection, and once you let go the image display will zoom in on the selected region.
-
-![photo](readme_images/photo4.jpg)
-![photo](readme_images/photo5.jpg)
-
-Again, the aspect ratio of the display is preserved.
-Double-clicking on the image restores the display to full size.
+Next, Ctrl-click and drag somewhere inside the image.  You'll see the
+typical rubberband selection, and once you let go the image display
+will zoom in on the selected region.  Again, the aspect ratio of the
+display is preserved.  If you click on the image without holding down
+Ctrl, you can drag the image to look at nearby
+regions. Ctrl-double-click on the image to restore the full region.
 
 If you have a wheel mouse, zoom in again and scroll the wheel, which should cause the image to pan vertically.
 If you scroll while holding down Shift, it pans horizontally; hold down Ctrl and you affect the zoom setting.
 Note as you zoom via the mouse, the zoom stays focused around the mouse pointer location, making it easy to zoom in on some small feature simply by pointing your mouse at it and then Ctrl-scrolling.
 
-
-But wait, there's more!
 You can view the image upside-down with
+
+```julia
+imshow(img, flipy=true)
 ```
-imshow(img, pixelspacing = [1,1], flipy=true)
+(`flipx` flips the image horizontally) or switch the horizontal and vertical axes with
+
+```julia
+imshow(img, axes=(2,1)).
 ```
-or switch the `x` and `y` axes with
+
+For movies, 3D, and 4D images, ImageView will create a "player" widget.
+
+```julia
+img = testimage("mri")
+imshow(img)
 ```
-imshow(img, pixelspacing = [1,1], xy=["y","x"])
+
+The `"mri"` image is an [AxisArray](https://github.com/JuliaArrays/AxisArrays.jl), and consequently you can select axes by name:
+
+```julia
+imshow(img, axes=(:S, :P), flipy=true)  # a sagittal plane (Superior, Posterior)
 ```
-![photo](readme_images/photo6.jpg)
-![photo](readme_images/photo7.jpg)
 
-To experience the full functionality, you'll need a "4D  image," a movie (time sequence) of 3D images.
-If you don't happen to have one lying around, you can create one via `include("test/test4d.jl")`, where `test` means the test directory in `ImageView`.
-(Assuming you installed `ImageView` via the package manager, you can say `include(joinpath(Pkg.dir(), "ImageView", "test", "test4d.jl"))`.)
-This creates a solid cone that changes color over time, again in the variable `img`.
-Load this file, then type `imshow(img)`.
-You should see something like this:
-
-![GUI snapshot](readme_images/display_GUI.jpg)
-
-The green circle is a "slice" from the cone.
-At the bottom of the window you'll see a number of buttons and our current location, `z=1` and `t=1`, which correspond to the base of the cone and the beginning of the movie, respectively.
-Click the upward-pointing green arrow, and you'll "pan" through the cone in the `z` dimension, making the circle smaller.
-You can go back with the downward-pointing green arrow, or step frame-by-frame with the black arrows.
-Next, clicking the "play forward" button moves forward in time, and you'll see the color change through gray to magenta.
-The black square is a stop button. You can, of course, type a particular `z`, `t` location into the entry boxes, or grab the sliders and move them.
-
-If you have a wheel mouse, Alt-scroll changes the time, and Ctrl-Alt-scroll changes the z-slice.
-
-You can change the playback speed by right-clicking in an empty space within the navigation bar, which brings up a popup (context) menu:
-
-![GUI snapshot](readme_images/popup.jpg)
-
-
-<br />
-<br />
-
-By default, `imshow` will show you slices in the `xy`-plane.
-You might want to see a different set of slices from the 4d image:
-```
-imshow(img, xy=["x","z"])
-```
-Initially you'll see nothing, but that's because this edge of the image is black.
-Type 151 into the `y:` entry box (note its name has changed) and hit enter, or move the "y" slider into the middle of its range; now you'll see the cone from the side.
-
-![GUI snapshot](readme_images/display_GUI2.jpg)
-
-This GUI is also useful for "plain movies" (2d images with time), in which case the `z` controls will be omitted and it will behave largely as a typical movie-player.
-Likewise, the `t` controls will be omitted for 3d images lacking a temporal component, making this a nice viewer for MRI scans.
+| `imshow(img)` | `imshow(img, axes=(:S, :P), flipy=true)` |
+|:-------------:|:----------------------------------------:|
+| ![photo](readme_images/mri.jpg) | ![photo](readme_images/mri_sagittal.jpg) |
 
 
 Finally, for grayscale images, right-clicking on the image yields a brightness/contrast GUI:
 
 ![Contrast GUI snapshot](readme_images/contrast.jpg)
 
+You can adjust the contrast by adjusting the sliders or by entering
+values into the text boxes.
 
 ## Programmatic usage
 
-`imshow` returns two outputs:
-```
-imgc, imgslice = imshow(img)
-```
-`imgc` is an `ImageCanvas`, and holds information and settings about the display. `imgslice` is useful if you're supplying multidimensional images; from it, you can infer the currently-selected frame in the GUI.
+### Simple command-line utilities
 
-Using these outputs, you can display a new image in place of the old one:
-```
-imshow(imgc, newimg)
-```
-This preserves settings (like `pixelspacing`); should you want to forget everything and start fresh, do it this way:
-```
-imshow(canvas(imgc), newimg)
-```
-`canvas(imgc)` just returns a [Tk Canvas](https://github.com/JuliaLang/Tk.jl/tree/master/examples), so this shows you can view images inside any pre-defined `Canvas`.
+`ImageView.closeall()` closes all open windows.
 
-Likewise, you can close the display,
+You can place multiple images in the same window using `canvasgrid`:
 ```
-destroy(toplevel(imgc))
-```
-and resize it:
-```
-set_size(toplevel(imgc), w, h)
+using ImageView, TestImages, Gtk.ShortNames
+grid, frames, canvases = canvasgrid((1,2))  # 1 row, 2 columns
+imshow(canvases[1,1], testimage("lighthouse"))
+imshow(canvases[1,2], testimage("mandrill"))
+win = Window(grid)
+showall(win)
 ```
 
-Another nice tool is `canvasgrid`:
-```
-c = canvasgrid(2,2)
-ops = [:pixelspacing => [1,1]]
-imshow(c[1,1], testimage("lighthouse"); ops...)
-imshow(c[1,2], testimage("mountainstream"); ops...)
-imshow(c[2,1], testimage("moonsurface"); ops...)
-imshow(c[2,2], testimage("mandrill"); ops...)
-```
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
 
-### Annotations
+### The dictionary and region-of-interest manipulations
+
+`imshow` returns a dictionary containing a wealth of information about
+the state of the viewer. Perhaps most interesting is the `"roi"`
+entry, which itself is another dictionary containing information about
+the current selected region or interest. These are
+[Reactive signals](https://juliagizmos.github.io/Reactive.jl/), and consequently you can even manipulate the
+state of the GUI by `push!`ing new values to these signals.
+
+For example, using the `"mri"` image above, you can select the 5th slice with
+```julia
+guidict = imshow(img)
+push!(guidict["roi"]["slicedata"].signals[1], 5)
+```
+
+`SliceData` objects contain information about which axes are displayed
+and the current slice indices of those axes perpendicular to the view
+plane. Likewise, `"image roi"` contains the actual image data
+currently being shown in the window (including all zoom/slice
+settings).
+
+The `"zoom"`- and `"pan"`-related signals originate from
+[GtkReactive](https://juliagizmos.github.io/GtkReactive.jl/stable/),
+and users should see the documentation for that package for more
+information.
+
+### Coupling two or more images together
+
+`imshow` allows you to pass many more arguments; please use `?imshow`
+to see some of the options. We can use these extra arguments to couple
+the zoom and slice regions between two images. Let's make a "fake" image encoding the segmentation of an image:
+
+```julia
+using ImageView, GtkReactive, TestImages, Colors
+
+# Prepare the data
+mri = testimage("mri")
+mriseg = RGB.(mri)
+mriseg[mri .> 0.5] = colorant"red"
+```
+
+Now we display the images:
+
+```julia
+guidata = imshow(mri, axes=(1,2))
+zr = guidata["roi"]["zoomregion"]
+slicedata = guidata["roi"]["slicedata"]
+imshow(mriseg, nothing, zr, slicedata)
+```
+
+Here we used `imshow` to create the first window, and then extracted
+the `zoomregion` and `slicedata` information from that display and
+used them to intialize a second window with the second image. If you
+zoom, pan, or change the slice plane in one window, it makes the same
+change in the other.
+
+Alternatively, you can place both displays in a single window:
+```julia
+zr, slicedata = roi(mri, (1,2))
+gd = imshow_gui((200, 200), slicedata, (1,2))
+imshow(gd["frame"][1,1], gd["canvas"][1,1], mri, nothing, zr, slicedata)
+imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
+showall(gd["window"])
+```
+
+You should see something like this:
+
+![coupled](readme_images/coupled.jpg)
+
+## Annotations
 
 You can add and remove various annotations to images (currently text, points, and lines).
 There are two basic styles of annotation: "anchored" and "floating."
@@ -178,33 +198,33 @@ and will always be displayed at approximately the same position within the windo
 As a consequence, "anchored" annotations are best for labeling particular features in the image,
 and "floating" annotations are best for things like scalebars.
 
-Here's an example of adding a scale bar to an image:
+Here's an example of adding a 30-pixel scale bar to an image:
 ```julia
-imgc, imsl = ImageView.imshow(img)
-length = 30
-ImageView.scalebar(imgc, imsl, length; x = 0.1, y = 0.05)
+guidict = imshow(img)
+scalebar(guidict, 30; x = 0.1, y = 0.05)
 ```
-`x` and `y` describe the center of the scale bar in normalized coordinates, with `(0,0)` in the upper left.
-In this example, the length of the scale bar is in pixels, but if you're using the SIUnits package for `pixelspacing`,
-then use something like `length = 50Micro*Meter`.
+
+`x` and `y` describe the center of the scale bar in normalized
+coordinates, with `(0,0)` in the upper left.  In this example, the
+length of the scale bar is in pixels, but if you're using the
+[Unitful](https://github.com/ajkeller34/Unitful.jl) package for the
+image's `pixelspacing`, then you should set the length to something
+like `50μm`.
 
 The remaining examples are for fixed annotations. Here is a demonstration:
 
 ```julia
-using Images, Color
-import ImageView
+using Images, Colors, ImageView
 z = ones(10,50);
 y = 8; x = 2;
 z[y,x] = 0
-zimg = convert(Image, z)
-imgc, img2 = ImageView.imshow(zimg,pixelspacing=[1,1]);
-Tk.set_size(ImageView.toplevel(imgc), 200, 200)
-idx = ImageView.annotate!(imgc, img2, ImageView.AnnotationText(x, y, "x", color=RGB(0,0,1), fontsize=3))
-idx2 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(1,0,0)))
-idx3 = ImageView.annotate!(imgc, img2, ImageView.AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
-idx4 = ImageView.annotate!(imgc, img2, ImageView.AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
-idx5 = ImageView.annotate!(imgc, img2, ImageView.AnnotationBox(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,0,1)))
-ImageView.delete!(imgc, idx)
+guidict = imshow(z)
+idx = annotate!(guidict, AnnotationText(x, y, "x", color=RGB(0,0,1), fontsize=3))
+idx2 = annotate!(guidict, AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(1,0,0)))
+idx3 = annotate!(guidict, AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
+idx4 = annotate!(guidict, AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
+idx5 = annotate!(guidict, AnnotationBox(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,0,1)))
+delete!(guidict, idx)
 ```
 
 #### Annotation API
@@ -291,12 +311,10 @@ Properties:
 If you call Julia from a script file, the julia process will terminate at the end of the program. This will cause any windows opened with `imshow()` to terminate, which is probably not what you intend. We want to make it only terminate the process when the image window is closed. Below is some example code to do this:
 
 ```
-using Tk
-using Images
-using ImageView
+using Images, ImageView, TestImages, Gtk.ShortNames
 
-img = imread()
-imgc, imgslice = imshow(img);
+img = testimage("mandrill")
+guidict = imshow(img);
 
 #If we are not in a REPL
 if (!isinteractive())
@@ -304,20 +322,24 @@ if (!isinteractive())
     # Create a condition object
     c = Condition()
 
-    # Get the main window (A Tk toplevel object)
-    win = toplevel(imgc)
+    # Get the window
+    win = guidict["gui"]["window"]
 
     # Notify the condition object when the window closes
-    bind(win, "<Destroy>", e->notify(c))
+    signal_connect(win, :destroy) do widget
+        notify(c)
+    end
 
     # Wait for the notification before proceeding ...
     wait(c)
 end
 ```
 
-This will prevent the julia process from terminating immediately. Note that if we did not add the `bind` function, the process will keep waiting even after the image window has closed, and you will have to manually close it with `CTRL + C`.
+This will prevent the julia process from terminating immediately. Note
+that if we did not call `signal_connect`, the process will keep
+waiting even after the image window has closed, and you will have to
+manually close it with `CTRL + C`.
 
-If you are opening more than one window you will need to create more than one `Condition` object, if you wish to wait until the last one is closed.
-
-<br>
-<br>
+If you are opening more than one window you will need to create more
+than one `Condition` object, if you wish to wait until the last one is
+closed.

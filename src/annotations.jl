@@ -1,8 +1,53 @@
 # Once this stabilizes, migrate to a Graphics layer? Only if that supports text, which seems unlikely.
 using Colors
-using Graphics
+using Graphics, Cairo
 
-abstract AbstractAnnotation
+function annotate!(guidict::Dict, ann; anchored::Bool=true)
+    c, zr = guidict["gui"]["canvas"], guidict["roi"]["zoomregion"]
+    if anchored
+        annf = AnchoredAnnotation((_)->canvasbb(c), (_)->zoombb(zr), ann)
+    else
+        annf = FloatingAnnotation((_)->canvasbb(c), ann)
+    end
+    h = hash(annf)
+    add_annotation!(guidict["annotations"], h=>annf)
+    AnnotationHandle(annf, h)
+end
+
+function add_annotation!(anns::Signal{Dict{UInt,Any}}, p::Pair)
+    a = value(anns)
+    push!(a, p)
+    push!(anns, a)
+end
+
+immutable AnnotationHandle{T}
+    ann::T
+    hash::UInt
+end
+
+function Base.delete!(anns::Signal{Dict{UInt,Any}}, anh::AnnotationHandle)
+    delete!(value(anns), anh.hash)
+    push!(anns, value(anns))
+end
+Base.delete!(guidict::Dict, anh::AnnotationHandle) = delete!(guidict["annotations"], anh)
+
+function draw_annotations(canvas, anns)
+    for (h, ann) in anns
+        draw(canvas, ann)
+    end
+    nothing
+end
+
+function canvasbb(c)
+    sz = size(widget(c))
+    BoundingBox(1, sz[1], 1, sz[2])
+end
+function zoombb(zr)
+    inds = indices(value(zr))
+    BoundingBox(first(inds[2]), last(inds[2]), first(inds[1]), last(inds[1]))
+end
+
+@compat abstract type AbstractAnnotation end
 
 # Use this type when you want your annotation to be linked to particular data-coordinates
 # (for example, to highlight a particular data point)
@@ -33,6 +78,12 @@ type AnnotationScalebarFixed{T}
     centery::Float64
     color::Color
 end
+
+AnnotationScalebarFixed{M<:AbstractMatrix,T}(width::T, height::T, imsl::Signal{M},
+                                             centerx::Real, centery::Real,
+                                             color::Color = RGB(1,1,1)) =
+    AnnotationScalebarFixed{T}(width, height, (wp,hp) -> normalized_lengths(imsl,wp,hp),
+                               Float64(centerx), Float64(centery), color)
 
 ## Text annotations
 
@@ -120,10 +171,10 @@ type AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
     linewidth::Float64
     coordinate_order::Vector{Int}
 
-    function AnnotationLines(lines::T, z, t, linecolor, linewidth, coord_order_str)
+    function (::Type{AnnotationLines{R,T}}){R,T}(lines::T, z, t, linecolor, linewidth, coord_order_str)
         ord = sortperm(Vector{UInt8}(coord_order_str))
         @assert coord_order_str[ord] == "xxyy"
-        new(lines, z, t, linecolor, linewidth, ord)
+        new{R,T}(lines, z, t, linecolor, linewidth, ord)
     end
 end
 
@@ -186,6 +237,39 @@ end
 
 AnnotationBox(bb::BoundingBox; args...) = AnnotationBox(bb.xmin, bb.ymin, bb.xmax, bb.ymax; args...)
 
+
+"""
+    wnorm, hnorm = normalized_lengths(img, width, height)
+
+Convert absolute `width` and `height` into normalized
+variants. Depends on the [`pixelspacing`](@ref) of `img`.
+"""
+function normalized_lengths(imsl::AbstractMatrix, width, height)
+    ps = pixelspacing(imsl)
+    inds = indices(imsl)
+    w = width/(ps[2]*length(inds[2]))
+    h = height/(ps[1]*length(inds[1]))
+    w, h
+end
+normalized_lengths(imsl::Signal, width, height) =
+    normalized_lengths(value(imsl), width, height)
+
+"""
+    scalebar(guidict::Dict, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
+
+Add a scale bar annotation to the image display controlled by
+`guidict` (returned by [`imshow`](@ref)). If the
+[`pixelspacing`](@ref) of the image is set using Unitful quantities,
+`length` should also be expressed in physical units.
+
+`x` and `y` control the placement of the scalebar, and `color` its rendered color.
+"""
+function scalebar(guidict::Dict, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
+    imsl = guidict["roi"]["image roi"]
+    ann = AnnotationScalebarFixed(length/1, length/10, imsl, x, y, color)
+    annotate!(guidict, ann, anchored=false)
+end
+
 ##############
 
 setvalid!(ann::AnchoredAnnotation, z, t) = (ann.valid = annotation_isvalid(ann.data, z, t))
@@ -202,7 +286,7 @@ annotation_isvalid(x, z, t) = true
 function setvalid!(ann::FloatingAnnotation, z, t)
 end
 
-function draw(c::Canvas, ann::AnchoredAnnotation)
+function Gtk.draw(c::Gtk.GtkCanvas, ann::AnchoredAnnotation)
     if ann.valid
         ctx = getgc(c)
         Graphics.save(ctx)
@@ -215,7 +299,7 @@ function draw(c::Canvas, ann::AnchoredAnnotation)
     end
 end
 
-function draw{T}(c::Canvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
+function Gtk.draw{T}(c::Gtk.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
     ctx = getgc(c)
     Graphics.save(ctx)
     data = ann.data
@@ -228,7 +312,7 @@ function draw{T}(c::Canvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
     restore(ctx)
 end
 
-function draw_anchored(ctx::CairoContext, data::AnnotationText, scale_x, scale_y)
+function draw_anchored(ctx::GraphicsContext, data::AnnotationText, scale_x, scale_y)
     set_source(ctx, data.color)
     if data.scale && scale_x != 1
         fontdesc = fontdescription(data.fontfamily, data.fontoptions, round(Int,data.fontsize/scale_x))
@@ -240,7 +324,7 @@ function draw_anchored(ctx::CairoContext, data::AnnotationText, scale_x, scale_y
                angle = data.angle, markup = data.markup)
 end
 
-function draw_anchored(ctx::CairoContext, data::AnnotationPoints, scale_x, scale_y)
+function draw_anchored(ctx::GraphicsContext, data::AnnotationPoints, scale_x, scale_y)
     set_line_width(ctx, data.linewidth)
     set_source(ctx, data.linecolor)
     if data.scale
@@ -252,15 +336,15 @@ function draw_anchored(ctx::CairoContext, data::AnnotationPoints, scale_x, scale
     draw_pts(ctx, data.pts, sz_x, sz_y, data.shape, data.color, data.linecolor)
 end
 
-draw_pts(ctx::CairoContext, pt::NTuple{2}, args...) = draw_pt(ctx, pt, args...)
+draw_pts(ctx::GraphicsContext, pt::NTuple{2}, args...) = draw_pt(ctx, pt, args...)
 
-function draw_pts{R<:Real}(ctx::CairoContext, pts::Vector{Tuple{R,R}}, args...)
+function draw_pts{R<:Real}(ctx::GraphicsContext, pts::Vector{Tuple{R,R}}, args...)
     for pt in pts
         draw_pt(ctx, pt, args...)
     end
 end
 
-function draw_pts(ctx::CairoContext, pts::Matrix, args...)
+function draw_pts(ctx::GraphicsContext, pts::Matrix, args...)
     @assert size(pts,1) == 2
     for i in 1:size(pts,2)
         pt = pts[:,i]
@@ -269,7 +353,7 @@ function draw_pts(ctx::CairoContext, pts::Matrix, args...)
 end
 
 
-function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::Color, linecolor::Color)
+function draw_pt(ctx::GraphicsContext, pt, sz_x, sz_y, shape::Char, color::Color, linecolor::Color)
     x::Float64,y::Float64 = pt
     hsz_x = sz_x/2
     hsz_y = sz_y/2
@@ -311,44 +395,44 @@ function draw_pt(ctx::CairoContext, pt, sz_x, sz_y, shape::Char, color::Color, l
     stroke(ctx)
 end
 
-function draw_anchored(ctx::CairoContext, data::AnnotationLines, args...)
+function draw_anchored(ctx::GraphicsContext, data::AnnotationLines, args...)
     set_line_width(ctx, data.linewidth)
     set_source(ctx, data.linecolor)
     draw_lines(ctx, data.lines, data.coordinate_order)
 end
 
-draw_lines(ctx::CairoContext, line::Tuple{Tuple{Real, Real},Tuple{Real, Real}}, _) =
+draw_lines(ctx::GraphicsContext, line::Tuple{Tuple{Real, Real},Tuple{Real, Real}}, _) =
     draw_line(ctx, line)
 
-function draw_lines{R<:Real}(ctx::CairoContext,
+function draw_lines{R<:Real}(ctx::GraphicsContext,
                              lines::Vector{Tuple{Tuple{R, R},Tuple{R, R}}}, _)
     for line in lines
         draw_line(ctx, line)
     end
 end
 
-function draw_lines{R<:Real}(ctx::CairoContext, lines::Matrix{R}, coordinate_order)
+function draw_lines{R<:Real}(ctx::GraphicsContext, lines::Matrix{R}, coordinate_order)
     for i in 1:size(lines, 2)
         pt = tuple(lines[coordinate_order,i]...)
         draw_line(ctx, pt)
     end
 end
 
-function draw_lines{R<:Tuple{Real,Real}}(ctx::CairoContext, lines::Matrix{R}, _)
+function draw_lines{R<:Tuple{Real,Real}}(ctx::GraphicsContext, lines::Matrix{R}, _)
     for i in 1:size(lines, 2)
         pt = tuple(lines[:,i]...)
         draw_line(ctx, pt)
     end
 end
 
-function draw_line(ctx::CairoContext, line::Tuple{Tuple{Real, Real},Tuple{Real, Real}})
+function draw_line(ctx::GraphicsContext, line::Tuple{Tuple{Real, Real},Tuple{Real, Real}})
     (x1, y1), (x2, y2) = line
     move_to(ctx, x1, y1)
     line_to(ctx, x2, y2)
     stroke(ctx)
 end
 
-function draw_line(ctx::CairoContext, line::Tuple{Real, Real, Real, Real})
+function draw_line(ctx::GraphicsContext, line::Tuple{Real, Real, Real, Real})
     x1, y1, x2, y2 = line
     move_to(ctx, x1, y1)
     line_to(ctx, x2, y2)
@@ -357,13 +441,13 @@ end
 
 ## Box
 
-function draw_anchored(ctx::CairoContext, data::AnnotationBox, args...)
+function draw_anchored(ctx::GraphicsContext, data::AnnotationBox, args...)
     set_line_width(ctx, data.linewidth)
     set_source(ctx, data.linecolor)
     draw_box(ctx, data.top, data.bottom, data.left, data.right)
 end
 
-function draw_box(ctx::CairoContext, top, bottom, left, right)
+function draw_box(ctx::GraphicsContext, top, bottom, left, right)
     move_to(ctx, left, top)
     line_to(ctx, right, top)
     line_to(ctx, right, bottom)
