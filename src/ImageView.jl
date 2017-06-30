@@ -134,7 +134,7 @@ Display the image `img` in a new window titled with `name`, returning
 a dictionary `guidict` containing any Reactive signals or GtkReactive
 widgets. If the image is 3 or 4 dimensional, GUI controls will be
 added for slicing along "extra" axes. By default the two-dimensional
-slice containts axes 1 and 2 are shown, but that can be changed by
+slice containing axes 1 and 2 are shown, but that can be changed by
 passing a different setting for `axes`.
 
 If the image is grayscale, by default contrast is set by a
