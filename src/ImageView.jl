@@ -428,8 +428,8 @@ function prep_contrast{T}(img::Signal, clim::Signal{CLim{T}})
     enabled = Signal(false; name="contrast_enabled") # skip hist calculation if the contrast gui isn't open
     histsig = map(filterwhen(enabled, value(img), img); name="histsig") do image
         cl = value(clim)
-        smin = nanz(min(minfinite(image), cl.min))
-        smax = nanz(max(maxfinite(image), cl.max))
+        smin = float(nanz(min(minfinite(image), cl.min)))
+        smax = float(nanz(max(maxfinite(image), cl.max)))
         if smax == smin
             smax = smin+1
         end
