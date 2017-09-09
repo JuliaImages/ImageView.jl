@@ -9,22 +9,22 @@ using Base: tail
 export Cone
 
 # A cone in 3d
-immutable Cone{C<:Colorant}
+struct Cone{C<:Colorant}
     sz3::Tuple{Int,Int,Int}
     center2::Tuple{Int,Int}
     colort::Vector{C}
 
-    function (::Type{Cone{C}}){C}(sz3, colort)
+    function Cone{C}(sz3, colort) where C
         center2 = ((sz3[1]+1)÷2, (sz3[2]+1)÷2)
         new{C}(sz3, center2, colort)
     end
 end
-Cone{C<:Colorant}(sz3::Tuple{Int,Int,Int}, colort::Vector{C}) = Cone{C}(sz3, colort)
+Cone(sz3::Tuple{Int,Int,Int}, colort::Vector{C}) where {C<:Colorant} = Cone{C}(sz3, colort)
 
 ## These define the interface that an object needs to support in order
 ## to be displayable with imshow
 
-Base.eltype{C}(::Type{Cone{C}}) = C
+Base.eltype(::Type{Cone{C}}) where {C} = C
 
 # What you actually need to implement is `indices(c)`, but we can do that here via `size`
 Base.size(c::Cone) = (c.sz3..., length(c.colort))
@@ -54,7 +54,7 @@ end
 # An array with custom pixelspacing. If you don't need to customize
 # ps, then you could just use a plain Array in the getindex method
 # above.
-immutable SpacedArray{T,N} <: AbstractArray{T,N}
+struct SpacedArray{T,N} <: AbstractArray{T,N}
     a::Array{T,N}
     ps::NTuple{N,Float64}
 end
