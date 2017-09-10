@@ -179,14 +179,15 @@ function imshow(img::AbstractArray, clim,
         hoverinfo(guidict["status"], btn, img, sd)
     end
 
-    roidict = imshow(guidict["frame"], guidict["canvas"], img, clim, zr, sd, anns)
+    roidict = imshow(guidict["frame"], guidict["canvas"], img,
+                     wrap_signal(clim), zr, sd, anns)
 
     showall(guidict["window"])
     Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
 end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                img::AbstractArray, clim,
+                img::AbstractArray, clim::Union{Void,Signal{<:CLim}},
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
@@ -412,8 +413,11 @@ function _deflt_clim(img::AbstractMatrix)
         minval = zero(typeof(minval))
         maxval = one(typeof(maxval))
     end
-    Signal(CLim(gray(minval), gray(maxval)); name="CLim")
+    Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
 end
+
+saferound(x::Integer) = convert(RInteger, x)
+saferound(x) = x
 
 default_axes(img) = (1, 2)
 default_axes(img::AxisArray) = axisnames(img)[[1,2]]
@@ -565,6 +569,10 @@ isgray(img) = false
 _mappedarray(f, img) = mappedarray(f, img)
 _mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), axes(img))
 _mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)))
+
+wrap_signal(x) = Signal(x)
+wrap_signal(x::Signal) = x
+wrap_signal(::Void) = nothing
 
 include("contrast_gui.jl")
 include("annotations.jl")
