@@ -22,5 +22,5 @@ function pixelspacing_dep(img, kwargs)
 end
 
 default_names(img::AbstractMatrix) = (:y, :x)
-default_names{T}(img::AbstractArray{T,3}) = (:y, :x, :z)
-default_names{T}(img::AbstractArray{T,4}) = (:y, :x, :z, :time)
+default_names(img::AbstractArray{T,3}) where {T} = (:y, :x, :z)
+default_names(img::AbstractArray{T,4}) where {T} = (:y, :x, :z, :time)

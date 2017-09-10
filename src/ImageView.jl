@@ -12,9 +12,9 @@ export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
 export CLim, annotate!, canvasgrid, imshow, imshow_gui, roi, scalebar, slice2d
 
-@compat const AbstractGray{T} = Color{T,1}
-@compat const GrayLike = Union{AbstractGray,Number}
-@compat const FixedColorant{T<:FixedPoint} = Colorant{T}
+const AbstractGray{T} = Color{T,1}
+const GrayLike = Union{AbstractGray,Number}
+const FixedColorant{T<:FixedPoint} = Colorant{T}
 
 include("slicing.jl")
 
@@ -24,14 +24,14 @@ include("slicing.jl")
 Specify contrast limits where `x <= cmin` will be rendered as black,
 and `x >= cmax` will be rendered as white.
 """
-immutable CLim{T}
+struct CLim{T}
     min::T
     max::T
 end
 CLim(min, max) = CLim(promote(min, max)...)
-Base.convert{T}(::Type{CLim{T}}, clim::CLim) = CLim(convert(T, clim.min),
+Base.convert(::Type{CLim{T}}, clim::CLim) where {T} = CLim(convert(T, clim.min),
                                                     convert(T, clim.max))
-Base.eltype{T}(::CLim{T}) = T
+Base.eltype(::CLim{T}) where {T} = T
 
 """
     closeall()
@@ -76,10 +76,10 @@ using GtkReactive's tools:
 - `init_pan_scroll`
 - `init_pan_drag`
 """
-function imshow!{T<:RInteger}(canvas::GtkReactive.Canvas{UserUnit},
-                              imgsig::Signal,
-                              zr::Signal{ZoomRegion{T}},
-                              annotations::Signal{Dict{UInt,Any}})
+function imshow!(canvas::GtkReactive.Canvas{UserUnit},
+                 imgsig::Signal,
+                 zr::Signal{ZoomRegion{T}},
+                 annotations::Signal{Dict{UInt,Any}}) where T<:RInteger
     draw(canvas, imgsig, anns) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
@@ -87,11 +87,11 @@ function imshow!{T<:RInteger}(canvas::GtkReactive.Canvas{UserUnit},
     end
 end
 
-function imshow!{T<:RInteger}(frame::Frame,
-                              canvas::GtkReactive.Canvas{UserUnit},
-                              imgsig::Signal,
-                              zr::Signal{ZoomRegion{T}},
-                              annotations::Signal{Dict{UInt,Any}})
+function imshow!(frame::Frame,
+                 canvas::GtkReactive.Canvas{UserUnit},
+                 imgsig::Signal,
+                 zr::Signal{ZoomRegion{T}},
+                 annotations::Signal{Dict{UInt,Any}}) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
@@ -167,10 +167,10 @@ function imshow(img::AbstractArray, clim;
     imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect)
 end
 
-function imshow{T}(img::AbstractArray, clim,
-                   zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                   anns=Signal(Dict{UInt,Any}());
-                   name="ImageView", aspect=:auto)
+function imshow(img::AbstractArray, clim,
+                zr::Signal{ZoomRegion{T}}, sd::SliceData,
+                anns=Signal(Dict{UInt,Any}());
+                name="ImageView", aspect=:auto) where T
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
     csz = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
@@ -185,10 +185,10 @@ function imshow{T}(img::AbstractArray, clim,
     Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
 end
 
-function imshow{T}(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                   img::AbstractArray, clim,
-                   zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                   anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
+function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
+                img::AbstractArray, clim,
+                zr::Signal{ZoomRegion{T}}, sd::SliceData,
+                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
         while length(s) < 2
             s = (s..., 1)
@@ -216,10 +216,10 @@ function imshow(img;
     imshow(img, zr, sd; name=name, aspect=aspect)
 end
 
-function imshow{T}(img,
-                   zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                   anns=Signal(Dict{UInt,Any}());
-                   name="ImageView", aspect=:auto)
+function imshow(img,
+                zr::Signal{ZoomRegion{T}}, sd::SliceData,
+                anns=Signal(Dict{UInt,Any}());
+                name="ImageView", aspect=:auto) where T
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
     csz = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
@@ -231,9 +231,9 @@ function imshow{T}(img,
     Dict("gui"=>guidict, "roi"=>roidict)
 end
 
-function imshow{T}(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                   img, zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                   anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
+function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
+                img, zr::Signal{ZoomRegion{T}}, sd::SliceData,
+                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
         slice2d(img, r, sd)
     end
@@ -337,10 +337,10 @@ panning and zooming. Optionally include a `frame` for preserving
 aspect ratio. `imgsig` must be two-dimensional (but can be a
 Signal-view of a higher-dimensional object).
 """
-function imshow{T<:RInteger}(canvas::GtkReactive.Canvas{UserUnit},
-                             imgsig::Signal,
-                             zr::Signal{ZoomRegion{T}},
-                             anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
+function imshow(canvas::GtkReactive.Canvas{UserUnit},
+                imgsig::Signal,
+                zr::Signal{ZoomRegion{T}},
+                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
     pans = init_pan_scroll(canvas, zr)
@@ -353,11 +353,11 @@ function imshow{T<:RInteger}(canvas::GtkReactive.Canvas{UserUnit},
     dct
 end
 
-function imshow{T<:RInteger}(frame::Frame,
-                             canvas::GtkReactive.Canvas{UserUnit},
-                             imgsig::Signal,
-                             zr::Signal{ZoomRegion{T}},
-                             anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
+function imshow(frame::Frame,
+                canvas::GtkReactive.Canvas{UserUnit},
+                imgsig::Signal,
+                zr::Signal{ZoomRegion{T}},
+                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
     pans = init_pan_scroll(canvas, zr)
@@ -388,7 +388,7 @@ function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     guidict
 end
 
-function hoverinfo{transpose}(lbl, btn, img, sd::SliceData{transpose})
+function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     io = IOBuffer()
     y, x = round(Int, btn.position.y.val), round(Int, btn.position.x.val)
     indices = sliceinds(img, transpose ? (x, y) : (y, x), makeslices(sd)...)
@@ -402,9 +402,9 @@ function hoverinfo{transpose}(lbl, btn, img, sd::SliceData{transpose})
 end
 
 default_clim(img) = nothing
-default_clim{C<:GrayLike}(img::AbstractArray{C}) = _default_clim(img, eltype(C))
+default_clim(img::AbstractArray{C}) where {C<:GrayLike} = _default_clim(img, eltype(C))
 _default_clim(img, ::Type{Bool}) = nothing
-_default_clim{T}(img, ::Type{T}) = _deflt_clim(img)
+_default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
 function _deflt_clim(img::AbstractMatrix)
     minval = nanz(minfinite(img))
     maxval = nanz(maxfinite(img))
@@ -423,7 +423,7 @@ default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 
 # default_slices(img) = ntuple(d->PlayerInfo(Signal(1), indices(img, d+2)), ndims(img)-2)
 
-function prep_contrast{T}(img::Signal, clim::Signal{CLim{T}})
+function prep_contrast(img::Signal, clim::Signal{CLim{T}}) where T
     # Set up the signals to calculate the histogram of intensity
     enabled = Signal(false; name="contrast_enabled") # skip hist calculation if the contrast gui isn't open
     histsig = map(filterwhen(enabled, value(img), img); name="histsig") do image
@@ -448,7 +448,7 @@ function prep_contrast{T}(img::Signal, clim::Signal{CLim{T}})
     enabled, histsig, imgc
 end
 
-function prep_contrast{T}(canvas, img::Signal, clim::Signal{CLim{T}})
+function prep_contrast(canvas, img::Signal, clim::Signal{CLim{T}}) where T
     enabled, histsig, imgsig = prep_contrast(img, clim)
     # Set up the right-click to open the contrast gui
     push!(canvas.preserved, create_contrast_popup(canvas, enabled, histsig, clim))
@@ -457,7 +457,7 @@ end
 
 prep_contrast(canvas, img::Signal, f) =
     map(image->mappedarray(f, image), img; name="f-mapped image")
-prep_contrast{A<:AbstractArray}(canvas, img::Signal{A}, ::Void) =
+prep_contrast(canvas, img::Signal{A}, ::Void) where {A<:AbstractArray} =
     prep_contrast(canvas, img, clamp01nan)
 prep_contrast(canvas, img::Signal, ::Void) = img
 
@@ -481,13 +481,13 @@ function create_contrast_popup(canvas, enabled, hist, clim)
     end
 end
 
-function map_image_roi{T}(img, zr::Signal{ZoomRegion{T}}, slices...)
+function map_image_roi(img, zr::Signal{ZoomRegion{T}}, slices...) where T
     map(zr, slices...; name="map_image_roi") do r, s...
         cv = r.currentview
         view(img, UnitRange{Int}(cv.y), UnitRange{Int}(cv.x), s...)
     end
 end
-map_image_roi{T}(img::Signal, zr::Signal{ZoomRegion{T}}, slices...) = img
+map_image_roi(img::Signal, zr::Signal{ZoomRegion{T}}, slices...) where {T} = img
 
 function set_aspect!(frame::AspectFrame, image)
     ps = map(abs, pixelspacing(image))
@@ -558,8 +558,8 @@ _axisdim(img, ax::Axis) = axisdim(img, ax)
 _axisdim(img, ax) = axisdim(img, Axis{ax})
 
 
-isgray{T<:Real}(img::AbstractArray{T}) = true
-isgray{T<:AbstractGray}(img::AbstractArray{T}) = true
+isgray(img::AbstractArray{T}) where {T<:Real} = true
+isgray(img::AbstractArray{T}) where {T<:AbstractGray} = true
 isgray(img) = false
 
 _mappedarray(f, img) = mappedarray(f, img)

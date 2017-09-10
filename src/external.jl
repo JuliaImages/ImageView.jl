@@ -13,5 +13,5 @@ end
 imshow(img) = imshow(img, [])
 
 # 'illustrates' fourier transform
-ftshow{T}(A::Array{T,2}) = imshow(log(1+abs(fftshift(A))),[])
+ftshow(A::Array{T,2}) where {T} = imshow(log(1+abs(fftshift(A))),[])
 

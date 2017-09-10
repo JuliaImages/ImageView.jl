@@ -20,7 +20,7 @@ function add_annotation!(anns::Signal{Dict{UInt,Any}}, p::Pair)
     push!(anns, a)
 end
 
-immutable AnnotationHandle{T}
+struct AnnotationHandle{T}
     ann::T
     hash::UInt
 end
@@ -47,30 +47,30 @@ function zoombb(zr)
     BoundingBox(first(inds[2]), last(inds[2]), first(inds[1]), last(inds[1]))
 end
 
-@compat abstract type AbstractAnnotation end
+abstract type AbstractAnnotation end
 
 # Use this type when you want your annotation to be linked to particular data-coordinates
 # (for example, to highlight a particular data point)
 # devicebb(data) returns a BoundingBox in device coordinates, userbb(data) returns one in user coordinates.
 # It's up to the draw() function to decide how to exploit these (most commonly, with set_coordinates())
-type AnchoredAnnotation{T} <: AbstractAnnotation
+mutable struct AnchoredAnnotation{T} <: AbstractAnnotation
     devicebb::Function
     userbb::Function
     data::T
     valid::Bool
 end
-AnchoredAnnotation{T}(devicebb::Function, userbb::Function, data::T) =
+AnchoredAnnotation(devicebb::Function, userbb::Function, data::T) where {T} =
     AnchoredAnnotation{T}(devicebb, userbb, data, true)
 
 # Use this type when you want your annotation to appear at a specific point on the screen, regardless
 # of zoom/resize state (e.g., a scale bar)
-type FloatingAnnotation{T} <: AbstractAnnotation
+mutable struct FloatingAnnotation{T} <: AbstractAnnotation
     devicebb::Function
     data::T
 end
 # FloatingAnnotation{T}(devicebb::Function, data::T) = AnchoredAnnotation{T}(devicebb, data)
 
-type AnnotationScalebarFixed{T}
+mutable struct AnnotationScalebarFixed{T}
     width::T   # Probably has units
     height::T
     getsize::Function   # syntax w,h = getsize(width,height)
@@ -79,15 +79,15 @@ type AnnotationScalebarFixed{T}
     color::Color
 end
 
-AnnotationScalebarFixed{M<:AbstractMatrix,T}(width::T, height::T, imsl::Signal{M},
-                                             centerx::Real, centery::Real,
-                                             color::Color = RGB(1,1,1)) =
+AnnotationScalebarFixed(width::T, height::T, imsl::Signal{M},
+                        centerx::Real, centery::Real,
+                        color::Color = RGB(1,1,1)) where {M<:AbstractMatrix,T} =
     AnnotationScalebarFixed{T}(width, height, (wp,hp) -> normalized_lengths(imsl,wp,hp),
                                Float64(centerx), Float64(centery), color)
 
 ## Text annotations
 
-type AnnotationText
+mutable struct AnnotationText
     x::Float64
     y::Float64
     z::Float64
@@ -122,7 +122,7 @@ fontdescription(fontfamily, fontoptions, fontsize) =
 
 ## Point annotations
 
-type AnnotationPoints{T}
+mutable struct AnnotationPoints{T}
     pts::T
     z::Float64
     t::Float64
@@ -134,16 +134,16 @@ type AnnotationPoints{T}
     scale::Bool
 end
 
-function AnnotationPoints{R<:Real}(xys::Vector{Tuple{R,R}}=Tuple{Float64,Float64}[];
-                                   z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1),
-                                   linewidth=1.0, linecolor=color, scale::Bool=false)
+function AnnotationPoints(xys::Vector{Tuple{R,R}}=Tuple{Float64,Float64}[];
+                          z = NaN, t = NaN, size=10.0, shape::Char='x', color = RGB(1,1,1),
+                          linewidth=1.0, linecolor=color, scale::Bool=false) where R<:Real
     AnnotationPoints{typeof(xys)}(xys, z, t, float(size), shape, to_colorant(color),
                                   float(linewidth), to_colorant(linecolor), scale)
 end
 
-function AnnotationPoints{R<:Real}(xys::Matrix{R}; z = NaN, t = NaN, size=10.0,
-                                   shape::Char='x', color = RGB(1,1,1), linewidth=1.0,
-                                   linecolor=color, scale::Bool=false)
+function AnnotationPoints(xys::Matrix{R}; z = NaN, t = NaN, size=10.0,
+                          shape::Char='x', color = RGB(1,1,1), linewidth=1.0,
+                          linecolor=color, scale::Bool=false) where R<:Real
     AnnotationPoints{Matrix{R}}(xys, z, t, float(size),
                                 shape, to_colorant(color), float(linewidth),
                                 to_colorant(linecolor), scale)
@@ -163,7 +163,7 @@ AnnotationPoint(x::Real, y::Real; args...) =
 
 ## Line annotations
 
-type AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
+mutable struct AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
     lines::T
     z::Float64
     t::Float64
@@ -171,28 +171,28 @@ type AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
     linewidth::Float64
     coordinate_order::Vector{Int}
 
-    function (::Type{AnnotationLines{R,T}}){R,T}(lines::T, z, t, linecolor, linewidth, coord_order_str)
+    function AnnotationLines{R,T}(lines::T, z, t, linecolor, linewidth, coord_order_str) where {R,T}
         ord = sortperm(Vector{UInt8}(coord_order_str))
         @assert coord_order_str[ord] == "xxyy"
         new{R,T}(lines, z, t, linecolor, linewidth, ord)
     end
 end
 
-function AnnotationLines{R<:Real}(lines::Vector{Tuple{Tuple{R, R},Tuple{R, R}}}=
-                                  Tuple{Tuple{Float64, Float64},Tuple{Float64, Float64}}[];
-                                  z = NaN, t = NaN, color=RGB(1,1,1),
-                                  linewidth=1.0, coord_order="xyxy")
+function AnnotationLines(lines::Vector{Tuple{Tuple{R, R},Tuple{R, R}}}=
+                         Tuple{Tuple{Float64, Float64},Tuple{Float64, Float64}}[];
+                         z = NaN, t = NaN, color=RGB(1,1,1),
+                         linewidth=1.0, coord_order="xyxy") where R<:Real
     AnnotationLines{R,Vector{Tuple{Tuple{R,R},Tuple{R, R}}}}(lines, z, t, color,
                                                              linewidth, coord_order)
 end
 
-function AnnotationLines{R<:Real}(lines::Matrix{R}; z = NaN, t = NaN, color=RGB(1,1,1),
-                                  linewidth=1.0, coord_order="xyxy")
+function AnnotationLines(lines::Matrix{R}; z = NaN, t = NaN, color=RGB(1,1,1),
+                         linewidth=1.0, coord_order="xyxy") where R<:Real
     AnnotationLines{R, Matrix{R}}(lines, z, t, color, linewidth, coord_order)
 end
 
-function AnnotationLine{R<:Real}(line::Tuple{Tuple{R,R},Tuple{R,R}};
-                                 z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0)
+function AnnotationLine(line::Tuple{Tuple{R,R},Tuple{R,R}};
+                        z = NaN, t = NaN, color=RGB(1,1,1), linewidth=1.0) where R<:Real
     AnnotationLines{R,Tuple{Tuple{R,R},Tuple{R,R}}}(line, z, t, color, linewidth, "xyxy")
 end
 
@@ -209,7 +209,7 @@ end
 
 ## Box annotations
 
-type AnnotationBox
+mutable struct AnnotationBox
     left::Float64
     top::Float64
     right::Float64
@@ -299,7 +299,7 @@ function Gtk.draw(c::Gtk.GtkCanvas, ann::AnchoredAnnotation)
     end
 end
 
-function Gtk.draw{T}(c::Gtk.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}})
+function Gtk.draw(c::Gtk.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}}) where T
     ctx = getgc(c)
     Graphics.save(ctx)
     data = ann.data
@@ -338,7 +338,7 @@ end
 
 draw_pts(ctx::GraphicsContext, pt::NTuple{2}, args...) = draw_pt(ctx, pt, args...)
 
-function draw_pts{R<:Real}(ctx::GraphicsContext, pts::Vector{Tuple{R,R}}, args...)
+function draw_pts(ctx::GraphicsContext, pts::Vector{Tuple{R,R}}, args...) where R<:Real
     for pt in pts
         draw_pt(ctx, pt, args...)
     end
@@ -404,21 +404,21 @@ end
 draw_lines(ctx::GraphicsContext, line::Tuple{Tuple{Real, Real},Tuple{Real, Real}}, _) =
     draw_line(ctx, line)
 
-function draw_lines{R<:Real}(ctx::GraphicsContext,
-                             lines::Vector{Tuple{Tuple{R, R},Tuple{R, R}}}, _)
+function draw_lines(ctx::GraphicsContext,
+                    lines::Vector{Tuple{Tuple{R, R},Tuple{R, R}}}, _) where R<:Real
     for line in lines
         draw_line(ctx, line)
     end
 end
 
-function draw_lines{R<:Real}(ctx::GraphicsContext, lines::Matrix{R}, coordinate_order)
+function draw_lines(ctx::GraphicsContext, lines::Matrix{R}, coordinate_order) where R<:Real
     for i in 1:size(lines, 2)
         pt = tuple(lines[coordinate_order,i]...)
         draw_line(ctx, pt)
     end
 end
 
-function draw_lines{R<:Tuple{Real,Real}}(ctx::GraphicsContext, lines::Matrix{R}, _)
+function draw_lines(ctx::GraphicsContext, lines::Matrix{R}, _) where R<:Tuple{Real,Real}
     for i in 1:size(lines, 2)
         pt = tuple(lines[:,i]...)
         draw_line(ctx, pt)
