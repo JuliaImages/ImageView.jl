@@ -5,6 +5,14 @@ struct SliceData{transpose,N,Axs}
     axs::Axs
 end
 
+function Base.show(io::IO, sd::SliceData{transpose,N}) where {transpose,N}
+    println(io, "SliceData{transpose=$transpose}:")
+    for i = 1:N
+        println(io, "  ", axisname(sd.axs[i]), ": ", value(sd.signals[i]))
+    end
+end
+axisname(ax::Axis) = axisnames(ax)[1]
+
 """
     SliceData{transpose::Bool}(signals::NTuple{N,Signal{Int}}, axes::NTuple{N,Axes})
 
