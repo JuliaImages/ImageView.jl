@@ -10,7 +10,8 @@ using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
-export CLim, annotate!, canvasgrid, imshow, imshow_gui, roi, scalebar, slice2d
+export CLim, annotate!, canvasgrid, imshow, imshow_gui, imlink,
+       roi, scalebar, slice2d
 
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
@@ -574,6 +575,7 @@ wrap_signal(x) = Signal(x)
 wrap_signal(x::Signal) = x
 wrap_signal(::Void) = nothing
 
+include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
 include("deprecated.jl")
