@@ -18,4 +18,4 @@ for j = -30:30, i = -30:30
         lbl[cx+i,cy+j] = 2
     end
 end
-ImageView.imshowlabeled(A, lbl)
+ImageView.imshowlabeled(A, lbl; name="circle and rectangle")
