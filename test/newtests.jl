@@ -127,6 +127,10 @@ if Gtk.libgtk_version >= v"3.10"
         guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
         showall(gd["window"])
         @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
+
+        # imlink
+        gd = imlink(img, mriseg)
+        @test gd["guidata"][1]["zoomregion"] === gd["guidata"][2]["zoomregion"]
     end
 
     @testset "Non-AbstractArrays" begin
