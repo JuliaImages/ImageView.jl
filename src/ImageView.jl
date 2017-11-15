@@ -379,7 +379,7 @@ value in the status bar.
 """
 function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     indices(img) == indices(label) || throw(DimensionMismatch("indices $(indices(label)) of label array disagree with indices $(indices(img)) of the image"))
-    guidict = imshow(img, proplist...)
+    guidict = imshow(img; proplist...)
     gui = guidict["gui"]
     sd = guidict["roi"]["slicedata"]
     close(gui["hoverinfo"])
