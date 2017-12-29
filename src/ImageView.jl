@@ -568,7 +568,7 @@ isgray(img::AbstractArray{T}) where {T<:AbstractGray} = true
 isgray(img) = false
 
 _mappedarray(f, img) = mappedarray(f, img)
-_mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), axes(img))
+_mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), AxisArrays.axes(img))
 _mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)))
 
 wrap_signal(x) = Signal(x)

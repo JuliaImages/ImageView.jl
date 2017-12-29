@@ -98,7 +98,7 @@ end
                                 ((:time, :y), view(B, 1, :, 1, :)'),
                                 ((:time, :z), view(B, 1, 1, :, :)'),
                                 ((:time, :x), view(B, :, 1, 1, :)'))
-        zr, sd = roi(axes(B), slicedims)
+        zr, sd = roi(AxisArrays.axes(B), slicedims)
         v = @inferred(slice2d(B, value(zr), sd))
         @test v == target
     end

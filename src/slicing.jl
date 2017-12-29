@@ -43,7 +43,7 @@ See also: [`slice2d`](@ref).
 roi(A) = roi(A, (1,2))
 
 roi(A, dims) = roi(indices(A), dims)
-roi(A, axs::Tuple{Symbol,Symbol}) = roi(axes(A), axs)
+roi(A, axs::Tuple{Symbol,Symbol}) = roi(AxisArrays.axes(A), axs)
 
 function roi(inds::Indices, dims::Dims{2})
     dims[1] != dims[2] || error("entries in dims must be distinct, got ", dims)
@@ -130,7 +130,7 @@ sliceinds(img, zoomranges, slices...) =
 sliceinds_t(::Positional, img, zoomranges, slices...) =
     sliceinds(indices(img), zoomranges, slices...)
 sliceinds_t(::Named, img, zoomranges, slices...) =
-    sliceinds(axes(img), zoomranges, slices...)
+    sliceinds(AxisArrays.axes(img), zoomranges, slices...)
 
 # Positional
 # Here we insist the axes are supplied in increasing order
@@ -182,6 +182,6 @@ transposedview(A::AbstractMatrix) =
     PermutedDimsArray{eltype(A),2,(2,1),(2,1),typeof(A)}(A)
 
 function transposedview(A::AxisArray{T,2}) where T
-    axs = axes(A)
+    axs = AxisArrays.axes(A)
     AxisArray(transposedview(A.data), (axs[2], axs[1]))
 end
