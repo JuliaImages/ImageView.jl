@@ -127,16 +127,16 @@ function imshow!(canvas::GtkReactive.Canvas,
 end
 
 """
-    imshow(img; axes=(1,2), name="ImageView") -> guidict
-    imshow(img, clim; axes=(1,2), name="ImageView") -> guidict
-    imshow(img, clim, zoomregion, slicedata, annotations; axes=(1,2), name="ImageView") -> guidict
+    imshow(img; axs=(1,2), name="ImageView") -> guidict
+    imshow(img, clim; axs=(1,2), name="ImageView") -> guidict
+    imshow(img, clim, zoomregion, slicedata, annotations; axs=(1,2), name="ImageView") -> guidict
 
 Display the image `img` in a new window titled with `name`, returning
 a dictionary `guidict` containing any Reactive signals or GtkReactive
 widgets. If the image is 3 or 4 dimensional, GUI controls will be
 added for slicing along "extra" axes. By default the two-dimensional
 slice containing axes 1 and 2 are shown, but that can be changed by
-passing a different setting for `axes`.
+passing a different setting for `axs`.
 
 If the image is grayscale, by default contrast is set by a
 `scaleminmax` object whose end-points can be modified by
@@ -149,10 +149,10 @@ Finally, you may specify [`GtkReactive.ZoomRegion`](@ref) and
 `annotations` that you wish to apply.
 """
 function imshow(img::AbstractArray;
-                axes = default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
+                axs = default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
                 kwargs...)
-    imgmapped = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
-    zr, sd = roi(imgmapped, axes)
+    imgmapped = kwhandler(_mappedarray(scalei, img), axs; kwargs...)
+    zr, sd = roi(imgmapped, axs)
     v = slice2d(imgmapped, value(zr), sd)
     imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect)
 end
@@ -164,8 +164,8 @@ function imshow(c::GtkReactive.Canvas, img::AbstractMatrix, anns=Signal(Dict{UIn
 end
 
 function imshow(img::AbstractArray, clim;
-                axes = default_axes(img), name="ImageView", aspect=:auto)
-    imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect)
+                axs = default_axes(img), name="ImageView", aspect=:auto)
+    imshow(img, clim, roi(img, axs)...; name=name, aspect=aspect)
 end
 
 function imshow(img::AbstractArray, clim,
@@ -213,8 +213,8 @@ end
 # option.  We also don't display hoverinfo, as there is no guarantee
 # that one can quickly compute intensities at a point.
 function imshow(img;
-                axes = default_axes(img), name="ImageView", aspect=:auto)
-    zr, sd = roi(img, axes)
+                axs = default_axes(img), name="ImageView", aspect=:auto)
+    zr, sd = roi(img, axs)
     imshow(img, zr, sd; name=name, aspect=aspect)
 end
 
@@ -539,16 +539,16 @@ function canvas_size(screensize_xy, requestedsize_xy; minsize=100)
     (round(Int, f*requestedsize_xy[1]), round(Int, f*requestedsize_xy[2]))
 end
 
-function kwhandler(img, axes; flipx=false, flipy=false, kwargs...)
+function kwhandler(img, axs; flipx=false, flipy=false, kwargs...)
     if flipx || flipy
         inds = Range[indices(img)...]
-        setrange!(inds, _axisdim(img, axes[1]), flipy)
-        setrange!(inds, _axisdim(img, axes[2]), flipx)
+        setrange!(inds, _axisdim(img, axs[1]), flipy)
+        setrange!(inds, _axisdim(img, axs[2]), flipx)
         img = view(img, inds...)
     end
     for (k, v) in kwargs
         if k == :xy
-            error("The `xy` keyword has been renamed `axes`, and it takes dimensions or Symbols (if using an AxisArray)")
+            error("The `xy` keyword has been renamed `axs`, and it takes dimensions or Symbols (if using an AxisArray)")
         end
     end
     pixelspacing_dep(img, kwargs)
@@ -568,7 +568,7 @@ isgray(img::AbstractArray{T}) where {T<:AbstractGray} = true
 isgray(img) = false
 
 _mappedarray(f, img) = mappedarray(f, img)
-_mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), axes(img))
+_mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), AxisArrays.axes(img))
 _mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)))
 
 wrap_signal(x) = Signal(x)

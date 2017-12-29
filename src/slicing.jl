@@ -14,11 +14,11 @@ end
 axisname(ax::Axis) = axisnames(ax)[1]
 
 """
-    SliceData{transpose::Bool}(signals::NTuple{N,Signal{Int}}, axes::NTuple{N,Axes})
+    SliceData{transpose::Bool}(signals::NTuple{N,Signal{Int}}, axs::NTuple{N,Axes})
 
 Specify slice information for a (possibly) multidimensional
 image. `signals` hold the currently-selected slices for the selected
-`axes`, all of which are effectively "orthogonal" to the plane in the
+`axs`, all of which are effectively "orthogonal" to the plane in the
 viewer.
 """
 SliceData{transpose}(signals::NTuple{N,Signal{Int}}, axs::NTuple{N,Axis}) where {transpose,N} =
@@ -43,7 +43,7 @@ See also: [`slice2d`](@ref).
 roi(A) = roi(A, (1,2))
 
 roi(A, dims) = roi(indices(A), dims)
-roi(A, axs::Tuple{Symbol,Symbol}) = roi(axes(A), axs)
+roi(A, axs::Tuple{Symbol,Symbol}) = roi(AxisArrays.axes(A), axs)
 
 function roi(inds::Indices, dims::Dims{2})
     dims[1] != dims[2] || error("entries in dims must be distinct, got ", dims)
@@ -59,15 +59,15 @@ function roi(inds::Indices, dims::Dims{2})
     Signal(zr), SliceData{dims[2] < dims[1]}((sigs...), (axs...))
 end
 
-function roi(axs::NTuple{N,Axis}, axes::Tuple{Symbol,Symbol}) where N
-    axes[1] != axes[2] || error("entries in axes must be distinct, got ", axes)
+function roi(axs::NTuple{N,Axis}, axids::Tuple{Symbol,Symbol}) where N
+    axids[1] != axids[2] || error("entries in axids must be distinct, got ", axids)
     names = axisnames(axs...)
-    dims = indexin([axes...], [names...])
+    dims = indexin([axids...], [names...])
     inds = map(v->indices(v, 1), axisvalues(axs...))
     zr = ZoomRegion(inds[[dims...]])
     sigs, axs = [], []
     for (i, n) in enumerate(names)
-        if !(n ∈ axes)
+        if !(n ∈ axids)
             ind = inds[i]
             push!(sigs, Signal(first(ind)))
             push!(axs, Axis{n}(ind))
@@ -130,7 +130,7 @@ sliceinds(img, zoomranges, slices...) =
 sliceinds_t(::Positional, img, zoomranges, slices...) =
     sliceinds(indices(img), zoomranges, slices...)
 sliceinds_t(::Named, img, zoomranges, slices...) =
-    sliceinds(axes(img), zoomranges, slices...)
+    sliceinds(AxisArrays.axes(img), zoomranges, slices...)
 
 # Positional
 # Here we insist the axes are supplied in increasing order
@@ -182,6 +182,6 @@ transposedview(A::AbstractMatrix) =
     PermutedDimsArray{eltype(A),2,(2,1),(2,1),typeof(A)}(A)
 
 function transposedview(A::AxisArray{T,2}) where T
-    axs = axes(A)
+    axs = AxisArrays.axes(A)
     AxisArray(transposedview(A.data), (axs[2], axs[1]))
 end

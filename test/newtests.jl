@@ -97,7 +97,7 @@ if Gtk.libgtk_version >= v"3.10"
         img = AxisArray(rand(3, 5, 2), :x, :y, :z)
         guin = imshow(img; name="AxisArray Named")
         @test isa(guin["roi"]["slicedata"].axs[1], Axis{:z})
-        guip = imshow(img; axes=(1,2), name="AxisArray Positional")
+        guip = imshow(img; axs=(1,2), name="AxisArray Positional")
         @test isa(guip["roi"]["slicedata"].axs[1], Axis{3})
 
         ## 3d images
@@ -106,7 +106,7 @@ if Gtk.libgtk_version >= v"3.10"
         @test isa(hmri["roi"]["slicedata"].axs[1], Axis{:S})
 
         # Use a custom CLim here because the first slice is not representative of the intensities
-        hmrip = imshow(img, Signal(CLim(0.0, 1.0)), axes=(:S, :P), name="S,P view")
+        hmrip = imshow(img, Signal(CLim(0.0, 1.0)), axs=(:S, :P), name="S,P view")
         @test isa(hmrip["roi"]["slicedata"].axs[1], Axis{:R})
         push!(hmrip["roi"]["slicedata"].signals[1], 84)
 
@@ -114,7 +114,7 @@ if Gtk.libgtk_version >= v"3.10"
         mriseg = RGB.(img)
         mriseg[img .> 0.5] = colorant"red"
         # version 1
-        guidata = imshow(img, axes=(1,2))
+        guidata = imshow(img, axs=(1,2))
         zr = guidata["roi"]["zoomregion"]
         slicedata = guidata["roi"]["slicedata"]
         guidata2 = imshow(mriseg, nothing, zr, slicedata)
