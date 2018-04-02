@@ -1,6 +1,46 @@
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
 
-function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal)
+function change_red(col::CLim{T}, chan::CLim{T2}) where {T<:AbstractRGB, T2<:GrayLike}
+    cmin = T(chan.min, green(col.min), blue(col.min))
+    cmax = T(chan.max, green(col.max), blue(col.max))
+    return CLim(cmin, cmax)
+end
+function change_green(col::CLim{T}, chan::CLim{T2}) where {T<:AbstractRGB, T2<:GrayLike}
+    cmin = T(red(col.min), chan.min, blue(col.min))
+    cmax = T(red(col.max), chan.max, blue(col.max))
+    return CLim(cmin, cmax)
+end
+function change_blue(col::CLim{T}, chan::CLim{T2}) where {T<:AbstractRGB, T2<:GrayLike}
+    cmin = T(red(col.min), green(col.min), chan.min)
+    cmax = T(red(col.max), green(col.max), chan.max)
+    return CLim(cmin, cmax)
+end
+change_red(col::Signal, chan::CLim) = change_red(value(col), chan)
+change_green(col::Signal, chan::CLim) = change_green(value(col), chan)
+change_blue(col::Signal, chan::CLim) = change_blue(value(col), chan)
+
+function contrast_gui(enabled::Signal{Bool}, hists::Vector, clim::Signal{CLim{T}}) where {T<:AbstractRGB}
+    @assert length(hists) == 3 #one signal per color channel
+    chanlims = channel_clims(value(clim))
+    rsig = Signal(chanlims[1])
+    gsig = Signal(chanlims[2])
+    bsig = Signal(chanlims[3])
+    #make sure that changes to individual channels update the color clim signal and vice versa
+    bindmap!(clim, x->change_red(clim, x), rsig, x->channel_clim(red, x); initial = false)
+    bindmap!(clim, x->change_green(clim, x), gsig, x->channel_clim(green, x); initial = false)
+    bindmap!(clim, x->change_blue(clim, x), bsig, x->channel_clim(blue, x); initial = false)
+    names = ["Red Contrast"; "Green Contrast"; "Blue Contrast"]
+    csigs = [rsig; gsig; bsig]
+    cguis = []
+    for i=1:length(hists)
+        push!(cguis, contrast_gui(enabled, hists[i], csigs[i]; wname = names[i]))
+    end
+    return cguis
+end
+
+contrast_gui(enabled, hist::Vector, clim) = contrast_gui(enabled, hist[1], clim)
+
+function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="Contrast")
     vhist, vclim = value(hist), value(clim)
     T = eltype(vclim)
     Δ = T <: Integer ? T(1) : eps(T)
@@ -14,7 +54,7 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal)
     end
     smin = Signal(convert(eltype(rng), cmin))
     smax = Signal(convert(eltype(rng), cmax))
-    cgui = contrast_gui_layout(smin, smax, rng)
+    cgui = contrast_gui_layout(smin, smax, rng; wname=wname)
     signal_connect(cgui["window"], :destroy) do widget
         push!(enabled, false)
     end
@@ -56,8 +96,8 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal)
     cgui
 end
 
-function contrast_gui_layout(smin::Signal, smax::Signal, rng)
-    win = Window("Contrast") |> (g = Grid())
+function contrast_gui_layout(smin::Signal, smax::Signal, rng; wname="Contrast")
+    win = Window(wname) |> (g = Grid())
     slmax = slider(rng; signal=smax)
     slmin = slider(rng; signal=smin)
     for sl in (slmax, slmin)
