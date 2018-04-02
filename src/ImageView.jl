@@ -8,6 +8,8 @@ using Gtk.ShortNames, GtkReactive, Graphics
 using Compat
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
 
+import Images: scaleminmax
+
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
 export CLim, annotate!, canvasgrid, imshow, imshow_gui, imlink,
@@ -405,6 +407,7 @@ end
 
 default_clim(img) = nothing
 default_clim(img::AbstractArray{C}) where {C<:GrayLike} = _default_clim(img, eltype(C))
+default_clim(img::AbstractArray{C}) where {C<:AbstractRGB} = _default_clim(img, eltype(C))
 _default_clim(img, ::Type{Bool}) = nothing
 _default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
 function _deflt_clim(img::AbstractMatrix)
@@ -415,6 +418,15 @@ function _deflt_clim(img::AbstractMatrix)
         maxval = one(typeof(maxval))
     end
     Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
+end
+
+function _deflt_clim(img::AbstractMatrix{T}) where {T<:AbstractRGB}
+    #bluemin, bluemax = nanz(minfinite(img)) nanz(maxfinite(img))
+    #if minval == maxval
+    minval = RGB(0.0,0.0,0.0)
+    maxval = RGB(1.0,1.0,1.0)
+    #Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
+    Signal(CLim(minval, maxval); name="CLim")
 end
 
 saferound(x::Integer) = convert(RInteger, x)
@@ -428,10 +440,12 @@ default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 
 # default_slices(img) = ntuple(d->PlayerInfo(Signal(1), indices(img, d+2)), ndims(img)-2)
 
-function prep_contrast(img::Signal, clim::Signal{CLim{T}}) where T
-    # Set up the signals to calculate the histogram of intensity
-    enabled = Signal(false; name="contrast_enabled") # skip hist calculation if the contrast gui isn't open
-    histsig = map(filterwhen(enabled, value(img), img); name="histsig") do image
+#to support color contrast gui need 3 mods:
+#   clims are RGB, scaling and mapping should be made to work with them
+#   multiple hist sigs, one per channel
+#   multiple contrast windows, each linked with a different hist sig and each able to update clims
+function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:GrayLike}
+    return [map(filterwhen(enabled, defaultimg, img); name="histsig") do image
         cl = value(clim)
         smin = float(nanz(min(minfinite(image), cl.min)))
         smax = float(nanz(max(maxfinite(image), cl.max)))
@@ -440,23 +454,77 @@ function prep_contrast(img::Signal, clim::Signal{CLim{T}}) where T
         end
         rng = linspace(smin, smax, 300)
         fit(Histogram, mappedarray(nanz, vec(channelview(image))), rng; closed=:right)
+    end]
+end
+
+redview(img::AbstractMatrix{T}) where {T<:AbstractRGB} = view(channelview(img),1,:,:)
+greenview(img::AbstractMatrix{T}) where {T<:AbstractRGB} = view(channelview(img),2,:,:)
+blueview(img::AbstractMatrix{T}) where {T<:AbstractRGB} = view(channelview(img),3,:,:)
+red_clim(clim::CLim{T}) where {T<:AbstractRGB} = CLim(red(clim.min), red(clim.max))
+green_clim(clim::CLim{T}) where {T<:AbstractRGB} = CLim(green(clim.min), green(clim.max))
+blue_clim(clim::CLim{T}) where {T<:AbstractRGB} = CLim(blue(clim.min), blue(clim.max))
+
+channel_clims(clim::CLim{T}) where {T<:AbstractRGB} = [red_clim(clim); green_clim(clim); blue_clim(clim)]
+
+function mapped_channel_clims(clim::Signal{CLim{T}}) where {T<:AbstractRGB}
+    inits = channel_clims(value(clim))
+    rsig = map(x->red_clim(x), clim; init=inits[1])
+    gsig = map(x->green_clim(x), clim; init=inits[2])
+    bsig = map(x->blue_clim(x), clim; init=inits[3])
+    return [rsig;gsig;bsig]
+end
+
+function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:AbstractRGB}
+    rv = map(x->redview(x), filterwhen(enabled, defaultimg, img); name="redview")
+    gv = map(x->redview(x), filterwhen(enabled, defaultimg, img); name="greenview")
+    bv = map(x->redview(x), filterwhen(enabled, defaultimg, img); name="blueview")
+    cls = mapped_channel_clims(clim) #note currently this gets called twice, also in contrast gui creation (a bit inefficient/awkward)
+    histsigs = []
+    push!(histsigs, histsignals(enabled, redview(defaultimg), rv, cls[1])[1])
+    push!(histsigs, histsignals(enabled, greenview(defaultimg), gv, cls[2])[1])
+    push!(histsigs, histsignals(enabled, blueview(defaultimg), bv, cls[3])[1])
+    return histsigs
+end
+
+function scaleminmax(mtyp::DataType, cmin::AbstractRGB{T}, cmax::AbstractRGB{T}) where {T}
+    r = scaleminmax(T, red(cmin), red(cmax))
+    g = scaleminmax(T, green(cmin), green(cmax))
+    b = scaleminmax(T, blue(cmin), blue(cmax))
+    return x->mtyp(r(red(x)), g(green(x)), b(blue(x)))
+end
+
+function safeminmax(cmin::T, cmax::T) where {T<:GrayLike}
+    if !(cmin < cmax)
+        cmax = cmin+1
     end
+    return cmin, cmax
+end
+
+function safeminmax(cmin::T, cmax::T) where {T<:AbstractRGB}
+    rmin, rmax = safeminmax(red(cmin), red(cmax))
+    gmin, gmax = safeminmax(green(cmin), green(cmax))
+    bmin, bmax = safeminmax(blue(cmin), blue(cmax))
+    return T(rmin, gmin, bmin), T(rmax, gmax, bmax)
+end
+
+function prep_contrast(img::Signal, clim::Signal{CLim{T}}) where {T}
+    # Set up the signals to calculate the histogram of intensity
+    enabled = Signal(false; name="contrast_enabled") # skip hist calculation if the contrast gui isn't open
+    histsigs = histsignals(enabled, value(img), img, clim)
     # Return a signal corresponding to the scaled image
     imgc = map(img, clim; name="clim-mapped image") do image, cl
-        cmin, cmax = cl.min, cl.max
-        if !(cmin < cmax)
-            cmax = cmin+1
-        end
-        smm = scaleminmax(Gray{N0f8}, cmin, cmax)
+        cmin, cmax = safeminmax(cl.min, cl.max)
+        mtyp = T<:GrayLike ? Gray{N0f8} : T
+        smm = scaleminmax(mtyp, cmin, cmax)
         mappedarray(smm, image)
     end
-    enabled, histsig, imgc
+    enabled, histsigs, imgc
 end
 
 function prep_contrast(canvas, img::Signal, clim::Signal{CLim{T}}) where T
-    enabled, histsig, imgsig = prep_contrast(img, clim)
+    enabled, histsigs, imgsig = prep_contrast(img, clim)
     # Set up the right-click to open the contrast gui
-    push!(canvas.preserved, create_contrast_popup(canvas, enabled, histsig, clim))
+    push!(canvas.preserved, create_contrast_popup(canvas, enabled, histsigs, clim))
     imgsig
 end
 
@@ -470,7 +538,7 @@ nanz(x) = ifelse(isnan(x), zero(x), x)
 nanz(x::FixedPoint) = x
 nanz(x::Integer) = x
 
-function create_contrast_popup(canvas, enabled, hist, clim)
+function create_contrast_popup(canvas, enabled, hists, clim)
     popupmenu = Menu()
     contrast = MenuItem("Contrast...")
     push!(popupmenu, contrast)
@@ -482,7 +550,7 @@ function create_contrast_popup(canvas, enabled, hist, clim)
     end)
     signal_connect(contrast, :activate) do widget
         push!(enabled, true)
-        contrast_gui(enabled, hist, clim)
+        contrast_gui(enabled, hists, clim)
     end
 end
 
