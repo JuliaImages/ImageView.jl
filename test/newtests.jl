@@ -4,6 +4,13 @@ using Base.Test
 
 include("core.jl")
 
+@testset "1d" begin
+    img = rand(N0f8, 5)
+    guidict = imshow(img)
+    win = guidict["gui"]["window"]
+    destroy(win)
+end
+
 @testset "Aspect ratio" begin
     img = rand(N0f8, 20, 20)
     guidict = imshow(img)
