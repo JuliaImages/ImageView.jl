@@ -157,6 +157,8 @@ function imshow(img::AbstractArray;
     imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect)
 end
 
+imshow(img::AbstractVector; kwargs...) = imshow(reshape(img, :, 1); kwargs...)
+
 function imshow(c::GtkReactive.Canvas, img::AbstractMatrix, anns=Signal(Dict{UInt,Any}());
                 kwargs...)
     f = parent(widget(c))
@@ -420,6 +422,7 @@ end
 saferound(x::Integer) = convert(RInteger, x)
 saferound(x) = x
 
+default_axes(::AbstractVector) = (1,)
 default_axes(img) = (1, 2)
 default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 
