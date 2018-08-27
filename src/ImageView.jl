@@ -476,11 +476,11 @@ function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim
     return histsigs
 end
 
-function scaleminmax(mtyp::DataType, cmin::AbstractRGB{T}, cmax::AbstractRGB{T}) where {T}
+function scaleminmax(::Type{Tout}, cmin::AbstractRGB{T}, cmax::AbstractRGB{T}) where {T,Tout}
     r = scaleminmax(T, red(cmin), red(cmax))
     g = scaleminmax(T, green(cmin), green(cmax))
     b = scaleminmax(T, blue(cmin), blue(cmax))
-    return x->mtyp(r(red(x)), g(green(x)), b(blue(x)))
+    return x->Tout(nanz(r(red(x))), nanz(g(green(x))), nanz(b(blue(x))))
 end
 
 function safeminmax(cmin::T, cmax::T) where {T<:GrayLike}
@@ -504,12 +504,15 @@ function prep_contrast(img::Signal, clim::Signal{CLim{T}}) where {T}
     # Return a signal corresponding to the scaled image
     imgc = map(img, clim; name="clim-mapped image") do image, cl
         cmin, cmax = safeminmax(cl.min, cl.max)
-        mtyp = T<:GrayLike ? Gray{N0f8} : T
-        smm = scaleminmax(mtyp, cmin, cmax)
+        smm = scaleminmax(outtype(T), cmin, cmax)
         mappedarray(smm, image)
     end
     enabled, histsigs, imgc
 end
+
+outtype(::Type{T}) where T<:GrayLike         = Gray{N0f8}
+outtype(::Type{C}) where C<:Color            = RGB{N0f8}
+outtype(::Type{C}) where C<:TransparentColor = RGBA{N0f8}
 
 function prep_contrast(canvas, img::Signal, clim::Signal{CLim{T}}) where T
     enabled, histsigs, imgsig = prep_contrast(img, clim)
