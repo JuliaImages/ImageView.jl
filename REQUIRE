@@ -1,6 +1,6 @@
 julia 0.6
 Images 0.6.0
-GtkReactive 0.2
+GtkReactive 0.4.2
 FixedPointNumbers 0.3
 Colors
 ColorVectorSpace

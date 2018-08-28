@@ -3,8 +3,8 @@ import ImageView
 
 imgdy = normedview(UInt8[y for y=0x00:0xff, x=0:100])
 imgdx = normedview(UInt8[x for y=1:100, x=0x00:0xff])
-ImageView.imshow(imgdy)
-ImageView.imshow(imgdx)
+imshow_now(imgdy)
+imshow_now(imgdx)
 
 A = zeros(300, 200)
 lbl = similar(A, Int)
