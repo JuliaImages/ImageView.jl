@@ -2,8 +2,6 @@ using ImageView, TestImages, Colors, FixedPointNumbers, ImageCore, Reactive,
       GtkReactive, AxisArrays, Gtk
 using Base.Test
 
-include("core.jl")
-
 @testset "1d" begin
     img = rand(N0f8, 5)
     guidict = imshow(img)

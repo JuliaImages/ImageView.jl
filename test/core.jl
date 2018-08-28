@@ -1,4 +1,4 @@
-using GtkReactive, AxisArrays, ImageView
+using GtkReactive, AxisArrays, Images, ImageView
 using ImageView: sliceinds
 using Base.Test
 
@@ -8,9 +8,64 @@ using Base.Test
     Reactive.run_till_now()
     @test value(cl) === CLim{Float64}(0, 1)
 
-    # default contrast setting with a homogenous image
-    imgdict = imshow(zeros(3, 3))
-    @test value(imgdict["clim"]) == CLim(0.0,1.0)
+    cmin = RGB(0.2,0.4,0.1)
+    cmax = RGB(1.0,0.8,0.95)
+    smm = scaleminmax(RGB{N0f8}, cmin, cmax)
+    @test @inferred(smm(cmin)) == RGB(0,0,0)
+    @test @inferred(smm(cmax)) == RGB(1,1,1)
+    @test @inferred(smm((cmin+1.00001*cmax)/2)) == RGB{N0f8}(0.5,0.5,0.5)
+end
+
+@testset "NaN and Inf" begin
+    # Grayscale
+    A = collect(reshape(linspace(-0.1, 1.1, 25), (5, 5)))
+    A[2,2] = NaN
+    A[3,3] = -Inf
+    A[4,4] = Inf
+
+    target = Gray{N0f8}[
+        0   0.0625  0.375   0.6875  1;
+        0   0       0.4375  0.75    1;
+        0   0.1875  0       0.8125  1;
+        0   0.25    0.5625  1       1;
+        0   0.3125  0.625   0.9375  1
+    ]
+
+    img = Signal(A)
+    clim = Signal(CLim(0.1, 0.9))
+    enabled, histsigs, imgcsig = ImageView.prep_contrast(img, clim)
+    imgc = value(imgcsig)
+    @test eltype(imgc) == Gray{N0f8}
+    @test imgc == target
+
+    img = Signal(Gray.(A))
+    clim = Signal(CLim(0.1, 0.9))
+    enabled, histsigs, imgcsig = ImageView.prep_contrast(img, clim)
+    imgc = value(imgcsig)
+    @test eltype(imgc) == Gray{N0f8}
+    @test imgc == target
+
+    # RGB
+    Ar = collect(reshape(linspace(-0.1, 1.1, 3*25), (3, 5, 5)))
+    Arc = copy(Ar)
+    Ar[1,2,2] = NaN
+    Ar[2,3,3] = -Inf
+    Ar[3,4,4] = Inf
+    target = colorview(RGB, N0f8.((clamp.(Arc, 0.1, 0.9) .- 0.1)./0.8))
+    c = target[2,2]
+    target[2,2] = RGB{N0f8}(0, green(c), blue(c))
+    c = target[3,3]
+    target[3,3] = RGB{N0f8}(red(c), 0, blue(c))
+    c = target[4,4]
+    target[4,4] = RGB{N0f8}(red(c), green(c), 1)
+
+    img = Signal(colorview(RGB, Ar))
+    cmin, cmax = RGB(0.1,0.1,0.1), RGB(0.9, 0.9, 0.9)
+    clim = Signal(CLim(cmin, cmax))
+    enabled, histsigs, imgcsig = ImageView.prep_contrast(img, clim)
+    imgc = value(imgcsig)
+    @test eltype(imgc) == RGB{N0f8}
+    @test imgc == target
 end
 
 @testset "sliceinds" begin

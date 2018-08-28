@@ -1,5 +1,6 @@
 import ImageView
-using Images, OffsetArrays
+using Images, OffsetArrays, Reactive
+using Base.Test
 
 # Grayscale
 ImageView.imshow(rand(Gray{N0f8}, 10, 10))
@@ -11,6 +12,10 @@ A[2,2] = NaN
 A[3,3] = -Inf
 A[4,4] = Inf
 ImageView.imshow(A)
+
+# default contrast setting with a homogenous image
+imgdict = ImageView.imshow(zeros(3, 3))
+@test value(imgdict["clim"]) == ImageView.CLim(0.0,1.0)
 
 # RGB
 ImageView.imshow(rand(RGB{N0f8}, 10, 10))
