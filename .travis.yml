@@ -11,7 +11,6 @@ addons:
             - libgtk-3-0
 julia:
     - 0.6
-    - nightly
 notifications:
   email: false
 script:
