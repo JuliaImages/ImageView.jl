@@ -78,7 +78,7 @@ using Colors, FixedPointNumbers, GtkReactive, ImageView
 
 ## Create an object and visualize it
 c = ConeModule.Cone((201, 301, 31), rand(RGB{N0f8}, 60))
-imshow(c; name="Cone 1,2")
+imshow_now(c; name="Cone 1,2")
 
 # Slice along axes 1 and t rather than 3 and t
-imshow(c, axes=(2,3), name="Cone 2,3")
+imshow_now(c, axes=(2,3), name="Cone 2,3")

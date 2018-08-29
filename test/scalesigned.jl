@@ -8,4 +8,4 @@ img2 = img[12:502, 10:500]
 dimg = float(img1)-float(img2)
 ss = scalesigned(1)   # replace 1 with whatever scaling you want to encode
 cs = colorsigned()
-ImageView.imshow(dimg, scalei=x->cs(ss(x)))
+imshow_now(dimg, scalei=x->cs(ss(x)))
