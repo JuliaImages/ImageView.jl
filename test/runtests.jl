@@ -1,6 +1,7 @@
 using ImageView
 using Images, OffsetArrays
-using Base.Test
+using Gtk
+using Test
 
 function imshow_now(args...; kwargs...)
     guidict = imshow(args...; kwargs...)

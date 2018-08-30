@@ -1,6 +1,6 @@
-julia 0.6 0.7
+julia 0.7
 Images 0.6.0
-GtkReactive 0.4.2
+GtkReactive 0.5.1
 FixedPointNumbers 0.3
 Colors
 ColorVectorSpace
@@ -12,4 +12,3 @@ MappedArrays
 AxisArrays
 StatsBase
 RoundingIntegers
-Compat 0.18

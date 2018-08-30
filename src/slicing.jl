@@ -42,7 +42,7 @@ See also: [`slice2d`](@ref).
 """
 roi(A) = roi(A, (1,2))
 
-roi(A, dims) = roi(indices(A), dims)
+roi(A, dims) = roi(axes(A), dims)
 roi(A, axs::Tuple{Symbol,Symbol}) = roi(AxisArrays.axes(A), axs)
 
 function roi(inds::Indices, dims::Dims{2})
@@ -56,24 +56,24 @@ function roi(inds::Indices, dims::Dims{2})
             push!(axs, Axis{i}(ind))
         end
     end
-    Signal(zr), SliceData{dims[2] < dims[1]}((sigs...), (axs...))
+    Signal(zr), SliceData{dims[2] < dims[1]}((sigs...,), (axs...,))
 end
 
-function roi(axs::NTuple{N,Axis}, axes::Tuple{Symbol,Symbol}) where N
-    axes[1] != axes[2] || error("entries in axes must be distinct, got ", axes)
+function roi(axs::NTuple{N,Axis}, axnames::Tuple{Symbol,Symbol}) where N
+    axnames[1] != axnames[2] || error("entries in axnames must be distinct, got ", axnames)
     names = axisnames(axs...)
-    dims = indexin([axes...], [names...])
-    inds = map(v->indices(v, 1), axisvalues(axs...))
+    dims = indexin([axnames...], [names...])
+    inds = map(v->axes(v, 1), axisvalues(axs...))
     zr = ZoomRegion(inds[[dims...]])
     sigs, axs = [], []
     for (i, n) in enumerate(names)
-        if !(n ∈ axes)
+        if !(n ∈ axnames)
             ind = inds[i]
             push!(sigs, Signal(first(ind)))
             push!(axs, Axis{n}(ind))
         end
     end
-    Signal(zr), SliceData{dims[2] < dims[1]}((sigs...), (axs...))
+    Signal(zr), SliceData{dims[2] < dims[1]}((sigs...,), (axs...,))
 end
 
 """
@@ -125,10 +125,44 @@ check_same() = Positional()
 
 @noinline check_same(tt1::TagType, tt2::TagType, tts...) = error("must use either positional or named")
 
+"""
+    inds = sliceinds(img, roi, slices...)
+    inds = sliceinds(axs, roi, slices...)
+
+Return an indices-tuple `inds` that selects the region-of-interest `roi` at particular `slices`
+along orthogonal coordinates. Use `AxisArrays.Axis` to indicate out-of-order axes, either
+by dimension number (e.g., `Axis{3}`) or by name (`Axis{:z}`).
+If you're using dimension numbers, `slices` must list them in increasing order.
+
+# Examples:
+```julia
+julia> using AxisArrays: Axis
+
+# Mimic a 4d array
+julia> axs = (1:1080, 1:1920, 1:20, 1:1000)
+(1:1080, 1:1920, 1:20, 1:1000)
+
+julia> ImageView.sliceinds(axs, (6:10, 1:5), Axis{3}(7), Axis{4}(15))
+(6:10, 1:5, 7, 15)
+
+julia> ImageView.sliceinds(axs, (6:10, 1:5), Axis{2}(7), Axis{4}(15))
+(6:10, 7, 1:5, 15)
+
+# Mimic a 4d AxisArray
+julia> axs = (Axis{:y}(1:1080), Axis{:x}(1:1920), Axis{:z}(1:20), Axis{:t}(1:1000))
+(Axis{:y,UnitRange{Int64}}(1:1080), Axis{:x,UnitRange{Int64}}(1:1920), Axis{:z,UnitRange{Int64}}(1:20), Axis{:t,UnitRange{Int64}}(1:1000))
+
+julia> ImageView.sliceinds(axs, (6:10, 1:5), Axis{:t}(15), Axis{:z}(7))   # out-of-order OK
+(6:10, 1:5, 7, 15)
+
+julia> ImageView.sliceinds(axs, (6:10, 1:5), Axis{:y}(15), Axis{:z}(7))
+(15, 6:10, 7, 1:5)
+```
+"""
 sliceinds(img, zoomranges, slices...) =
     sliceinds_t(tagtype(slices...), img, zoomranges, slices...)
 sliceinds_t(::Positional, img, zoomranges, slices...) =
-    sliceinds(indices(img), zoomranges, slices...)
+    sliceinds(axes(img), zoomranges, slices...)
 sliceinds_t(::Named, img, zoomranges, slices...) =
     sliceinds(AxisArrays.axes(img), zoomranges, slices...)
 
@@ -149,33 +183,32 @@ sliceinds(axs::Tuple{}, zoomranges::Tuple{}) = ()
 # Named
 # Here we allow any ordering of axes
 @inline function sliceinds(axs::NTuple{N,Axis}, zoomranges, slices...) where N
-    # ind, newzoomranges, newslices = pickaxis((), axs[1], zoomranges, slices...)
-    ind, newzoomranges, newslices = pickaxis(axs[1], zoomranges, slices...)
+    ind, newzoomranges, newslices = pickaxis((), axs[1], zoomranges, slices...)
+    # ind, newzoomranges, newslices = pickaxis(axs[1], zoomranges, slices...)
     (ind, sliceinds(tail(axs), newzoomranges, newslices...)...)
 end
 
-# Commented out due to https://github.com/JuliaLang/julia/issues/20714
-# @inline pickaxis(out, ax::Axis, zoomranges, slice1::Axis, slices...) =
-#     _pickaxis(out, AxisArrays.samesym(ax, slice1), ax, zoomranges, slice1, slices...)
-# @inline _pickaxis(out, ::Val{true}, ax, zoomranges, slice1, slices...) =
-#     slice1.val, zoomranges, (out..., slices...)
-# @inline _pickaxis(out, ::Val{false}, ax, zoomranges, slice1, slices...) =
-#     pickaxis((out..., slice1), ax, zoomranges, slices...)
-# @inline pickaxis(out, ax::Axis, zoomranges) =
-#     zoomranges[1], tail(zoomranges), out
+@inline pickaxis(out, ax::Axis, zoomranges, slice1::Axis, slices...) =
+    _pickaxis(out, AxisArrays.samesym(ax, slice1), ax, zoomranges, slice1, slices...)
+@inline _pickaxis(out, ::Val{true}, ax, zoomranges, slice1, slices...) =
+    slice1.val, zoomranges, (out..., slices...)
+@inline _pickaxis(out, ::Val{false}, ax, zoomranges, slice1, slices...) =
+    pickaxis((out..., slice1), ax, zoomranges, slices...)
+@inline pickaxis(out, ax::Axis, zoomranges) =
+    zoomranges[1], tail(zoomranges), out
 
-@generated function pickaxis(ax::Axis{name}, zoomranges, slices...) where name
-    idx = findfirst(x->axisnames(x)[1] == name, slices)
-    if idx == 0
-        return quote
-            zoomranges[1], tail(zoomranges), slices
-        end
-    end
-    newslices_exprs = [:(slices[$i]) for i in setdiff(1:length(slices), idx)]
-    quote
-        slices[$idx].val, zoomranges, ($(newslices_exprs...),)
-    end
-end
+# @generated function pickaxis(ax::Axis{name}, zoomranges, slices...) where name
+#     idx = findfirst(x->axisnames(x)[1] == name, slices)
+#     if idx == 0
+#         return quote
+#             zoomranges[1], tail(zoomranges), slices
+#         end
+#     end
+#     newslices_exprs = [:(slices[$i]) for i in setdiff(1:length(slices), idx)]
+#     quote
+#         slices[$idx].val, zoomranges, ($(newslices_exprs...),)
+#     end
+# end
 
 # For type stability we don't want to use permuteddimsview
 transposedview(A::AbstractMatrix) =

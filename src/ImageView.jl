@@ -1,12 +1,11 @@
-__precompile__()
-
 module ImageView
 
 using FixedPointNumbers, Colors, ColorVectorSpace, Images, StatsBase
-using MappedArrays, AxisArrays, RoundingIntegers
+using MappedArrays, RoundingIntegers
 using Gtk.ShortNames, GtkReactive, Graphics
-using Compat
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
+import AxisArrays
+using AxisArrays: Axis, axisnames, axisvalues
 
 import Images: scaleminmax
 
@@ -48,7 +47,7 @@ function closeall()
     nothing
 end
 
-const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Void}()
+const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
 
 """
     imshow()
@@ -111,7 +110,7 @@ function imshow!(canvas::GtkReactive.Canvas,
                  annotations::Signal{Dict{UInt,Any}})
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
-        set_coordinates(cnvs, indices(image))
+        set_coordinates(cnvs, axes(image))
         draw_annotations(cnvs, anns)
     end
 end
@@ -122,7 +121,7 @@ function imshow!(canvas::GtkReactive.Canvas,
                  annotations::Signal{Dict{UInt,Any}})
     draw(canvas, annotations) do cnvs, anns
         copy!(cnvs, img)
-        set_coordinates(cnvs, indices(img))
+        set_coordinates(cnvs, axes(img))
         draw_annotations(cnvs, anns)
     end
     nothing
@@ -151,7 +150,7 @@ Finally, you may specify [`GtkReactive.ZoomRegion`](@ref) and
 `annotations` that you wish to apply.
 """
 function imshow(img::AbstractArray;
-                axes = default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
+                axes=default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
                 kwargs...)
     imgmapped = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
     zr, sd = roi(imgmapped, axes)
@@ -187,12 +186,12 @@ function imshow(img::AbstractArray, clim,
     roidict = imshow(guidict["frame"], guidict["canvas"], img,
                      wrap_signal(clim), zr, sd, anns)
 
-    showall(guidict["window"])
+    Gtk.showall(guidict["window"])
     Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
 end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                img::AbstractArray, clim::Union{Void,Signal{<:CLim}},
+                img::AbstractArray, clim::Union{Nothing,Signal{<:CLim}},
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
@@ -233,7 +232,7 @@ function imshow(img,
 
     roidict = imshow(guidict["frame"], guidict["canvas"], img, zr, sd, anns)
 
-    showall(guidict["window"])
+    Gtk.showall(guidict["window"])
     Dict("gui"=>guidict, "roi"=>roidict)
 end
 
@@ -281,7 +280,7 @@ function imshow_gui(canvassize::Tuple{Int,Int},
     end
     push!(vbox, g)
     status = Label("")
-    setproperty!(status, :halign, Gtk.GConstants.GtkAlign.START)
+    set_gtk_property!(status, :halign, Gtk.GConstants.GtkAlign.START)
     push!(vbox, status)
 
     guidict = Dict("window"=>win, "vbox"=>vbox, "frame"=>frames, "status"=>status,
@@ -314,8 +313,8 @@ GtkAspectRatioFrames that contain each canvas, and `canvases` is an
 """
 function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:auto)
     g = Grid()
-    frames = Matrix{Any}(gridsize)
-    canvases = Matrix{Any}(gridsize)
+    frames = Matrix{Any}(undef, gridsize)
+    canvases = Matrix{Any}(undef, gridsize)
     for j = 1:gridsize[2], i = 1:gridsize[1]
         f, c = frame_canvas(aspect)
         g[j,i] = f
@@ -327,8 +326,8 @@ end
 
 function frame_canvas(aspect)
     f = aspect==:none ? Frame() : AspectFrame("", 0.5, 0.5, 1)
-    setproperty!(f, :expand, true)
-    setproperty!(f, :shadow_type, Gtk.GConstants.GtkShadowType.NONE)
+    set_gtk_property!(f, :expand, true)
+    set_gtk_property!(f, :shadow_type, Gtk.GConstants.GtkShadowType.NONE)
     c = canvas(UserUnit)
     push!(f, widget(c))
     f, c
@@ -383,7 +382,7 @@ Display `img`, but showing the pixel's `label` rather than the color
 value in the status bar.
 """
 function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
-    indices(img) == indices(label) || throw(DimensionMismatch("indices $(indices(label)) of label array disagree with indices $(indices(img)) of the image"))
+    axes(img) == axes(label) || throw(DimensionMismatch("axes $(axes(label)) of label array disagree with axes $(axes(img)) of the image"))
     guidict = imshow(img; proplist...)
     gui = guidict["gui"]
     sd = guidict["roi"]["slicedata"]
@@ -397,13 +396,13 @@ end
 function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     io = IOBuffer()
     y, x = round(Int, btn.position.y.val), round(Int, btn.position.x.val)
-    indices = sliceinds(img, transpose ? (x, y) : (y, x), makeslices(sd)...)
-    if checkbounds(Bool, img, indices...)
+    axes = sliceinds(img, transpose ? (x, y) : (y, x), makeslices(sd)...)
+    if checkbounds(Bool, img, axes...)
         print(io, '[', y, ',', x, "] ")
-        showcompact(io, img[indices...])
-        setproperty!(lbl, :label, String(take!(io)))
+        show(IOContext(io, :compact=>true), img[axes...])
+        set_gtk_property!(lbl, :label, String(take!(io)))
     else
-        setproperty!(lbl, :label, "")
+        set_gtk_property!(lbl, :label, "")
     end
 end
 
@@ -438,7 +437,7 @@ default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 #default_view(img) = view(img, :, :, ntuple(d->1, ndims(img)-2)...)
 #default_view(img::Signal) = default_view(value(img))
 
-# default_slices(img) = ntuple(d->PlayerInfo(Signal(1), indices(img, d+2)), ndims(img)-2)
+# default_slices(img) = ntuple(d->PlayerInfo(Signal(1), axes(img, d+2)), ndims(img)-2)
 
 function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:GrayLike}
     return [map(filterwhen(enabled, defaultimg, img); name="histsig") do image
@@ -448,7 +447,7 @@ function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim
         if smax == smin
             smax = smin+1
         end
-        rng = linspace(smin, smax, 300)
+        rng = range(smin, stop=smax, length=300)
         fit(Histogram, mappedarray(nanz, vec(channelview(image))), rng; closed=:right)
     end]
 end
@@ -523,9 +522,9 @@ end
 
 prep_contrast(canvas, img::Signal, f) =
     map(image->mappedarray(f, image), img; name="f-mapped image")
-prep_contrast(canvas, img::Signal{A}, ::Void) where {A<:AbstractArray} =
+prep_contrast(canvas, img::Signal{A}, ::Nothing) where {A<:AbstractArray} =
     prep_contrast(canvas, img, clamp01nan)
-prep_contrast(canvas, img::Signal, ::Void) = img
+prep_contrast(canvas, img::Signal, ::Nothing) = img
 
 nanz(x) = ifelse(isnan(x), zero(x), x)
 nanz(x::FixedPoint) = x
@@ -535,7 +534,7 @@ function create_contrast_popup(canvas, enabled, hists, clim)
     popupmenu = Menu()
     contrast = MenuItem("Contrast...")
     push!(popupmenu, contrast)
-    showall(popupmenu)
+    Gtk.showall(popupmenu)
     push!(canvas.preserved, map(canvas.mouse.buttonpress; name="open contrast GUI") do btn
         if btn.button == 3 && btn.clicktype == BUTTON_PRESS
             popup(popupmenu, btn.gtkevent)
@@ -557,9 +556,9 @@ map_image_roi(img::Signal, zr::Signal{ZoomRegion{T}}, slices...) where {T} = img
 
 function set_aspect!(frame::AspectFrame, image)
     ps = map(abs, pixelspacing(image))
-    sz = map(length, indices(image))
+    sz = map(length, axes(image))
     r = sz[2]*ps[2]/(sz[1]*ps[1])
-    setproperty!(frame, :ratio, r)
+    set_gtk_property!(frame, :ratio, r)
     nothing
 end
 set_aspect!(frame, image) = nothing
@@ -600,19 +599,15 @@ function canvas_size(screensize_xy, requestedsize_xy; minsize=100)
     (round(Int, f*requestedsize_xy[1]), round(Int, f*requestedsize_xy[2]))
 end
 
-function kwhandler(img, axes; flipx=false, flipy=false, kwargs...)
+function kwhandler(img, axs; flipx=false, flipy=false, kwargs...)
     if flipx || flipy
-        inds = Range[indices(img)...]
-        setrange!(inds, _axisdim(img, axes[1]), flipy)
-        setrange!(inds, _axisdim(img, axes[2]), flipx)
+        inds = AbstractRange[axes(img)...]
+        setrange!(inds, _axisdim(img, axs[1]), flipy)
+        setrange!(inds, _axisdim(img, axs[2]), flipx)
         img = view(img, inds...)
     end
-    for (k, v) in kwargs
-        if k == :xy
-            error("The `xy` keyword has been renamed `axes`, and it takes dimensions or Symbols (if using an AxisArray)")
-        end
-    end
-    pixelspacing_dep(img, kwargs)
+    # isempty(kwargs) || error("cannot handle ", kwargs)
+    img
 end
 function setrange!(inds, ax::Integer, flip)
     ind = inds[ax]
@@ -634,11 +629,10 @@ _mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)
 
 wrap_signal(x) = Signal(x)
 wrap_signal(x::Signal) = x
-wrap_signal(::Void) = nothing
+wrap_signal(::Nothing) = nothing
 
 include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
-include("deprecated.jl")
 
 end # module

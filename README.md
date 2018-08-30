@@ -113,7 +113,7 @@ grid, frames, canvases = canvasgrid((1,2))  # 1 row, 2 columns
 imshow(canvases[1,1], testimage("lighthouse"))
 imshow(canvases[1,2], testimage("mandrill"))
 win = Window(grid)
-showall(win)
+Gtk.showall(win)
 ```
 
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
@@ -180,7 +180,7 @@ zr, slicedata = roi(mri, (1,2))
 gd = imshow_gui((200, 200), slicedata, (1,2))
 imshow(gd["frame"][1,1], gd["canvas"][1,1], mri, nothing, zr, slicedata)
 imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
-showall(gd["window"])
+Gtk.showall(gd["window"])
 ```
 
 You should see something like this:

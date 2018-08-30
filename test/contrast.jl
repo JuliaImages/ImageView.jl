@@ -1,5 +1,5 @@
 using ImageView, FixedPointNumbers, Reactive, ColorTypes
-using Base.Test
+using Test
 
 @testset "contrast GUI" begin
     # test for the fix in #119
@@ -12,6 +12,7 @@ using Base.Test
         push!(enabled, true)
         yield()
         ret = ImageView.contrast_gui(enabled, histsig, clim)
+        sleep(1.0)
         if isa(ret, Vector) #one gui dict per channel for color images
             for r in ret
                 @test isa(r, Dict)

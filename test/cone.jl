@@ -26,7 +26,7 @@ Cone(sz3::Tuple{Int,Int,Int}, colort::Vector{C}) where {C<:Colorant} = Cone{C}(s
 
 Base.eltype(::Type{Cone{C}}) where {C} = C
 
-# What you actually need to implement is `indices(c)`, but we can do that here via `size`
+# What you actually need to implement is `axes(c)`, but we can do that here via `size`
 Base.size(c::Cone) = (c.sz3..., length(c.colort))
 
 # c[x, y, z, t]
@@ -35,11 +35,11 @@ function Base.getindex(c::Cone, y::Real, x::Real, z::Real, t::Real)
 end
 function Base.getindex(c::Cone, y, x, z, t)
     # indexing with vectors or colons
-    inds = map(normalize_inds, indices(c), (y, x, z, t))
+    inds = map(normalize_inds, axes(c), (y, x, z, t))
     sz = map(length, filtervec(inds, inds))
     yn, xn, zn, tn = inds
     ps = filtervec((1.0, 1.0, 5.0), (yn, xn, zn))  # to get the pixelspacing correct
-    out = Array{eltype(c)}(sz)
+    out = Array{eltype(c)}(undef, sz)
     k = 0
     for ti in tn, zi in zn, xi in xn, yi in yn
         out[k+=1] = c[yi,xi,zi,ti]

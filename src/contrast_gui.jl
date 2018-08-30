@@ -68,7 +68,7 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="
             bigmin = min(cmin,cmax,rmin,rmax)
             thismax = min(typemax(T), max(cmin, cmax, rmax))
             thismin = max(typemin(T), min(cmin, cmax, rmin))
-            rng = linspace(thismin, thismax, 255)
+            rng = range(thismin, stop=thismax, length=255)
             cminT, cmaxT = T(min(cmin, cmax)), T(max(cmin, cmax))
             if cminT == cmaxT
                 cminT = min(cminT, cminT-Δ)
@@ -84,7 +84,7 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="
     end
     # TODO: we might want to throttle this?
     redraw = draw(cgui["canvas"], hist) do cnvs, hst
-        if getproperty(cgui["window"], :visible, Bool) # protects against window destruction
+        if get_gtk_property(cgui["window"], :visible, Bool) # protects against window destruction
             rng, cl = hst.edges[1], value(clim)
             mn, mx = minimum(rng), maximum(rng)
             push!(cgui["slider_min"], rng, clamp(cl.min, mn, mx))
@@ -101,13 +101,13 @@ function contrast_gui_layout(smin::Signal, smax::Signal, rng; wname="Contrast")
     slmax = slider(rng; signal=smax)
     slmin = slider(rng; signal=smin)
     for sl in (slmax, slmin)
-        setproperty!(sl, :draw_value, false)
+        set_gtk_property!(sl, :draw_value, false)
     end
     g[1,1] = widget(slmax)
     g[1,3] = widget(slmin)
     cnvs = canvas(UserUnit)
     g[1,2] = widget(cnvs)
-    setproperty!(cnvs, :expand, true)
+    set_gtk_property!(cnvs, :expand, true)
     emax_w = Entry(; width_chars=5, hexpand=false, halign=GTK_ALIGN_END, valign=GTK_ALIGN_START)
     emin_w = Entry(; width_chars=5, hexpand=false, halign=GTK_ALIGN_END, valign=GTK_ALIGN_END)
     g[2,1] = emax_w
@@ -118,7 +118,7 @@ function contrast_gui_layout(smin::Signal, smax::Signal, rng; wname="Contrast")
     emax = textbox(eltype(smax); widget=emax_w, signal=smax) # , range=rng)
     emin = textbox(eltype(smin); widget=emin_w, signal=smin) #, range=rng)
 
-    showall(win)
+    Gtk.showall(win)
     Dict("window"=>win, "canvas"=>cnvs, "slider_min"=>slmin, "slider_max"=>slmax, "textbox_min"=>emin, "textbox_max"=>emax)
 end
 

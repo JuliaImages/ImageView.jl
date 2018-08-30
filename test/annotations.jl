@@ -13,10 +13,10 @@ idx6 = annotate!(guidict, AnnotationPoints([(x+25, y-3), (x+24, y-3), (x+23, y-3
                                            shape='o', size=3, color=RGB(1,0,1),
                                            linecolor=RGB(0,0,0), scale=true))
 
-sleep(2)
+sleep(0.01)
 delete!(guidict, idx)
-sleep(0.5)
+sleep(0.01)
 
 img = testimage("lighthouse")
-guidict = imshow(img)
+guidict = imshow_now(img)
 scalebar(guidict, 30; x = 0.1, y = 0.05)
