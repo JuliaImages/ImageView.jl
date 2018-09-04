@@ -1,6 +1,8 @@
+(Sys.islinux() || Sys.iswindows()) && import ImageMagick # work around libz issues
 using ImageView
 using Images, OffsetArrays
-using Base.Test
+using Gtk
+using Test
 
 function imshow_now(args...; kwargs...)
     guidict = imshow(args...; kwargs...)

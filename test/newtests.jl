@@ -1,6 +1,8 @@
 using ImageView, TestImages, Colors, FixedPointNumbers, ImageCore, Reactive,
-      GtkReactive, AxisArrays, Gtk
-using Base.Test
+      GtkReactive, Gtk, IntervalSets
+using Test
+import AxisArrays
+using AxisArrays: Axis
 
 @testset "1d" begin
     img = rand(N0f8, 5)
@@ -18,19 +20,19 @@ end
     Reactive.run_till_now()
     sleep(1.0)  # give compilation a chance to catch up
 
-    @test getproperty(frame, :ratio, Float32) == 1.0
+    @test get_gtk_property(frame, :ratio, Float32) == 1.0
     push!(zr, (1:20, 8:10))  # The first one sometimes gets dropped. Reactive bug?
     Reactive.run_till_now()
     push!(zr, (1:20, 9:10))
     Reactive.run_till_now()
     sleep(1.0)
     @test value(zr).currentview.x == 9..10
-    @test getproperty(frame, :ratio, Float32) ≈ 0.1
+    @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     push!(zr, (9:10, 1:20))
     Reactive.run_till_now()
-    showall(win)
+    Gtk.showall(win)
     sleep(0.1)
-    @test getproperty(frame, :ratio, Float32) ≈ 10.0
+    @test get_gtk_property(frame, :ratio, Float32) ≈ 10.0
 
     destroy(win)
 
@@ -43,7 +45,7 @@ end
 # image display
 img_n0f8 = rand(N0f8, 3,3)
 imsd = imshow_now(img_n0f8; name="N0f8")
-@test getproperty(imsd["gui"]["window"], :title, String) == "N0f8"
+@test get_gtk_property(imsd["gui"]["window"], :title, String) == "N0f8"
 
 img_n0f16 = rand(N0f16, 3,3)
 imshow_now(img_n0f16; name="N0f16")
@@ -104,6 +106,8 @@ if Gtk.libgtk_version >= v"3.10"
         @test isa(guin["roi"]["slicedata"].axs[1], Axis{:z})
         guip = imshow_now(img; axes=(1,2), name="AxisArray Positional")
         @test isa(guip["roi"]["slicedata"].axs[1], Axis{3})
+        guip2 = imshow_now(img; axes=(1,3), name="AxisArray Positional")
+        @test isa(guip2["roi"]["slicedata"].axs[1], Axis{2})
 
         ## 3d images
         img = testimage("mri")
@@ -117,7 +121,7 @@ if Gtk.libgtk_version >= v"3.10"
 
         ## Two coupled images
         mriseg = RGB.(img)
-        mriseg[img .> 0.5] = colorant"red"
+        mriseg[img .> 0.5] .= colorant"red"
         # version 1
         guidata = imshow_now(img, axes=(1,2))
         zr = guidata["roi"]["zoomregion"]
@@ -130,7 +134,7 @@ if Gtk.libgtk_version >= v"3.10"
         gd = imshow_gui((200, 200), slicedata, (1,2))
         guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
         guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
-        showall(gd["window"])
+        Gtk.showall(gd["window"])
         sleep(0.01)
         @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
 

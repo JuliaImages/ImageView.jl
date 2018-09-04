@@ -43,7 +43,7 @@ function canvasbb(c)
     BoundingBox(1, sz[1], 1, sz[2])
 end
 function zoombb(zr)
-    inds = indices(value(zr))
+    inds = axes(value(zr))
     BoundingBox(first(inds[2]), last(inds[2]), first(inds[1]), last(inds[1]))
 end
 
@@ -172,7 +172,7 @@ mutable struct AnnotationLines{R<:Union{Real, Tuple{Real, Real}}, T}
     coordinate_order::Vector{Int}
 
     function AnnotationLines{R,T}(lines::T, z, t, linecolor, linewidth, coord_order_str) where {R,T}
-        ord = sortperm(Vector{UInt8}(coord_order_str))
+        ord = sortperm(codeunits(coord_order_str))
         @assert coord_order_str[ord] == "xxyy"
         new{R,T}(lines, z, t, linecolor, linewidth, ord)
     end
@@ -200,7 +200,7 @@ AnnotationLine(pt1::Tuple{Real,Real}, pt2::Tuple{Real,Real}; args...) =
     AnnotationLine((pt1, pt2); args...)
 
 function AnnotationLine(c1::Real, c2::Real, c3::Real, c4::Real; coord_order="xyxy", args...)
-    ord = sortperm(Vector{UInt8}(coord_order))
+    ord = sortperm(codeunits(coord_order))
     @assert coord_order[ord] == "xxyy"
     (x1,x2,y1,y2) = [c1,c2,c3,c4][ord]
     AnnotationLine((Float64(x1), Float64(y1)),
@@ -222,7 +222,7 @@ end
 
 function AnnotationBox(c1::Real, c2::Real, c3::Real, c4::Real; z = NaN, t = NaN,
                        color=RGB(1,1,1), linewidth=1.0, coord_order="xyxy")
-    ord = sortperm(Vector{UInt8}(coord_order))
+    ord = sortperm(codeunits(coord_order))
     @assert coord_order[ord] == "xxyy"
     (x1, x2, y1, y2) = [c1, c2, c3, c4][ord]
     (x1, x2) = minmax(x1, x2)
@@ -246,7 +246,7 @@ variants. Depends on the [`pixelspacing`](@ref) of `img`.
 """
 function normalized_lengths(imsl::AbstractMatrix, width, height)
     ps = pixelspacing(imsl)
-    inds = indices(imsl)
+    inds = axes(imsl)
     w = width/(ps[2]*length(inds[2]))
     h = height/(ps[1]*length(inds[1]))
     w, h

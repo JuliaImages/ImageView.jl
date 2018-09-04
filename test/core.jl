@@ -1,6 +1,8 @@
-using GtkReactive, AxisArrays, Images, ImageView
+using GtkReactive, Images, ImageView
 using ImageView: sliceinds
-using Base.Test
+using Test
+import AxisArrays
+using AxisArrays: Axis
 
 @testset "CLim" begin
     cl = Signal(CLim(0.0, 0.8))
@@ -18,7 +20,7 @@ end
 
 @testset "NaN and Inf" begin
     # Grayscale
-    A = collect(reshape(linspace(-0.1, 1.1, 25), (5, 5)))
+    A = collect(reshape(range(-0.1, stop=1.1, length=25), (5, 5)))
     A[2,2] = NaN
     A[3,3] = -Inf
     A[4,4] = Inf
@@ -46,7 +48,7 @@ end
     @test imgc == target
 
     # RGB
-    Ar = collect(reshape(linspace(-0.1, 1.1, 3*25), (3, 5, 5)))
+    Ar = collect(reshape(range(-0.1, stop=1.1, length=3*25), (3, 5, 5)))
     Arc = copy(Ar)
     Ar[1,2,2] = NaN
     Ar[2,3,3] = -Inf
@@ -86,7 +88,7 @@ end
     @test_throws MethodError sliceinds(B, (1:3, 1:3), Axis{:Y}(1), Axis{:Y}(1))
 
     A = rand(3,3,3,3)
-    zr = ZoomRegion(indices(A)[1:2])
+    zr = ZoomRegion(axes(A)[1:2])
     @test_throws TypeError sliceinds(A, (1:3, 1:3), Axis{3}(1))
     @test @inferred(sliceinds(A, (1:3, 1:3), Axis{3}(1), Axis{4}(1))) === (1:3, 1:3, 1, 1)
     @test @inferred(sliceinds(A, (1:3, 1:3), Axis{2}(1), Axis{4}(1))) === (1:3, 1, 1:3, 1)
@@ -103,10 +105,10 @@ end
 
 @testset "SliceData" begin
     A = reshape(1:9, 3, 3)
-    zr, sd = roi(indices(A), (1,2))
+    zr, sd = roi(axes(A), (1,2))
     v = @inferred(slice2d(A, value(zr), sd))
     @test v == A
-    zr, sd = roi(indices(A), (2,1))
+    zr, sd = roi(axes(A), (2,1))
     v = @inferred(slice2d(A, value(zr), sd))
     @test v == A'
 
@@ -117,7 +119,7 @@ end
                                 ((2, 1), view(A, :, :, 1)'),
                                 ((3, 1), view(A, :, 1, :)'),
                                 ((3, 2), view(A, 1, :, :)'))
-        zr, sd = roi(indices(A), slicedims)
+        zr, sd = roi(axes(A), slicedims)
         v = @inferred(slice2d(A, value(zr), sd))
         @test v == target
     end
@@ -135,7 +137,7 @@ end
                                 ((4, 2), view(A, 1, :, 1, :)'),
                                 ((4, 3), view(A, 1, 1, :, :)'),
                                 ((4, 1), view(A, :, 1, 1, :)'))
-        zr, sd = roi(indices(A), slicedims)
+        zr, sd = roi(axes(A), slicedims)
         v = @inferred(slice2d(A, value(zr), sd))
         @test v == target
     end
