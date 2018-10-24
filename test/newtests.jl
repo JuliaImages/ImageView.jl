@@ -87,6 +87,18 @@ end
     @test w <= ws && h <= hs
 end
 
+@testset "imshow!" begin
+    img = testimage("mri")
+    guidict = imshow(img[:,:,1])
+    c = guidict["gui"]["canvas"]
+    ImageView.imshow!(c, img[:,:,2])
+
+    zr = Signal(ZoomRegion(img[:,:,1]))
+    imgsig = Signal(img[:,:,1])
+    imshow(c, imgsig, zr)
+    push!(imgsig, img[:,:,8])
+end
+
 @testset "Orientation" begin
     img = [1 2; 3 4]
     guidict = imshow_now(img)

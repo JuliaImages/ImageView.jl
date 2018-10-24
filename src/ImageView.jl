@@ -60,6 +60,7 @@ imshow() = imshow(load(open_dialog("Pick an image to display")))
     imshow!(canvas, img) -> drawsignal
     imshow!(canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
     imshow!(frame::Frame, canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
+    imshow!(..., annotations=Signal(Dict{UInt,Any}()))
 
 Display the image `img`, in the specified `canvas`. Use the version
 with `zr` if you have already turned on rubber-banding or other
@@ -68,6 +69,8 @@ used for updating the canvas.
 
 If you supply `frame`, then the pixel aspect ratio will be set to that
 of `pixelspacing(img)`.
+
+With any of these forms, you may optionally supply `annotations`.
 
 This only creates the `draw` method for `canvas`; mouse- or key-based
 interactivity can be set up via [`imshow`](@ref) or, at a lower level,
@@ -81,8 +84,8 @@ using GtkReactive's tools:
 function imshow!(canvas::GtkReactive.Canvas{UserUnit},
                  imgsig::Signal,
                  zr::Signal{ZoomRegion{T}},
-                 annotations::Signal{Dict{UInt,Any}}) where T<:RInteger
-    draw(canvas, imgsig, anns) do cnvs, image, anns
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
+    draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
         draw_annotations(cnvs, anns)
@@ -93,7 +96,7 @@ function imshow!(frame::Frame,
                  canvas::GtkReactive.Canvas{UserUnit},
                  imgsig::Signal,
                  zr::Signal{ZoomRegion{T}},
-                 annotations::Signal{Dict{UInt,Any}}) where T<:RInteger
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
@@ -107,7 +110,7 @@ end
 # don't need `frame` variants of the remaining methods.
 function imshow!(canvas::GtkReactive.Canvas,
                  imgsig::Signal,
-                 annotations::Signal{Dict{UInt,Any}})
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, axes(image))
@@ -118,7 +121,7 @@ end
 # Simple non-interactive image display
 function imshow!(canvas::GtkReactive.Canvas,
                  img::AbstractMatrix,
-                 annotations::Signal{Dict{UInt,Any}})
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
     draw(canvas, annotations) do cnvs, anns
         copy!(cnvs, img)
         set_coordinates(cnvs, axes(img))
