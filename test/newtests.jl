@@ -43,47 +43,49 @@ end
 end
 
 # image display
-img_n0f8 = rand(N0f8, 3,3)
-imsd = imshow_now(img_n0f8; name="N0f8")
-@test get_gtk_property(imsd["gui"]["window"], :title, String) == "N0f8"
+@testset "Image display" begin
+    img_n0f8 = rand(N0f8, 3,3)
+    imsd = imshow_now(img_n0f8; name="N0f8")
+    @test get_gtk_property(imsd["gui"]["window"], :title, String) == "N0f8"
 
-img_n0f16 = rand(N0f16, 3,3)
-imshow_now(img_n0f16; name="N0f16")
+    img_n0f16 = rand(N0f16, 3,3)
+    imshow_now(img_n0f16; name="N0f16")
 
-img_rgb = rand(RGB{N0f8}, 3, 3)
-imshow_now(img_rgb; name="RGB{N0f8}")
+    img_rgb = rand(RGB{N0f8}, 3, 3)
+    imshow_now(img_rgb; name="RGB{N0f8}")
 
-img_int = rand(Int, 3,3)
-imshow_now(img_int; name="Int")
+    img_int = rand(Int, 3,3)
+    imshow_now(img_int; name="Int")
 
-img_float16 = rand(Float16, 3,3)
-imshow_now(img_float16; name="Float16")
+    img_float16 = rand(Float16, 3,3)
+    imshow_now(img_float16; name="Float16")
 
-img_float32 = rand(Float32, 3,3)
-img_float32[1,1] = NaN
-img_float32[2,1] = Inf
-img_float32[3,1] = -5
-imshow_now(img_float32; name="Float32")
+    img_float32 = rand(Float32, 3,3)
+    img_float32[1,1] = NaN
+    img_float32[2,1] = Inf
+    img_float32[3,1] = -5
+    imshow_now(img_float32; name="Float32")
 
-img_float64 = rand(Float64, 3,3)
-imshow_now(img_float64; name="Float64")
+    img_float64 = rand(Float64, 3,3)
+    imshow_now(img_float64; name="Float64")
 
-img_nan = fill(NaN, (3,3))
-imshow_now(img_nan; name="NaN")
+    img_nan = fill(NaN, (3,3))
+    imshow_now(img_nan; name="NaN")
 
-img_rgbfloat = rand(RGB{Float32}, 3, 3)
-imshow_now(img_rgbfloat; name="RGB{Float32}")
+    img_rgbfloat = rand(RGB{Float32}, 3, 3)
+    imshow_now(img_rgbfloat; name="RGB{Float32}")
 
-img = testimage("lighthouse")
-hlh = imshow_now(img, name="Lighthouse")
+    img = testimage("lighthouse")
+    hlh = imshow_now(img, name="Lighthouse")
 
-# a large image
-img = testimage("earth")
-hbig = imshow_now(img, name="Earth")
-win = hbig["gui"]["window"]
-w, h = size(win)
-ws, hs = screen_size(win)
-@test w <= ws && h <= hs
+    # a large image
+    img = testimage("earth")
+    hbig = imshow_now(img, name="Earth")
+    win = hbig["gui"]["window"]
+    w, h = size(win)
+    ws, hs = screen_size(win)
+    @test w <= ws && h <= hs
+end
 
 @testset "Orientation" begin
     img = [1 2; 3 4]
