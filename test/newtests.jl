@@ -93,9 +93,8 @@ end
     c = guidict["gui"]["canvas"]
     ImageView.imshow!(c, img[:,:,2])
 
-    zr = Signal(ZoomRegion(img[:,:,1]))
     imgsig = Signal(img[:,:,1])
-    imshow(c, imgsig, zr)
+    imshow(c, imgsig)
     push!(imgsig, img[:,:,8])
 end
 
