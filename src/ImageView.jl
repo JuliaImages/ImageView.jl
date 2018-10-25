@@ -11,7 +11,7 @@ import Images: scaleminmax
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
-export CLim, annotate!, canvasgrid, imshow, imshow_gui, imlink,
+export CLim, annotate!, canvasgrid, imshow, imshow!, imshow_gui, imlink,
        roi, scalebar, slice2d
 
 const AbstractGray{T} = Color{T,1}
@@ -60,6 +60,7 @@ imshow() = imshow(load(open_dialog("Pick an image to display")))
     imshow!(canvas, img) -> drawsignal
     imshow!(canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
     imshow!(frame::Frame, canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
+    imshow!(..., annotations=Signal(Dict{UInt,Any}()))
 
 Display the image `img`, in the specified `canvas`. Use the version
 with `zr` if you have already turned on rubber-banding or other
@@ -69,6 +70,8 @@ used for updating the canvas.
 If you supply `frame`, then the pixel aspect ratio will be set to that
 of `pixelspacing(img)`.
 
+With any of these forms, you may optionally supply `annotations`.
+
 This only creates the `draw` method for `canvas`; mouse- or key-based
 interactivity can be set up via [`imshow`](@ref) or, at a lower level,
 using GtkReactive's tools:
@@ -77,12 +80,28 @@ using GtkReactive's tools:
 - `init_zoom_scroll`
 - `init_pan_scroll`
 - `init_pan_drag`
+
+# Example
+
+```julia
+using ImageView, GtkReactive, Gtk.ShortNames, TestImages
+# Create a window with a canvas in it
+win = Window()
+c = canvas(UserUnit)
+push!(win, c)
+Gtk.showall(win)
+# Load images
+mri = testimage("mri")
+# Display the image
+imshow!(c, mri[:,:,1])
+# Update with a different image
+imshow!(c, mri[:,:,8])
 """
 function imshow!(canvas::GtkReactive.Canvas{UserUnit},
                  imgsig::Signal,
                  zr::Signal{ZoomRegion{T}},
-                 annotations::Signal{Dict{UInt,Any}}) where T<:RInteger
-    draw(canvas, imgsig, anns) do cnvs, image, anns
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
+    draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
         draw_annotations(cnvs, anns)
@@ -93,7 +112,7 @@ function imshow!(frame::Frame,
                  canvas::GtkReactive.Canvas{UserUnit},
                  imgsig::Signal,
                  zr::Signal{ZoomRegion{T}},
-                 annotations::Signal{Dict{UInt,Any}}) where T<:RInteger
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
@@ -107,7 +126,7 @@ end
 # don't need `frame` variants of the remaining methods.
 function imshow!(canvas::GtkReactive.Canvas,
                  imgsig::Signal,
-                 annotations::Signal{Dict{UInt,Any}})
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, axes(image))
@@ -118,7 +137,7 @@ end
 # Simple non-interactive image display
 function imshow!(canvas::GtkReactive.Canvas,
                  img::AbstractMatrix,
-                 annotations::Signal{Dict{UInt,Any}})
+                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
     draw(canvas, annotations) do cnvs, anns
         copy!(cnvs, img)
         set_coordinates(cnvs, axes(img))
@@ -251,7 +270,8 @@ function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
 end
 
 """
-    imshow_gui(canvassize, slicedata, gridsize=(1,1); name="ImageView", aspect=:auto) -> guidict
+    guidict = imshow_gui(canvassize; name="ImageView", aspect=:auto)
+    guidict = imshow_gui(canvassize, slicedata, gridsize=(1,1); name="ImageView", aspect=:auto)
 
 Create an image-viewer GUI. By default creates a single canvas, but
 with custom `gridsize` you can create a grid of canvases. `canvassize
@@ -334,6 +354,7 @@ function frame_canvas(aspect)
 end
 
 """
+    imshow(canvas, imgsig::Signal) -> guidict
     imshow(canvas, imgsig::Signal, zr::Signal{ZoomRegion}) -> guidict
     imshow(frame::Frame, canvas, imgsig::Signal, zr::Signal{ZoomRegion}) -> guidict
 
@@ -341,10 +362,29 @@ Display `imgsig` (a `Signal` of an image) in `canvas`, setting up
 panning and zooming. Optionally include a `frame` for preserving
 aspect ratio. `imgsig` must be two-dimensional (but can be a
 Signal-view of a higher-dimensional object).
+
+# Example
+
+```julia
+using ImageView, TestImages, Gtk
+mri = testimage("mri");
+# Create a canvas `c`. There are other approaches, like stealing one from a previous call
+# to `imshow`, or using GtkReactive directly.
+guidict = imshow_gui((300, 300))
+c = guidict["canvas"];
+# To see anything you have to call `showall` on the window (once)
+Gtk.showall(guidict["window"])
+# Create the image Signal
+imgsig = Signal(mri[:,:,1]);
+# Show it
+imshow(c, imgsig)
+# Now anytime you want to update, just push! a new image
+push!(imgsig, mri[:,:,8])
+```
 """
 function imshow(canvas::GtkReactive.Canvas{UserUnit},
                 imgsig::Signal,
-                zr::Signal{ZoomRegion{T}},
+                zr::Signal{ZoomRegion{T}}=Signal(ZoomRegion(value(imgsig))),
                 anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
