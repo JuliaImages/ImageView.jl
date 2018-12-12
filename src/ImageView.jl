@@ -205,8 +205,11 @@ function imshow(img::AbstractArray, clim,
     roidict = imshow(guidict["frame"], guidict["canvas"], img,
                      wrap_signal(clim), zr, sd, anns)
 
-    Gtk.showall(guidict["window"])
-    Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
+    win = guidict["window"]
+    Gtk.showall(win)
+    dct = Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
+    GtkReactive.gc_preserve(win, dct)
+    return dct
 end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
@@ -251,8 +254,11 @@ function imshow(img,
 
     roidict = imshow(guidict["frame"], guidict["canvas"], img, zr, sd, anns)
 
-    Gtk.showall(guidict["window"])
-    Dict("gui"=>guidict, "roi"=>roidict)
+    win = guidict["window"]
+    Gtk.showall(win)
+    dct = Dict("gui"=>guidict, "roi"=>roidict)
+    GtkReactive.gc_preserve(win, dct)
+    return dct
 end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
@@ -266,6 +272,7 @@ function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
 
     roidict = imshow(frame, canvas, imgsig, zr, anns)
     roidict["slicedata"] = sd
+    GtkReactive.gc_preserve(frame, roidict)
     roidict
 end
 
