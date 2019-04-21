@@ -1,7 +1,0 @@
-TestImages
-@linux ImageMagick
-@windows ImageMagick
-@osx QuartzImageIO
-OffsetArrays
-ImageCore
-Reactive
