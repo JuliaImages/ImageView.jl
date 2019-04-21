@@ -2,7 +2,7 @@ language: julia
 sudo: true
 dist: trusty
 os:
-    - linux
+  #- linux
     - osx
 addons:
     apt:
@@ -12,22 +12,26 @@ addons:
             - libgtk-3-0
     homebrew:
       packages:
-        - xquartz
+#        - xquartz
         - gtk+3
       brewfile: true
       update: true
 julia:
-    - 0.7
+  #- 0.7
     - 1.0
-    - 1.1
-    - nightly
+      #  - 1.1
+      #- nightly
 notifications:
   email: false
 
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
     - julia -e 'using Pkg; Pkg.build()'
-    - xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)'
+    - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+          ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )&
+          julia -e 'using Pkg; Pkg.test("ImageView")'; fi
+    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
+          xvfb-run julia -e 'using Pkg; Pkg.test("ImageView")'; fi
 
 after_success:
     - julia --color=yes -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
