@@ -487,7 +487,7 @@ default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 # default_slices(img) = ntuple(d->PlayerInfo(Signal(1), axes(img, d+2)), ndims(img)-2)
 
 function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:GrayLike}
-    return [map(filterwhen(enabled, defaultimg, img); name="histsig") do image
+    return [map(filterwhen(enabled, defaultimg, img), enabled; name="histsig") do image, _  # `enabled` fixes issue #168
         cl = value(clim)
         smin = float(nanz(min(minfinite(image), cl.min)))
         smax = float(nanz(max(maxfinite(image), cl.max)))
