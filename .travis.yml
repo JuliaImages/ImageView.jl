@@ -9,6 +9,12 @@ addons:
             - xvfb
             - xauth
             - libgtk-3-0
+    homebrew:
+      packages:
+        - xquartz
+        - gtk+3
+      brewfile: true
+      update: true
 julia:
     - 0.7
     - 1.0
