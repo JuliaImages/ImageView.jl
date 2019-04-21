@@ -18,15 +18,16 @@ RoundingIntegers = "d5f540fe-1c90-5db3-b776-2e2f362d9394"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-julia = ">= 0.7"
-Images = ">= 0.6.0"
-GtkReactive = ">= 0.5.1"
-Gtk = ">= 0.11"
 Graphics = ">= 0.2"
+Gtk = ">= 0.11"
+GtkReactive = ">= 0.5.1"
+Images = ">= 0.6.0"
+julia = ">= 0.7"
 
 [extras]
 ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
 ImageMagick = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 QuartzImageIO = "dca85d43-d64c-5e67-8c65-017450d5d020"
 Reactive = "a223df75-4e93-5b7c-acf9-bdd599c0f4de"
@@ -34,4 +35,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 
 [targets]
-test = ["ImageCore", "ImageMagick", "OffsetArrays", "QuartzImageIO", "Reactive", "Test", "TestImages"]
+test = ["ImageCore", "ImageMagick", "IntervalSets", "OffsetArrays", "QuartzImageIO", "Reactive", "Test", "TestImages"]
