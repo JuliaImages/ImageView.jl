@@ -3,6 +3,7 @@ sudo: true
 dist: trusty
 os:
     - linux
+    - osx
 addons:
     apt:
         packages:
