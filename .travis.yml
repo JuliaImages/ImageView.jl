@@ -12,9 +12,15 @@ addons:
 julia:
     - 0.7
     - 1.0
+    - 1.1
+    - nightly
 notifications:
   email: false
+
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("ImageView")'
-    - xvfb-run julia -e 'using Pkg; Pkg.test("ImageView")'
+    - julia -e 'using Pkg; Pkg.build()'
+    - xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)'
+
+after_success:
+    - julia --color=yes -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
