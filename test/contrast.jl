@@ -22,5 +22,12 @@ using Test
             @test isa(ret, Dict)
             Gtk.destroy(ret["window"])
         end
+        # issue #168
+        h = value(value(histsig)[1])
+        fill!(h.weights, 0)
+        push!(enabled, false)
+        yield()
+        h = value(value(histsig)[1])
+        @test sum(h.weights) > 0
     end
 end
