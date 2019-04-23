@@ -2,7 +2,7 @@ language: julia
 sudo: true
 dist: trusty
 os:
-    - linux
+    - osx
 addons:
     apt:
         packages:
@@ -10,10 +10,7 @@ addons:
             - xauth
             - libgtk-3-0
 julia:
-    - 0.7
     - 1.0
-    - 1.1
-    - nightly
 notifications:
   email: false
 
