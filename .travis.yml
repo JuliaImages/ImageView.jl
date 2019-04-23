@@ -4,11 +4,6 @@ dist: trusty
 os:
     - osx
 addons:
-    apt:
-        packages:
-            - xvfb
-            - xauth
-            - libgtk-3-0
     homebrew:
         packages:
             - gtk+3
@@ -29,10 +24,11 @@ before_install:
 
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'using Pkg; Pkg.build()'
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
-        xvfb-run julia -e 'using Pkg; Pkg.test("ImageView")';
+        xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
-        julia -e 'using Pkg; Pkg.test("ImageView")'; fi
+        julia -e 'using Pkg; Pkg.test(coverage=true)'; fi
 
 after_success:
     - julia --color=yes -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
