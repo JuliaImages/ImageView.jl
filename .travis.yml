@@ -32,10 +32,9 @@ before_install:
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
-          xvfb-run julia -e 'using Pkg; Pkg.test("ImageView")'
-      else
-          julia -e 'using Pkg; Pkg.test("ImageView")'
-      fi
+          xvfb-run julia -e 'using Pkg; Pkg.test("ImageView")';
+      elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
+          julia -e 'using Pkg; Pkg.test("ImageView")'; fi
 
 after_success:
     - julia --color=yes -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
