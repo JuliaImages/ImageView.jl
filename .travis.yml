@@ -25,7 +25,7 @@ before_script:
         julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(\`unlink glib\`); Homebrew.brew(\`install --verbose --build-from-source ${GLIB_SOURCE_URL}\`)";
         julia -e "using Pkg, Homebrew; Homebrew.brew(\`switch fontconfig ${FONTCONFIG_VERSION}\`)";
         ${FONTCONFIG_DIR}/fc-cache -frv;
-        julia -e 'using Pkg; Pkg.build("Homebrew"); Pkg.build("Cairo")'
+        julia -e 'using Pkg; Pkg.build("Homebrew"); Pkg.build("Cairo")';
     fi
     
 script:
