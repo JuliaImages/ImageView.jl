@@ -11,9 +11,7 @@ julia:
 notifications:
   email: false
 env:
-  - GLIB_SOURCE_URL="https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb"
-  - FONTCONFIG_VERSION="2.13.1"
-  - FONTCONFIG_DIR=/Users/travis/.julia/v${TRAVIS_JULIA_VERSION}/Homebrew/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin
+  - GLIB_SOURCE_URL="https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb" FONTCONFIG_VERSION="2.13.1" FONTCONFIG_DIR=/Users/travis/.julia/v${TRAVIS_JULIA_VERSION}/Homebrew/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin
 
 # install specific glib version 2.58 using Homebrew.jl solves Segmentation fault 11; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
 # reinstall fontconfig using Homebrew.jl solves _jl_libcairo error; see https://github.com/JuliaPackaging/Homebrew.jl/issues/229
