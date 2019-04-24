@@ -21,13 +21,15 @@ before_script:
         julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(\`unlink glib\`); Homebrew.brew(\`install --verbose --build-from-source ${GLIB_SOURCE_URL}\`)";
     fi
     
-# install specific glib version using Homebrew.jl; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
+# install specific glib version 2.58 using Homebrew.jl solves Segmentation fault 11; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
+# reinstall fontconfig using Homebrew.jl solves _jl_libcairo error; see https://github.com/JuliaGraphics/Cairo.jl/issues/165
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia -e 'using Pkg; Pkg.build()'
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
         xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
+        julia -e 'using Pkg, Homebrew; Homebrew.brew(`reinstall fontconfig`); Pkg.build("Cairo")';
         julia -e 'using Pkg; Pkg.test(coverage=true)'; fi
 
 after_success:
