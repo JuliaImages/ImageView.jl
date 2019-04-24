@@ -10,13 +10,15 @@ julia:
   - 1.0
 notifications:
   email: false
+env:
+  - GLIB_SOURCE_URL="https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb"
 
 before_script:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
         ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok; )&
     fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        julia -e 'using Pkg; Pkg.add("Homebrew"); using Homebrew; Homebrew.brew(`switch glib 2.58.3`)';
+        julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(`unlink glib`); Homebrew.brew(`install --verbose --build-from-source $GLIB_SOURCE_URL`)";
     fi
     
 # install specific glib version using Homebrew.jl; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
