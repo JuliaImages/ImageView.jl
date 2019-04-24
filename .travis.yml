@@ -14,7 +14,7 @@ notifications:
 # install specific glib version; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        brew unlink glib
+        brew unlink glib;
         brew install --verbose --build-from-source 'https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb' ;
         ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok; )&
     fi
