@@ -1,25 +1,22 @@
 language: julia
 sudo: true
 dist: trusty
-os:
-    - osx
+os: osx
 addons:
-    homebrew:
-        packages:
-            - gtk+3
-        brewfile: true
-        update: true
+  homebrew:
+    packages:
+    - gtk+3
+    update: true
 julia:
-    - 1.0
+  - 1.0
 notifications:
   email: false
-
 
 before_install:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
         # install specific glib version; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
-        brew install --verbose --build-from-source https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb
-        ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok )&
+        brew install --verbose --build-from-source 'https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb' ;
+        ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok; )&
     fi
 
 script:
