@@ -29,7 +29,7 @@ script:
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
         xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
-        julia -e 'using Pkg, Homebrew; Homebrew.brew(`reinstall fontconfig`); Pkg.build("Cairo")';
+        julia -e 'using Pkg, Homebrew; Homebrew.brew(`unlink fontconfig`); Homebrew.brew(`reinstall fontconfig`); Pkg.build("Cairo")';
         julia -e 'using Pkg; Pkg.test(coverage=true)'; fi
 
 after_success:
