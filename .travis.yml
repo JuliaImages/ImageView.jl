@@ -12,24 +12,28 @@ notifications:
   email: false
 env:
   - GLIB_SOURCE_URL="https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb"
+  - FONTCONFIG_VERSION="2.13.1"
+  - FONTCONFIG_DIR=/Users/travis/.julia/v${TRAVIS_JULIA_VERSION}/Homebrew/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin
 
+# install specific glib version 2.58 using Homebrew.jl solves Segmentation fault 11; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
+# reinstall fontconfig using Homebrew.jl solves _jl_libcairo error; see https://github.com/JuliaPackaging/Homebrew.jl/issues/229
 before_script:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
         ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok; )&
     fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
         julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(\`unlink glib\`); Homebrew.brew(\`install --verbose --build-from-source ${GLIB_SOURCE_URL}\`)";
+        julia -e "using Pkg, Homebrew; Homebrew.brew(\`switch fontconfig ${FONTCONFIG_VERSION}\`)";
+        ${FONTCONFIG_DIR}/fc-cache -frv;
+        julia -e 'using Pkg; Pkg.build("Homebrew"); Pkg.build("Cairo")'
     fi
     
-# install specific glib version 2.58 using Homebrew.jl solves Segmentation fault 11; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
-# reinstall fontconfig using Homebrew.jl solves _jl_libcairo error; see https://github.com/JuliaGraphics/Cairo.jl/issues/165
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia -e 'using Pkg; Pkg.build()'
   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
         xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
-        julia -e 'using Pkg, Homebrew; Homebrew.brew(`unlink fontconfig`); Homebrew.brew(`reinstall fontconfig`); Pkg.build("Cairo")';
         julia -e 'using Pkg; Pkg.test(coverage=true)'; fi
 
 after_success:
