@@ -18,7 +18,7 @@ before_script:
         ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok; )&
     fi
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-        julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(`unlink glib`); Homebrew.brew(`install --verbose --build-from-source $GLIB_SOURCE_URL`)";
+        julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(\`unlink glib\`); Homebrew.brew(\`install --verbose --build-from-source ${GLIB_SOURCE_URL}\`)";
     fi
     
 # install specific glib version using Homebrew.jl; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
