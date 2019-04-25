@@ -25,6 +25,9 @@ before_script:
         /Users/travis/.julia/packages/Homebrew/*/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin/fc-cache -frv;
         julia -e 'using Pkg; Pkg.build("Homebrew"); Pkg.build("Cairo")';
     fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+        julia -e 'using Cairo';
+    fi
     
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
