@@ -18,20 +18,20 @@ end
     @test isa(frame, Gtk.GtkAspectFrameLeaf)
     zr = guidict["roi"]["zoomregion"]
     Reactive.run_till_now()
-    sleep(1.0)  # give compilation a chance to catch up
+    sleep(5)  # give compilation a chance to catch up
 
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
     push!(zr, (1:20, 8:10))  # The first one sometimes gets dropped. Reactive bug?
     Reactive.run_till_now()
     push!(zr, (1:20, 9:10))
     Reactive.run_till_now()
-    sleep(1.0)
+    sleep(5)
     @test value(zr).currentview.x == 9..10
     @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     push!(zr, (9:10, 1:20))
     Reactive.run_till_now()
     Gtk.showall(win)
-    sleep(0.1)
+    sleep(5)
     @test get_gtk_property(frame, :ratio, Float32) ≈ 10.0
 
     destroy(win)

@@ -9,36 +9,8 @@ os: osx
 julia:
   - 0.7
   - 1.0
-  - 1.1
-  - nightly
 notifications:
   email: false
-# env:
-#   - GLIB_SOURCE_URL="https://raw.githubusercontent.com/Homebrew/homebrew-core/05871cb0394f78ef25a5c1c071456d0f1e4be4fe/Formula/glib.rb" FONTCONFIG_VERSION="2.13.1"
-
-# install specific glib version 2.58 using Homebrew.jl solves Segmentation fault 11; see https://github.com/JuliaGraphics/Cairo.jl/issues/271
-# reinstall fontconfig using Homebrew.jl solves _jl_libcairo error; see https://github.com/JuliaPackaging/Homebrew.jl/issues/229
-# before_script:
-#   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-#         ( sudo Xvfb :99 -ac -screen 0 1024x768x8; echo ok; )&
-#     fi
-#   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-#         julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(\`unlink glib\`); Homebrew.brew(\`install --verbose --build-from-source ${GLIB_SOURCE_URL}\`)";
-#         julia -e "using Pkg, Homebrew; Homebrew.brew(\`switch fontconfig ${FONTCONFIG_VERSION}\`)";
-#         /Users/travis/.julia/packages/Homebrew/*/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin/fc-cache -frv;
-#         julia -e 'using Pkg; Pkg.build("Homebrew"); Pkg.build("Cairo")';
-#     fi
-#   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-#         julia -e 'using Cairo';
-#     fi
-    
-# script:
-#   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#   - julia -e 'using Pkg; Pkg.build()'
-#   - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then 
-#         xvfb-run julia -e 'using Pkg; Pkg.test(coverage=true)';
-#     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then 
-#         julia -e 'using Pkg; Pkg.test(coverage=true)'; fi
 
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
