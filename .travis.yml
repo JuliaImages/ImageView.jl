@@ -22,7 +22,7 @@ before_script:
   - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
         julia -e "using Pkg; Pkg.add(\"Homebrew\"); using Homebrew; Homebrew.brew(\`unlink glib\`); Homebrew.brew(\`install --verbose --build-from-source ${GLIB_SOURCE_URL}\`)";
         julia -e "using Pkg, Homebrew; Homebrew.brew(\`switch fontconfig ${FONTCONFIG_VERSION}\`)";
-        /Users/travis/.julia/v${TRAVIS_JULIA_VERSION}/Homebrew/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin/fc-cache -frv;
+        /Users/travis/.julia/packages/Homebrew/*/deps/usr/Cellar/fontconfig/${FONTCONFIG_VERSION}/bin/fc-cache -frv;
         julia -e 'using Pkg; Pkg.build("Homebrew"); Pkg.build("Cairo")';
     fi
     
