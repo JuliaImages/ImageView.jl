@@ -156,7 +156,7 @@ using ImageView, GtkReactive, TestImages, Colors
 # Prepare the data
 mri = testimage("mri")
 mriseg = RGB.(mri)
-mriseg[mri .> 0.5] = colorant"red"
+mriseg[mri .> 0.5] .= colorant"red"
 ```
 
 Now we display the images:
