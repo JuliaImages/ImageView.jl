@@ -10,9 +10,8 @@ addons:
             - xauth
             - libgtk-3-0
 julia:
-    - 0.7
     - 1.0
-    - 1.1
+    - 1.3
     - nightly
 notifications:
   email: false
