@@ -84,7 +84,7 @@ end
     win = hbig["gui"]["window"]
     w, h = size(win)
     ws, hs = screen_size(win)
-    @test w <= ws && h <= hs
+    !Sys.iswindows() && @test w <= ws && h <= hs
 end
 
 @testset "imshow!" begin
