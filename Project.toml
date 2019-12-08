@@ -1,6 +1,6 @@
 name = "ImageView"
 uuid = "86fae568-95e7-573e-a6b2-d8a6b900c9ef"
-version = "0.9.0"
+version = "0.10.0"
 
 [deps]
 AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
@@ -18,11 +18,20 @@ RoundingIntegers = "d5f540fe-1c90-5db3-b776-2e2f362d9394"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-julia = ">= 0.7"
-Images = ">= 0.6.0"
-GtkReactive = ">= 0.5.1"
-Gtk = ">= 0.11"
-Graphics = ">= 0.2"
+AxisArrays = "0.3"
+Cairo = "0.6, 0.7, 0.8, 1"
+ColorVectorSpace = "0.6, 0.7"
+Colors = "0.9"
+FileIO = "1"
+FixedPointNumbers = "0.6.1"
+Graphics = "0.2, 0.3, 0.4, 1"
+Gtk = "0.16, 0.17, 0.18, 1"
+GtkReactive = "0.5.1, 0.6, 0.7, 1"
+Images = "0.15, 0.16, 0.17, 0.18, 0.19"
+MappedArrays = "0.2"
+RoundingIntegers = "0.2"
+StatsBase = "0.28, 0.29, 0.30, 0.31, 0.32"
+julia = "1"
 
 [extras]
 ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
