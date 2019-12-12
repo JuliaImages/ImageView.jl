@@ -4,7 +4,7 @@ using Images, OffsetArrays
 using Gtk
 using Test
 
-function imshow_now(args...; kwargs...)
+function imshow_now(@nospecialize(args...); @nospecialize(kwargs...))
     guidict = imshow(args...; kwargs...)
     Gtk.showall(guidict["gui"]["window"])
     sleep(0.01)
