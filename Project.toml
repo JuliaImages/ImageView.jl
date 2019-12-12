@@ -20,7 +20,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [compat]
 AxisArrays = "0.3"
 Cairo = "0.6, 0.7, 0.8, 1"
-ColorVectorSpace = "0.6, 0.7"
+ColorVectorSpace = "0.6, 0.7, 0.8"
 Colors = "0.9"
 FileIO = "1"
 FixedPointNumbers = "0.6.1"
