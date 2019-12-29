@@ -1,6 +1,4 @@
 # Once this stabilizes, migrate to a Graphics layer? Only if that supports text, which seems unlikely.
-using Colors
-using Graphics, Cairo
 
 function annotate!(guidict::Dict, ann; anchored::Bool=true)
     c, zr = guidict["gui"]["canvas"], guidict["roi"]["zoomregion"]

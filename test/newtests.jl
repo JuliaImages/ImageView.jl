@@ -1,4 +1,4 @@
-using ImageView, TestImages, Colors, FixedPointNumbers, ImageCore, Reactive,
+using ImageView, TestImages, ImageCore, Reactive,
       GtkReactive, Gtk, IntervalSets
 using Test
 import AxisArrays
