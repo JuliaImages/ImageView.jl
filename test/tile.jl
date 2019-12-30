@@ -1,5 +1,5 @@
 import ImageView
-using Colors, Gtk.ShortNames
+using Images, Gtk.ShortNames
 using TestImages
 
 grid, frames, c = ImageView.canvasgrid((2,2))

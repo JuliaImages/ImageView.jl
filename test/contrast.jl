@@ -1,4 +1,4 @@
-using ImageView, FixedPointNumbers, Reactive, Colors
+using ImageView, ImageCore, Reactive
 using Test
 
 @testset "contrast GUI" begin

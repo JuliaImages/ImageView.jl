@@ -1,8 +1,8 @@
 module ImageView
 
-using FixedPointNumbers, Colors, ColorVectorSpace, Images, StatsBase
+using Images, StatsBase
 using MappedArrays, RoundingIntegers
-using Gtk.ShortNames, GtkReactive, Graphics
+using Gtk.ShortNames, GtkReactive, Graphics, Cairo
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
 import AxisArrays
 using AxisArrays: Axis, axisnames, axisvalues

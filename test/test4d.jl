@@ -1,6 +1,5 @@
 import Images, AxisArrays
 using AxisArrays: Axis
-using Colors
 
 # Create a cone in 3d that changes color over time
 sz = [201, 301, 31]

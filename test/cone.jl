@@ -3,7 +3,7 @@
 
 module ConeModule
 
-using FixedPointNumbers, Colors, ImageCore, Cairo, Reactive, ImageView
+using ImageCore, Cairo, Reactive, ImageView
 using Base: tail
 
 export Cone
@@ -74,7 +74,7 @@ filtervec(::Tuple{}, ::Tuple{}) = ()
 
 end
 
-using Colors, FixedPointNumbers, GtkReactive, ImageView
+using ImageCore, GtkReactive, ImageView
 
 ## Create an object and visualize it
 c = ConeModule.Cone((201, 301, 31), rand(RGB{N0f8}, 60))

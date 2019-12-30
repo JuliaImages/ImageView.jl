@@ -151,7 +151,7 @@ to see some of the options. We can use these extra arguments to couple
 the zoom and slice regions between two images. Let's make a "fake" image encoding the segmentation of an image:
 
 ```julia
-using ImageView, GtkReactive, TestImages, Colors
+using ImageView, GtkReactive, TestImages, Images
 
 # Prepare the data
 mri = testimage("mri")
@@ -214,7 +214,7 @@ like `50μm`.
 The remaining examples are for fixed annotations. Here is a demonstration:
 
 ```julia
-using Images, Colors, ImageView
+using Images, ImageView
 z = ones(10,50);
 y = 8; x = 2;
 z[y,x] = 0
