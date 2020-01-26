@@ -277,20 +277,23 @@ function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
 end
 
 """
-    guidict = imshow_gui(canvassize; name="ImageView", aspect=:auto)
-    guidict = imshow_gui(canvassize, slicedata, gridsize=(1,1); name="ImageView", aspect=:auto)
+    guidict = imshow_gui(canvassize, gridsize=(1,1); name="ImageView", aspect=:auto, slicedata=SliceData{false}())
 
 Create an image-viewer GUI. By default creates a single canvas, but
-with custom `gridsize` you can create a grid of canvases. `canvassize
-= (szx, szy)` describes the desired size of the (or each)
-canvas. `slicedata` is an object created by [`roi`](@ref) that encodes
+with custom `gridsize = (nx, ny)` you can create a grid of canvases.
+`canvassize = (szx, szy)` describes the desired size of the (or each) canvas.
+
+Optionally provide a `name` for the window.
+`aspect` should be `:auto` or `:none`, with the former preserving the pixel aspect ratio
+as the window is resized.
+`slicedata` is an object created by [`roi`](@ref) that encodes
 the necessary information for creating player widgets for viewing
 multidimensional images.
 """
 function imshow_gui(canvassize::Tuple{Int,Int},
-                    sd::SliceData=SliceData{false}(),
                     gridsize::Tuple{Int,Int} = (1,1);
-                    name = "ImageView", aspect=:auto)
+                    name = "ImageView", aspect=:auto,
+                    slicedata::SliceData=SliceData{false}())
     winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
     win = Window(name, winsize...)
     window_wrefs[win] = nothing
@@ -314,8 +317,8 @@ function imshow_gui(canvassize::Tuple{Int,Int},
                    "canvas"=>canvases)
 
     # Add the player controls
-    if !isempty(sd)
-        players = [player(sd.signals[i], axisvalues(sd.axs[i])[1]; id=i) for i = 1:length(sd)]
+    if !isempty(slicedata)
+        players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
         guidict["players"] = players
         hbox = Box(:h)
         for p in players
@@ -326,6 +329,9 @@ function imshow_gui(canvassize::Tuple{Int,Int},
 
     guidict
 end
+
+imshow_gui(canvassize::Tuple{Int,Int}, slicedata::SliceData, args...; kwargs...) =
+    imshow_gui(canvassize, args...; slicedata=slicedata, kwargs...)
 
 fullsize(zr::ZoomRegion) =
     map(i->length(UnitRange{Int}(i)), (zr.fullview.y, zr.fullview.x))

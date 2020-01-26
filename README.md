@@ -106,17 +106,24 @@ values into the text boxes.
 
 `ImageView.closeall()` closes all open windows.
 
-You can place multiple images in the same window using `canvasgrid`:
+You can place multiple images in the same window using `imshow_gui`:
 ```
 using ImageView, TestImages, Gtk.ShortNames
-grid, frames, canvases = canvasgrid((1,2))  # 1 row, 2 columns
+gui = imshow_gui((300, 300), (2, 1))  # 2 columns, 1 row of images (each initially 300×300)
+canvases = gui["canvas"]
 imshow(canvases[1,1], testimage("lighthouse"))
 imshow(canvases[1,2], testimage("mandrill"))
-win = Window(grid)
-Gtk.showall(win)
+Gtk.showall(gui["window"])
 ```
 
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
+
+`gui["window"]` returns the window; `gui["canvas"]` either returns a single canvas
+(if there is just one), or an array if you've specified a grid of canvases.
+
+`Gtk.showall(win)` is sometimes needed when using the lower-level utilities of this
+package. Generally you should call it after you've finished assembling the entire window,
+so as to avoid redraws with each subsequent change.
 
 ### The dictionary and region-of-interest manipulations
 
@@ -177,7 +184,7 @@ change in the other.
 Alternatively, you can place both displays in a single window:
 ```julia
 zr, slicedata = roi(mri, (1,2))
-gd = imshow_gui((200, 200), slicedata, (1,2))
+gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
 imshow(gd["frame"][1,1], gd["canvas"][1,1], mri, nothing, zr, slicedata)
 imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
 Gtk.showall(gd["window"])
