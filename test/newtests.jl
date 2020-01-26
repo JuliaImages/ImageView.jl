@@ -144,7 +144,7 @@ if Gtk.libgtk_version >= v"3.10"
 
         # version 2
         zr, slicedata = roi(img, (1,2))
-        gd = imshow_gui((200, 200), slicedata, (1,2))
+        gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
         guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
         guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
         Gtk.showall(gd["window"])

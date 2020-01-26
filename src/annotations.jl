@@ -1,15 +1,22 @@
 # Once this stabilizes, migrate to a Graphics layer? Only if that supports text, which seems unlikely.
 
+annotations() = Signal(Dict{UInt,Any}())
+
 function annotate!(guidict::Dict, ann; anchored::Bool=true)
-    c, zr = guidict["gui"]["canvas"], guidict["roi"]["zoomregion"]
+    c, roi, anns = guidict["gui"]["canvas"], guidict["roi"], guidict["annotations"]
+    annotate!(anns, c, roi, ann; anchored=anchored)
+end
+
+function annotate!(anns::Signal{Dict{UInt,Any}}, c::GtkReactive.Canvas, roi::Dict{String}, ann; anchored::Bool=true)
     if anchored
+        zr = roi["zoomregion"]
         annf = AnchoredAnnotation((_)->canvasbb(c), (_)->zoombb(zr), ann)
     else
         annf = FloatingAnnotation((_)->canvasbb(c), ann)
     end
     h = hash(annf)
-    add_annotation!(guidict["annotations"], h=>annf)
-    AnnotationHandle(annf, h)
+    add_annotation!(anns, h=>annf)
+    return AnnotationHandle(annf, h)
 end
 
 function add_annotation!(anns::Signal{Dict{UInt,Any}}, p::Pair)
