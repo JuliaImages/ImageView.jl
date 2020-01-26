@@ -169,32 +169,35 @@ Finally, you may specify [`GtkReactive.ZoomRegion`](@ref) and
 [`SliceData`](@ref) signals. See also [`roi`](@ref), as well as any
 `annotations` that you wish to apply.
 """
-function imshow(@nospecialize(img::AbstractArray);
+function imshow(img::AbstractArray;
                 axes=default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
                 kwargs...)
+    @nospecialize
     imgmapped = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
     zr, sd = roi(imgmapped, axes)
     v = slice2d(imgmapped, value(zr), sd)
     imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect)
 end
 
-imshow(@nospecialize(img::AbstractVector); kwargs...) = imshow(reshape(img, :, 1); kwargs...)
+imshow(img::AbstractVector; kwargs...) = (@nospecialize; imshow(reshape(img, :, 1); kwargs...))
 
-function imshow(c::GtkReactive.Canvas, @nospecialize(img::AbstractMatrix), anns=annotations();
-                kwargs...)
+function imshow(c::GtkReactive.Canvas, img::AbstractMatrix, anns=annotations(); kwargs...)
+    @nospecialize
     f = parent(widget(c))
     imshow(f, c, img, default_clim(img), roi(img, default_axes(img))..., anns; kwargs...)
 end
 
-function imshow(@nospecialize(img::AbstractArray), clim;
+function imshow(img::AbstractArray, clim;
                 axes = default_axes(img), name="ImageView", aspect=:auto)
+    @nospecialize
     imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect)
 end
 
-function imshow(@nospecialize(img::AbstractArray), clim,
+function imshow(img::AbstractArray, clim,
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns=annotations();
                 name="ImageView", aspect=:auto) where T
+    @nospecialize
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
     csz = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
@@ -214,10 +217,12 @@ function imshow(@nospecialize(img::AbstractArray), clim,
 end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                @nospecialize(img::AbstractArray), clim::Union{Nothing,Signal{<:CLim}},
+                img::AbstractArray, clim::Union{Nothing,Signal{<:CLim}},
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
+    @nospecialize
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
+        @nospecialize
         while length(s) < 2
             s = (s..., 1)
         end
@@ -238,16 +243,18 @@ end
 # For things that are not AbstractArrays, we don't offer the clim
 # option.  We also don't display hoverinfo, as there is no guarantee
 # that one can quickly compute intensities at a point.
-function imshow(@nospecialize(img);
+function imshow(img;
                 axes = default_axes(img), name="ImageView", aspect=:auto)
+    @nospecialize
     zr, sd = roi(img, axes)
     imshow(img, zr, sd; name=name, aspect=aspect)
 end
 
-function imshow(@nospecialize(img),
+function imshow(img,
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns=annotations();
                 name="ImageView", aspect=:auto) where T
+    @nospecialize
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
     csz = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
@@ -263,9 +270,11 @@ function imshow(@nospecialize(img),
 end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                @nospecialize(img), zr::Signal{ZoomRegion{T}}, sd::SliceData,
+                img, zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
+    @nospecialize
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
+        @nospecialize
         slice2d(img, r, sd)
     end
     set_aspect!(frame, value(imgsig))
@@ -397,9 +406,10 @@ push!(imgsig, mri[:,:,8])
 ```
 """
 function imshow(canvas::GtkReactive.Canvas{UserUnit},
-                @nospecialize(imgsig::Signal),
+                imgsig::Signal,
                 zr::Signal{ZoomRegion{T}}=Signal(ZoomRegion(value(imgsig))),
                 anns::Annotations=annotations()) where T<:RInteger
+    @nospecialize
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
     pans = init_pan_scroll(canvas, zr)
@@ -414,9 +424,10 @@ end
 
 function imshow(frame::Frame,
                 canvas::GtkReactive.Canvas{UserUnit},
-                @nospecialize(imgsig::Signal),
+                imgsig::Signal,
                 zr::Signal{ZoomRegion{T}},
                 anns::Annotations=annotations()) where T<:RInteger
+    @nospecialize
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
     pans = init_pan_scroll(canvas, zr)
@@ -435,7 +446,8 @@ end
 Display `img`, but showing the pixel's `label` rather than the color
 value in the status bar.
 """
-function imshowlabeled(@nospecialize(img::AbstractArray), @nospecialize(label::AbstractArray); proplist...)
+function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
+    @nospecialize
     axes(img) == axes(label) || throw(DimensionMismatch("axes $(axes(label)) of label array disagree with axes $(axes(img)) of the image"))
     guidict = imshow(img; proplist...)
     gui = guidict["gui"]
@@ -447,7 +459,7 @@ function imshowlabeled(@nospecialize(img::AbstractArray), @nospecialize(label::A
     guidict
 end
 
-function hoverinfo(lbl, btn, @nospecialize(img), sd::SliceData{transpose}) where transpose
+function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     io = IOBuffer()
     y, x = round(Int, btn.position.y.val), round(Int, btn.position.x.val)
     axes = sliceinds(img, transpose ? (x, y) : (y, x), makeslices(sd)...)

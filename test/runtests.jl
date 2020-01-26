@@ -4,11 +4,14 @@ using Images, OffsetArrays
 using Gtk
 using Test
 
-function imshow_now(@nospecialize(args...); @nospecialize(kwargs...))
-    guidict = imshow(args...; kwargs...)
-    Gtk.showall(guidict["gui"]["window"])
-    sleep(0.01)
-    guidict
+if !isdefined(@__MODULE__, :imshow_now)
+    function imshow_now(args...; kwargs...)
+        @nospecialize
+        guidict = imshow(args...; kwargs...)
+        Gtk.showall(guidict["gui"]["window"])
+        sleep(0.01)
+        guidict
+    end
 end
 
 include("simple.jl")
