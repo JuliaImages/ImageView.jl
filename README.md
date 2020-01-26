@@ -231,8 +231,39 @@ idx2 = annotate!(guidict, AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(
 idx3 = annotate!(guidict, AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
 idx4 = annotate!(guidict, AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
 idx5 = annotate!(guidict, AnnotationBox(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,0,1)))
+# This shows that you can remove annotations, too:
 delete!(guidict, idx)
 ```
+
+This is what this looks like before `delete!`ing the first annotation:
+
+![annotations](readme_images/annotations.png)
+
+If you have a grid of images, then each image needs its own set of annotations, initialized
+by calling `annotations()`:
+
+```julia
+using ImageView, Images, Gtk.ShortNames
+# Create the window and a 2x2 grid of canvases, each 300x300 pixels in size
+gui = imshow_gui((300, 300), (2, 2))
+canvases = gui["canvas"]
+# Create some single-color images (just for testing purposes)
+makeimage(color) = fill(color, 100, 100)
+imgs = makeimage.([colorant"red" colorant"green";
+                   colorant"blue" colorant"purple"])
+# Create empty annotations structures for each canvas
+anns = [annotations() annotations();
+        annotations() annotations()]
+# Draw the images on the canvases. Note that we supply the annotation object for each.
+roidict = [imshow(canvases[1,1], imgs[1,1], anns[1,1]) imshow(canvases[1,2], imgs[1,2], anns[1,2]);
+           imshow(canvases[2,1], imgs[2,1], anns[2,1]) imshow(canvases[2,2], imgs[2,2], anns[2,2])]
+# Now we'll add an annotation to the lower-right image
+annotate!(anns[2,2], canvases[2,2], roidict[2,2], AnnotationBox(5, 5, 30, 80, linewidth=3, color=RGB(1,1,0)))
+Gtk.showall(gui["window"])
+```
+
+![grid annotations](readme_images/grid_annotations.png)
+
 
 #### Annotation API
 ```

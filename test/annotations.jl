@@ -20,3 +20,15 @@ sleep(0.01)
 img = testimage("lighthouse")
 guidict = imshow_now(img)
 scalebar(guidict, 30; x = 0.1, y = 0.05)
+
+# Grid of images (issue #202)
+gd = imshow_gui((300, 300), (2, 2))
+canvases = gd["canvas"]
+anns = [annotations() annotations();
+        annotations() annotations()]
+makeimage(color) = fill(color, 100, 100)
+imgs = makeimage.([colorant"red" colorant"green";
+                   colorant"blue" colorant"purple"])
+roidict = [imshow(canvases[1,1], imgs[1,1], anns[1,1]) imshow(canvases[1,2], imgs[1,2], anns[1,2]);
+           imshow(canvases[2,1], imgs[2,1], anns[2,1]) imshow(canvases[2,2], imgs[2,2], anns[2,2])]
+idx = annotate!(anns[2,2], canvases[2,2], roidict[2,2], AnnotationBox(5, 5, 30, 80, linewidth=3, color=RGB(1,1,0)))

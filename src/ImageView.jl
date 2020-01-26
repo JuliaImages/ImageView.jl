@@ -11,12 +11,13 @@ import Images: scaleminmax
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
-export CLim, annotate!, canvasgrid, imshow, imshow!, imshow_gui, imlink,
+export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, imlink,
        roi, scalebar, slice2d
 
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
 const FixedColorant{T<:FixedPoint} = Colorant{T}
+const Annotations = Signal{Dict{UInt,Any}}
 
 include("slicing.jl")
 
@@ -60,7 +61,7 @@ imshow() = imshow(load(open_dialog("Pick an image to display")))
     imshow!(canvas, img) -> drawsignal
     imshow!(canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
     imshow!(frame::Frame, canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
-    imshow!(..., annotations=Signal(Dict{UInt,Any}()))
+    imshow!(..., anns=annotations())
 
 Display the image `img`, in the specified `canvas`. Use the version
 with `zr` if you have already turned on rubber-banding or other
@@ -100,7 +101,7 @@ imshow!(c, mri[:,:,8])
 function imshow!(canvas::GtkReactive.Canvas{UserUnit},
                  imgsig::Signal,
                  zr::Signal{ZoomRegion{T}},
-                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
+                 annotations::Annotations=annotations()) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
@@ -112,7 +113,7 @@ function imshow!(frame::Frame,
                  canvas::GtkReactive.Canvas{UserUnit},
                  imgsig::Signal,
                  zr::Signal{ZoomRegion{T}},
-                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
+                 annotations::Annotations=annotations()) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, value(zr))
@@ -126,7 +127,7 @@ end
 # don't need `frame` variants of the remaining methods.
 function imshow!(canvas::GtkReactive.Canvas,
                  imgsig::Signal,
-                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
+                 annotations::Annotations=annotations())
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
         set_coordinates(cnvs, axes(image))
@@ -137,7 +138,7 @@ end
 # Simple non-interactive image display
 function imshow!(canvas::GtkReactive.Canvas,
                  img::AbstractMatrix,
-                 annotations::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}()))
+                 annotations::Annotations=annotations())
     draw(canvas, annotations) do cnvs, anns
         copy!(cnvs, img)
         set_coordinates(cnvs, axes(img))
@@ -179,7 +180,7 @@ end
 
 imshow(@nospecialize(img::AbstractVector); kwargs...) = imshow(reshape(img, :, 1); kwargs...)
 
-function imshow(c::GtkReactive.Canvas, @nospecialize(img::AbstractMatrix), anns=Signal(Dict{UInt,Any}());
+function imshow(c::GtkReactive.Canvas, @nospecialize(img::AbstractMatrix), anns=annotations();
                 kwargs...)
     f = parent(widget(c))
     imshow(f, c, img, default_clim(img), roi(img, default_axes(img))..., anns; kwargs...)
@@ -192,7 +193,7 @@ end
 
 function imshow(@nospecialize(img::AbstractArray), clim,
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                anns=Signal(Dict{UInt,Any}());
+                anns=annotations();
                 name="ImageView", aspect=:auto) where T
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
@@ -215,7 +216,7 @@ end
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
                 @nospecialize(img::AbstractArray), clim::Union{Nothing,Signal{<:CLim}},
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T
+                anns::Annotations=annotations()) where T
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
         while length(s) < 2
             s = (s..., 1)
@@ -245,7 +246,7 @@ end
 
 function imshow(@nospecialize(img),
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                anns=Signal(Dict{UInt,Any}());
+                anns=annotations();
                 name="ImageView", aspect=:auto) where T
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
@@ -263,7 +264,7 @@ end
 
 function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
                 @nospecialize(img), zr::Signal{ZoomRegion{T}}, sd::SliceData,
-                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T
+                anns::Annotations=annotations()) where T
     imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
         slice2d(img, r, sd)
     end
@@ -398,7 +399,7 @@ push!(imgsig, mri[:,:,8])
 function imshow(canvas::GtkReactive.Canvas{UserUnit},
                 @nospecialize(imgsig::Signal),
                 zr::Signal{ZoomRegion{T}}=Signal(ZoomRegion(value(imgsig))),
-                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
+                anns::Annotations=annotations()) where T<:RInteger
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
     pans = init_pan_scroll(canvas, zr)
@@ -415,7 +416,7 @@ function imshow(frame::Frame,
                 canvas::GtkReactive.Canvas{UserUnit},
                 @nospecialize(imgsig::Signal),
                 zr::Signal{ZoomRegion{T}},
-                anns::Signal{Dict{UInt,Any}}=Signal(Dict{UInt,Any}())) where T<:RInteger
+                anns::Annotations=annotations()) where T<:RInteger
     zoomrb = init_zoom_rubberband(canvas, zr)
     zooms = init_zoom_scroll(canvas, zr)
     pans = init_pan_scroll(canvas, zr)
