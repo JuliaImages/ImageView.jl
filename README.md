@@ -10,6 +10,8 @@ To install the `ImageView` package:
 Pkg.add("ImageView")
 ```
 
+Note for Mac users: It is strongly recommended that you use Julia 1.3 or higher, as this release introduced a new approach for handling library dependencies like Cairo and Gtk.
+
 ## Preparation
 
 First let's try it with a photograph. If you have an image on your computer, load it this way:
