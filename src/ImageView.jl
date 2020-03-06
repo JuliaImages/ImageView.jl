@@ -482,7 +482,7 @@ function _deflt_clim(img::AbstractMatrix)
     maxval = nanz(maxfinite(img))
     if minval == maxval
         minval = zero(typeof(minval))
-        maxval = one(typeof(maxval))
+        maxval = oneunit(typeof(maxval))
     end
     Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
 end

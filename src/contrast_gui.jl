@@ -49,7 +49,7 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="
     if !(cmin < cmax)
         cmin, cmax = first(rng), last(rng)
         if !(cmin < cmax)
-            cmin, cmax = zero(cmin), one(cmax)
+            cmin, cmax = zero(cmin), oneunit(cmax)
         end
     end
     smin = Signal(convert(eltype(rng), cmin))
