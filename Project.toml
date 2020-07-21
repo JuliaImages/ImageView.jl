@@ -1,7 +1,7 @@
 name = "ImageView"
 uuid = "86fae568-95e7-573e-a6b2-d8a6b900c9ef"
 author = ["Tim Holy <tim.holy@gmail.com"]
-version = "0.10.8"
+version = "0.10.9"
 
 [deps]
 AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
@@ -23,7 +23,7 @@ GtkReactive = "0.5.1, 0.6, 0.7, 1"
 Images = "0.15, 0.16, 0.17, 0.18, 0.19, 0.20, 0.21, 0.22"
 MappedArrays = "0.2"
 RoundingIntegers = "0.2"
-StatsBase = "0.28, 0.29, 0.30, 0.31, 0.32"
+StatsBase = "0.28, 0.29, 0.30, 0.31, 0.32, 0.33"
 julia = "1"
 
 [extras]
