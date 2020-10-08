@@ -1,7 +1,7 @@
 name = "ImageView"
 uuid = "86fae568-95e7-573e-a6b2-d8a6b900c9ef"
 author = ["Tim Holy <tim.holy@gmail.com"]
-version = "0.10.9"
+version = "0.10.10"
 
 [deps]
 AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"

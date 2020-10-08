@@ -151,8 +151,13 @@ function _precompile_()
     @assert precompile(Tuple{Type{Dict},Tuple{Pair{String,Dict{String,Any}},Pair{String,Signal{CLim{RoundingIntegers.RUInt8}}},Pair{String,Dict{String,Any}},Pair{String,Signal{Dict{UInt,Any}}}}})
     @assert precompile(Tuple{typeof(Base.grow_to!),Dict{String,Dict{String,Any}},Tuple{Pair{String,Dict{String,Any}},Pair{String,Signal{CLim{N0f8}}},Pair{String,Dict{String,Any}},Pair{String,Signal{Dict{UInt,Any}}}},Int})
     @assert precompile(Tuple{typeof(_mappedarray),Function,Array{UInt8,2}})
-    @assert precompile(Tuple{typeof(_mappedarray),Function,AxisArray{RGB24,4,Base.ReinterpretArray{RGB24,4,UInt32,Array{UInt32,4}},Tuple{Axis{:x,UnitRange{Int}},Axis{:y,UnitRange{Int}},Axis{:z,StepRange{Int,Int}},Axis{:time,UnitRange{Int}}}}})
-    @assert precompile(Tuple{typeof(_mappedarray),Function,Base.ReinterpretArray{N0f8,2,UInt8,Array{UInt8,2}}})
+    if Base.VERSION >= v"1.6.0-DEV.1083"   # julia #37559
+        @assert precompile(Tuple{typeof(_mappedarray),Function,AxisArray{RGB24,4,Base.ReinterpretArray{RGB24,4,UInt32,Array{UInt32,4},true},Tuple{Axis{:x,UnitRange{Int}},Axis{:y,UnitRange{Int}},Axis{:z,StepRange{Int,Int}},Axis{:time,UnitRange{Int}}}}})
+        @assert precompile(Tuple{typeof(_mappedarray),Function,Base.ReinterpretArray{N0f8,2,UInt8,Array{UInt8,2},true}})
+    else
+        @assert precompile(Tuple{typeof(_mappedarray),Function,AxisArray{RGB24,4,Base.ReinterpretArray{RGB24,4,UInt32,Array{UInt32,4}},Tuple{Axis{:x,UnitRange{Int}},Axis{:y,UnitRange{Int}},Axis{:z,StepRange{Int,Int}},Axis{:time,UnitRange{Int}}}}})
+        @assert precompile(Tuple{typeof(_mappedarray),Function,Base.ReinterpretArray{N0f8,2,UInt8,Array{UInt8,2}}})
+    end
     @assert precompile(Tuple{typeof(closeall)})
     @assert precompile(Tuple{typeof(contrast_gui),Signal{Bool},Array{Any,1},Signal{CLim{RGB{Float64}}}})
     @assert precompile(Tuple{typeof(contrast_gui),Signal{Bool},Array{Signal{StatsBase.Histogram{Int,1,Tuple{StepRangeLen{Float32,Float64,Float64}}}},1},Signal{CLim{N0f16}}})
