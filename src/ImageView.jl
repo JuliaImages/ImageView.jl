@@ -1,7 +1,8 @@
 module ImageView
 
 using Images, StatsBase
-using MappedArrays, RoundingIntegers
+using Images.MappedArrays
+using RoundingIntegers
 using Gtk.ShortNames, GtkReactive, Graphics, Cairo
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
 import AxisArrays
