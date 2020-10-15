@@ -1,4 +1,3 @@
-include(raw"../src/ImageView.jl")
 using TestImages
 using Test
 
