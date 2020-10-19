@@ -189,8 +189,9 @@ function imshow(c::GtkReactive.Canvas, img::AbstractMatrix, anns=annotations(); 
 end
 
 function imshow(img::AbstractArray, clim;
-                axes = default_axes(img), name="ImageView", aspect=:auto)
+                axes = default_axes(img), name="ImageView", aspect=:auto, kwargs...)
     @nospecialize
+    img = kwhandler(img, axes; kwargs...)
     imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect)
 end
 
