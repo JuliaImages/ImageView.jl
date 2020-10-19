@@ -83,7 +83,7 @@ function _precompile_()
     end
     let fbody = try __lookup_kwbody__(which(imshow, (AbstractArray,Signal{CLim{Float64}},))) catch missing end
         if !ismissing(fbody)
-            @assert precompile(fbody, (Tuple{Symbol,Symbol},String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float64}},))
+            @assert precompile(fbody, (Any,Any,Any,Any,typeof(imshow),AbstractArray,Any,))
         end
     end
     let fbody = try __lookup_kwbody__(which(imshow, (AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{2,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))) catch missing end
