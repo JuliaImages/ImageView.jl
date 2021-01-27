@@ -76,9 +76,9 @@ function _precompile_()
     end
     let fbody = try __lookup_kwbody__(which(imshow, (AbstractArray,Signal{CLim{Float16}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))) catch missing end
         if !ismissing(fbody)
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float16}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float32}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float16}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float32}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
         end
     end
     let fbody = try __lookup_kwbody__(which(imshow, (AbstractArray,Signal{CLim{Float64}},))) catch missing end
@@ -88,17 +88,17 @@ function _precompile_()
     end
     let fbody = try __lookup_kwbody__(which(imshow, (AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{2,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))) catch missing end
         if !ismissing(fbody)
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{2,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{3,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{:z,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{true,1,Tuple{Axis{:R,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{N0f16}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{N0f8}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{N0f8}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{:S,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{RGB{Float64}}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{RGB{Float64}}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,2,Tuple{Axis{:z,Base.OneTo{Int}},Axis{:time,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{RoundingIntegers.RInt}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
-            @assert precompile(fbody, (String,Symbol,typeof(imshow),AbstractArray,Signal{CLim{RoundingIntegers.RUInt8}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{2,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{3,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{:z,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{Float64}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{true,1,Tuple{Axis{:R,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{N0f16}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{N0f8}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{N0f8}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,1,Tuple{Axis{:S,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{RGB{Float64}}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{RGB{Float64}}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,2,Tuple{Axis{:z,Base.OneTo{Int}},Axis{:time,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{RoundingIntegers.RInt}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
+            @assert precompile(fbody, (String,Symbol,Nothing,typeof(imshow),AbstractArray,Signal{CLim{RoundingIntegers.RUInt8}},Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,0,Tuple{}},Signal{Dict{UInt,Any}},))
         end
     end
     let fbody = try __lookup_kwbody__(which(imshow, (Any,Signal{ZoomRegion{RoundingIntegers.RInt}},SliceData{false,2,Tuple{Axis{1,Base.OneTo{Int}},Axis{4,Base.OneTo{Int}}}},Signal{Dict{UInt,Any}},))) catch missing end

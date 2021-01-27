@@ -150,8 +150,8 @@ end
 
 """
     imshow(img; axes=(1,2), name="ImageView") -> guidict
-    imshow(img, clim; axes=(1,2), name="ImageView") -> guidict
-    imshow(img, clim, zoomregion, slicedata, annotations; axes=(1,2), name="ImageView") -> guidict
+    imshow(img, clim; kwargs...) -> guidict
+    imshow(img, clim, zoomregion, slicedata, annotations; kwargs...) -> guidict
 
 Display the image `img` in a new window titled with `name`, returning
 a dictionary `guidict` containing any Reactive signals or GtkReactive
@@ -169,15 +169,21 @@ contrast function.
 Finally, you may specify [`GtkReactive.ZoomRegion`](@ref) and
 [`SliceData`](@ref) signals. See also [`roi`](@ref), as well as any
 `annotations` that you wish to apply.
+
+Other supported keyword arguments include:
+- `scalei=identity` as an intensity-scaling function prior to display
+- `aspect=:auto` to control the aspect ratio of the image
+- `flipx=false`, `flipy=false` to flip axes
+- `canvassize=nothing` to control the size of the window (`nothing` chooses based on image size)
 """
 function imshow(img::AbstractArray;
                 axes=default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
                 kwargs...)
     @nospecialize
-    imgmapped = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
+    imgmapped, kwargs = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
     zr, sd = roi(imgmapped, axes)
     v = slice2d(imgmapped, value(zr), sd)
-    imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect)
+    imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect, kwargs...)
 end
 
 imshow(img::AbstractVector; kwargs...) = (@nospecialize; imshow(reshape(img, :, 1); kwargs...))
@@ -191,19 +197,21 @@ end
 function imshow(img::AbstractArray, clim;
                 axes = default_axes(img), name="ImageView", aspect=:auto, kwargs...)
     @nospecialize
-    img = kwhandler(img, axes; kwargs...)
-    imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect)
+    img, kwargs = kwhandler(img, axes; kwargs...)
+    imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect, kwargs...)
 end
 
 function imshow(img::AbstractArray, clim,
                 zr::Signal{ZoomRegion{T}}, sd::SliceData,
                 anns=annotations();
-                name="ImageView", aspect=:auto) where T
+                name="ImageView", aspect=:auto, canvassize::Union{Nothing,Tuple{Int,Int}}=nothing) where T
     @nospecialize
     v = slice2d(img, value(zr), sd)
     ps = map(abs, pixelspacing(v))
-    csz = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
-    guidict = imshow_gui(csz, sd; name=name, aspect=aspect)
+    if canvassize === nothing
+        canvassize = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
+    end
+    guidict = imshow_gui(canvassize, sd; name=name, aspect=aspect)
     guidict["hoverinfo"] = map(guidict["canvas"].mouse.motion; name="hoverinfo") do btn
         hoverinfo(guidict["status"], btn, img, sd)
     end
@@ -674,8 +682,7 @@ function kwhandler(@nospecialize(img), axs; flipx=false, flipy=false, kwargs...)
         setrange!(inds, _axisdim(img, axs[2]), flipx)
         img = view(img, inds...)
     end
-    # isempty(kwargs) || error("cannot handle ", kwargs)
-    img
+    img, kwargs
 end
 function setrange!(inds, ax::Integer, flip)
     ind = inds[ax]
