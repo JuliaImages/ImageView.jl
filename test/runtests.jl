@@ -16,7 +16,7 @@ end
 
 include("simple.jl")
 include("contrast.jl")
-include("contrast_kwargs.jl")
+include("kwargs.jl")
 include("scalesigned.jl")
 include("tile.jl")
 include("annotations.jl")
