@@ -1,4 +1,4 @@
-using Images
+using ImageCore
 import ImageView
 
 imgdy = normedview(UInt8[y for y=0x00:0xff, x=0:100])

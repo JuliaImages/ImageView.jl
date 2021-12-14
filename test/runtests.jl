@@ -1,6 +1,6 @@
 (Sys.islinux() || Sys.iswindows()) && import ImageMagick # work around libz issues
 using ImageView
-using Images, OffsetArrays
+using ImageCore, OffsetArrays
 using Gtk
 using Test
 

@@ -1,5 +1,5 @@
-import Images, AxisArrays
-using AxisArrays: Axis
+using ImageCore
+using AxisArrays: AxisArrays, AxisArray, Axis
 
 # Create a cone in 3d that changes color over time
 sz = [201, 301, 31]

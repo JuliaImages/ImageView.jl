@@ -1,4 +1,4 @@
-using Images, ImageView, TestImages
+using ImageCore, ImageView, TestImages
 
 z = ones(10,50);
 y = 8; x = 2;
