@@ -1,5 +1,5 @@
 import ImageView
-using Images, Gtk.ShortNames
+using ImageCore, Gtk.ShortNames
 using TestImages
 
 gui = imshow_gui((400, 300), (2, 2); name="canvasgrid")

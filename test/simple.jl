@@ -1,5 +1,5 @@
 using ImageView
-using Images, OffsetArrays, Reactive
+using ImageCore, OffsetArrays, Reactive
 using Test
 
 @testset "Simple grayscale" begin

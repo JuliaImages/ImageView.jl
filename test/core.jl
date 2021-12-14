@@ -1,4 +1,4 @@
-using GtkReactive, Images, ImageView
+using GtkReactive, ImageCore, ImageView
 using ImageView: sliceinds
 using Test
 import AxisArrays

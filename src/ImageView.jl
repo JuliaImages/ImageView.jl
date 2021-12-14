@@ -1,14 +1,14 @@
 module ImageView
 
-using Images, StatsBase
-using Images.MappedArrays
+using ImageCore, ImageBase, StatsBase
+using ImageCore.MappedArrays
 using RoundingIntegers
 using Gtk.ShortNames, GtkReactive, Graphics, Cairo
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
-import AxisArrays
-using AxisArrays: Axis, axisnames, axisvalues
+using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
+using ImageMetadata
 
-import Images: scaleminmax
+import ImageCore: scaleminmax
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
@@ -482,18 +482,25 @@ function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     end
 end
 
+function valuespan(img::AbstractMatrix)
+    minval = minimum_finite(img)
+    maxval = maximum_finite(img)
+    if minval > maxval
+        minval = zero(typeof(minval))
+        maxval = oneunit(typeof(maxval))
+    elseif minval == maxval
+        maxval = minval+1
+    end
+    return minval, maxval
+end
+
 default_clim(img) = nothing
 default_clim(img::AbstractArray{C}) where {C<:GrayLike} = _default_clim(img, eltype(C))
 default_clim(img::AbstractArray{C}) where {C<:AbstractRGB} = _default_clim(img, eltype(C))
 _default_clim(img, ::Type{Bool}) = nothing
 _default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
 function _deflt_clim(img::AbstractMatrix)
-    minval = nanz(minfinite(img))
-    maxval = nanz(maxfinite(img))
-    if minval == maxval
-        minval = zero(typeof(minval))
-        maxval = oneunit(typeof(maxval))
-    end
+    minval, maxval = valuespan(img)
     Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
 end
 
@@ -518,8 +525,9 @@ default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:GrayLike}
     return [map(filterwhen(enabled, defaultimg, img), enabled; name="histsig") do image, _  # `enabled` fixes issue #168
         cl = value(clim)
-        smin = float(nanz(min(minfinite(image), cl.min)))
-        smax = float(nanz(max(maxfinite(image), cl.max)))
+        smin, smax = valuespan(image)
+        smin = float(min(smin, cl.min))
+        smax = float(max(smax, cl.max))
         if smax == smin
             smax = smin+1
         end

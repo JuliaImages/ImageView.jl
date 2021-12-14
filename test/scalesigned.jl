@@ -1,6 +1,6 @@
 # http://juliaimages.github.io/latest/function_reference.html#ImageCore.scalesigned
 
-using Images, TestImages
+using ImageCore, TestImages
 import ImageView
 img = testimage("cameraman")
 img1 = img[10:500, 10:500]
