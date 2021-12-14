@@ -1,5 +1,5 @@
 using ImageView
-using ImageCore, OffsetArrays, Reactive
+using ImageCore, OffsetArrays
 using Test
 
 @testset "Simple grayscale" begin
@@ -15,7 +15,7 @@ using Test
 
     # default contrast setting with a homogenous image
     imgdict = imshow_now(zeros(3, 3))
-    @test value(imgdict["clim"]) == ImageView.CLim(0.0,1.0)
+    @test imgdict["clim"][] == ImageView.CLim(0.0,1.0)
 end
 
 @testset "Simple RGB" begin

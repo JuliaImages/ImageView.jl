@@ -1,3 +1,8 @@
+# New in 1.0
+
+- switch from GtkReactive to GtkObservables. Reactive was essentially
+  unmaintained, and Observables has a stronger technical foundation.
+
 # New in 0.5
 
 ImageView has been rewritten from scratch. Effort was made to maintain
