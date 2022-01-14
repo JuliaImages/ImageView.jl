@@ -618,7 +618,6 @@ function create_contrast_popup(canvas, enabled, hists, clim)
     popupmenu = Menu()
     contrast = MenuItem("Contrast...")
     push!(popupmenu, contrast)
-    Gtk.showall(popupmenu)
     push!(canvas.preserved, map(canvas.mouse.buttonpress; name="open contrast GUI") do btn
         if btn.button == 3 && btn.clicktype == BUTTON_PRESS
             popup(popupmenu, btn.gtkevent)
