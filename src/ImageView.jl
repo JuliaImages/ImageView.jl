@@ -183,7 +183,7 @@ function imshow(img::AbstractArray;
     imgmapped, kwargs = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
     zr, sd = roi(imgmapped, axes)
     v = slice2d(imgmapped, value(zr), sd)
-    imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect, kwargs...)
+    imshow(imgmapped, default_clim(img), zr, sd; name=name, aspect=aspect, kwargs...)
 end
 
 imshow(img::AbstractVector; kwargs...) = (@nospecialize; imshow(reshape(img, :, 1); kwargs...))
@@ -482,7 +482,7 @@ function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     end
 end
 
-function valuespan(img::AbstractMatrix)
+function valuespan(img::AbstractArray)
     minval = minimum_finite(img)
     maxval = maximum_finite(img)
     if minval > maxval
@@ -499,7 +499,7 @@ default_clim(img::AbstractArray{C}) where {C<:GrayLike} = _default_clim(img, elt
 default_clim(img::AbstractArray{C}) where {C<:AbstractRGB} = _default_clim(img, eltype(C))
 _default_clim(img, ::Type{Bool}) = nothing
 _default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
-function _deflt_clim(img::AbstractMatrix)
+function _deflt_clim(img::AbstractArray)
     minval, maxval = valuespan(img)
     Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
 end
