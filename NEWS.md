@@ -1,7 +1,8 @@
-# New in 1.0
+# New in 0.11
 
 - switch from GtkReactive to GtkObservables. Reactive was essentially
   unmaintained, and Observables has a stronger technical foundation.
+- reductions in latency, particularly on Julia versions >= 1.8.
 
 # New in 0.5
 
