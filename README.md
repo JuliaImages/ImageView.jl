@@ -133,13 +133,13 @@ so as to avoid redraws with each subsequent change.
 the state of the viewer. Perhaps most interesting is the `"roi"`
 entry, which itself is another dictionary containing information about
 the current selected region or interest. These are
-[Reactive signals](https://juliagizmos.github.io/Reactive.jl/), and consequently you can even manipulate the
+[Observables signals](https://juliagizmos.github.io/Observables.jl/), and consequently you can even manipulate the
 state of the GUI by `push!`ing new values to these signals.
 
 For example, using the `"mri"` image above, you can select the 5th slice with
 ```julia
 guidict = imshow(img)
-push!(guidict["roi"]["slicedata"].signals[1], 5)
+guidict["roi"]["slicedata"].signals[1][] = 5
 ```
 
 `SliceData` objects contain information about which axes are displayed
@@ -149,7 +149,7 @@ currently being shown in the window (including all zoom/slice
 settings).
 
 The `"zoom"`- and `"pan"`-related signals originate from
-[GtkReactive](https://juliagizmos.github.io/GtkReactive.jl/stable/),
+[GtkObservables](https://juliagizmos.github.io/GtkObservables.jl/stable/),
 and users should see the documentation for that package for more
 information.
 
@@ -160,7 +160,7 @@ to see some of the options. We can use these extra arguments to couple
 the zoom and slice regions between two images. Let's make a "fake" image encoding the segmentation of an image:
 
 ```julia
-using ImageView, GtkReactive, TestImages, Images
+using ImageView, GtkObservables, TestImages, Images
 
 # Prepare the data
 mri = testimage("mri")

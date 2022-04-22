@@ -1,12 +1,20 @@
 module ImageView
+if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optlevel"))
+    @eval Base.Experimental.@optlevel 1
+end
+if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@max_methods"))
+    @eval Base.Experimental.@max_methods 1
+end
 
 using ImageCore, ImageBase, StatsBase
 using ImageCore.MappedArrays
 using RoundingIntegers
-using Gtk.ShortNames, GtkReactive, Graphics, Cairo
+using Gtk.ShortNames, GtkObservables, Graphics, Cairo
 using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
+using GtkObservables.Observables
 using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
 using ImageMetadata
+using Compat # for @constprop :none
 
 import ImageCore: scaleminmax
 
@@ -18,7 +26,7 @@ export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, im
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
 const FixedColorant{T<:FixedPoint} = Colorant{T}
-const Annotations = Signal{Dict{UInt,Any}}
+const Annotations = Observable{Dict{UInt,Any}}
 
 include("slicing.jl")
 
@@ -34,7 +42,7 @@ struct CLim{T}
 end
 CLim(min, max) = CLim(promote(min, max)...)
 Base.convert(::Type{CLim{T}}, clim::CLim) where {T} = CLim(convert(T, clim.min),
-                                                    convert(T, clim.max))
+                                                           convert(T, clim.max))
 Base.eltype(::CLim{T}) where {T} = T
 
 """
@@ -46,6 +54,7 @@ function closeall()
     for (w, _) in window_wrefs
         destroy(w)
     end
+    empty!(window_wrefs)
     nothing
 end
 
@@ -60,13 +69,13 @@ imshow() = imshow(load(open_dialog("Pick an image to display")))
 
 """
     imshow!(canvas, img) -> drawsignal
-    imshow!(canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
-    imshow!(frame::Frame, canvas, img::Signal, zr::Signal{ZoomRegion}) -> drawsignal
+    imshow!(canvas, img::Observable, zr::Observable{ZoomRegion}) -> drawsignal
+    imshow!(frame::Frame, canvas, img::Observable, zr::Observable{ZoomRegion}) -> drawsignal
     imshow!(..., anns=annotations())
 
 Display the image `img`, in the specified `canvas`. Use the version
 with `zr` if you have already turned on rubber-banding or other
-pan/zoom interactivity for `canvas`. Returns the Reactive `drawsignal`
+pan/zoom interactivity for `canvas`. Returns the Observables `drawsignal`
 used for updating the canvas.
 
 If you supply `frame`, then the pixel aspect ratio will be set to that
@@ -76,7 +85,7 @@ With any of these forms, you may optionally supply `annotations`.
 
 This only creates the `draw` method for `canvas`; mouse- or key-based
 interactivity can be set up via [`imshow`](@ref) or, at a lower level,
-using GtkReactive's tools:
+using GtkObservables's tools:
 
 - `init_zoom_rubberband`
 - `init_zoom_scroll`
@@ -86,7 +95,7 @@ using GtkReactive's tools:
 # Example
 
 ```julia
-using ImageView, GtkReactive, Gtk.ShortNames, TestImages
+using ImageView, GtkObservables, Gtk.ShortNames, TestImages
 # Create a window with a canvas in it
 win = Window()
 c = canvas(UserUnit)
@@ -99,25 +108,25 @@ imshow!(c, mri[:,:,1])
 # Update with a different image
 imshow!(c, mri[:,:,8])
 """
-function imshow!(canvas::GtkReactive.Canvas{UserUnit},
-                 imgsig::Signal,
-                 zr::Signal{ZoomRegion{T}},
+function imshow!(canvas::GtkObservables.Canvas{UserUnit},
+                 imgsig::Observable,
+                 zr::Observable{ZoomRegion{T}},
                  annotations::Annotations=annotations()) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
-        set_coordinates(cnvs, value(zr))
+        set_coordinates(cnvs, zr[])
         draw_annotations(cnvs, anns)
     end
 end
 
 function imshow!(frame::Frame,
-                 canvas::GtkReactive.Canvas{UserUnit},
-                 imgsig::Signal,
-                 zr::Signal{ZoomRegion{T}},
+                 canvas::GtkObservables.Canvas{UserUnit},
+                 imgsig::Observable,
+                 zr::Observable{ZoomRegion{T}},
                  annotations::Annotations=annotations()) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
-        set_coordinates(cnvs, value(zr))
+        set_coordinates(cnvs, zr[])
         set_aspect!(frame, image)
         draw_annotations(cnvs, anns)
     end
@@ -126,8 +135,8 @@ end
 # Without a ZoomRegion, there's no risk that the apsect ratio needs to
 # change dynamically, so it can be set once and left. Consequently we
 # don't need `frame` variants of the remaining methods.
-function imshow!(canvas::GtkReactive.Canvas,
-                 imgsig::Signal,
+function imshow!(canvas::GtkObservables.Canvas,
+                 imgsig::Observable,
                  annotations::Annotations=annotations())
     draw(canvas, imgsig, annotations) do cnvs, image, anns
         copy!(cnvs, image)
@@ -137,7 +146,7 @@ function imshow!(canvas::GtkReactive.Canvas,
 end
 
 # Simple non-interactive image display
-function imshow!(canvas::GtkReactive.Canvas,
+function imshow!(canvas::GtkObservables.Canvas,
                  img::AbstractMatrix,
                  annotations::Annotations=annotations())
     draw(canvas, annotations) do cnvs, anns
@@ -154,7 +163,7 @@ end
     imshow(img, clim, zoomregion, slicedata, annotations; kwargs...) -> guidict
 
 Display the image `img` in a new window titled with `name`, returning
-a dictionary `guidict` containing any Reactive signals or GtkReactive
+a dictionary `guidict` containing any Observables signals or GtkObservables
 widgets. If the image is 3 or 4 dimensional, GUI controls will be
 added for slicing along "extra" axes. By default the two-dimensional
 slice containing axes 1 and 2 are shown, but that can be changed by
@@ -166,7 +175,7 @@ right-clicking on the image. If `clim == nothing`, the image's own
 native contrast is used (`clamp01nan`).  You may also pass a custom
 contrast function.
 
-Finally, you may specify [`GtkReactive.ZoomRegion`](@ref) and
+Finally, you may specify [`GtkObservables.ZoomRegion`](@ref) and
 [`SliceData`](@ref) signals. See also [`roi`](@ref), as well as any
 `annotations` that you wish to apply.
 
@@ -176,43 +185,39 @@ Other supported keyword arguments include:
 - `flipx=false`, `flipy=false` to flip axes
 - `canvassize=nothing` to control the size of the window (`nothing` chooses based on image size)
 """
-function imshow(img::AbstractArray;
+Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray);
                 axes=default_axes(img), name="ImageView", scalei=identity, aspect=:auto,
                 kwargs...)
-    @nospecialize
     imgmapped, kwargs = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
     zr, sd = roi(imgmapped, axes)
-    v = slice2d(imgmapped, value(zr), sd)
-    imshow(imgmapped, default_clim(v), zr, sd; name=name, aspect=aspect, kwargs...)
+    v = slice2d(imgmapped, zr[], sd)
+    imshow(Base.inferencebarrier(imgmapped)::AbstractArray, default_clim(v), zr, sd; name=name, aspect=aspect, kwargs...)
 end
 
 imshow(img::AbstractVector; kwargs...) = (@nospecialize; imshow(reshape(img, :, 1); kwargs...))
 
-function imshow(c::GtkReactive.Canvas, img::AbstractMatrix, anns=annotations(); kwargs...)
-    @nospecialize
+function imshow(c::GtkObservables.Canvas, @nospecialize(img::AbstractMatrix), anns=annotations(); kwargs...)
     f = parent(widget(c))
     imshow(f, c, img, default_clim(img), roi(img, default_axes(img))..., anns; kwargs...)
 end
 
-function imshow(img::AbstractArray, clim;
+Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim;
                 axes = default_axes(img), name="ImageView", aspect=:auto, kwargs...)
-    @nospecialize
     img, kwargs = kwhandler(img, axes; kwargs...)
     imshow(img, clim, roi(img, axes)...; name=name, aspect=aspect, kwargs...)
 end
 
-function imshow(img::AbstractArray, clim,
-                zr::Signal{ZoomRegion{T}}, sd::SliceData,
+Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
+                zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns=annotations();
                 name="ImageView", aspect=:auto, canvassize::Union{Nothing,Tuple{Int,Int}}=nothing) where T
-    @nospecialize
-    v = slice2d(img, value(zr), sd)
+    v = slice2d(img, zr[], sd)
     ps = map(abs, pixelspacing(v))
     if canvassize === nothing
-        canvassize = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
+        canvassize = default_canvas_size(fullsize(zr[]), ps[2]/ps[1])
     end
     guidict = imshow_gui(canvassize, sd; name=name, aspect=aspect)
-    guidict["hoverinfo"] = map(guidict["canvas"].mouse.motion; name="hoverinfo") do btn
+    guidict["hoverinfo"] = on(guidict["canvas"].mouse.motion) do btn
         hoverinfo(guidict["status"], btn, img, sd)
     end
 
@@ -222,28 +227,27 @@ function imshow(img::AbstractArray, clim,
     win = guidict["window"]
     Gtk.showall(win)
     dct = Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
-    GtkReactive.gc_preserve(win, dct)
+    GtkObservables.gc_preserve(win, dct)
     return dct
 end
 
-function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                img::AbstractArray, clim::Union{Nothing,Signal{<:CLim}},
-                zr::Signal{ZoomRegion{T}}, sd::SliceData,
+function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
+                @nospecialize(img::AbstractArray), clim::Union{Nothing,Observable{<:CLim}},
+                zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
-    @nospecialize
-    imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
+    imgsig = map(zr, sd.signals...) do r, s...
         @nospecialize
         while length(s) < 2
             s = (s..., 1)
         end
-        for (h, ann) in value(anns)
+        for (h, ann) in anns[]
             setvalid!(ann, s...)
         end
         slice2d(img, r, sd)
     end
-    set_aspect!(frame, value(imgsig))
+    set_aspect!(frame, imgsig[])
     imgc = prep_contrast(canvas, imgsig, clim)
-    GtkReactive.gc_preserve(frame, imgc)
+    GtkObservables.gc_preserve(frame, imgc)
 
     roidict = imshow(frame, canvas, imgc, zr, anns)
     roidict["slicedata"] = sd
@@ -253,21 +257,21 @@ end
 # For things that are not AbstractArrays, we don't offer the clim
 # option.  We also don't display hoverinfo, as there is no guarantee
 # that one can quickly compute intensities at a point.
-function imshow(img;
+Compat.@constprop :none function imshow(img;
                 axes = default_axes(img), name="ImageView", aspect=:auto)
     @nospecialize
     zr, sd = roi(img, axes)
     imshow(img, zr, sd; name=name, aspect=aspect)
 end
 
-function imshow(img,
-                zr::Signal{ZoomRegion{T}}, sd::SliceData,
+Compat.@constprop :none function imshow(img,
+                zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns=annotations();
                 name="ImageView", aspect=:auto) where T
     @nospecialize
-    v = slice2d(img, value(zr), sd)
+    v = slice2d(img, zr[], sd)
     ps = map(abs, pixelspacing(v))
-    csz = default_canvas_size(fullsize(value(zr)), ps[2]/ps[1])
+    csz = default_canvas_size(fullsize(zr[]), ps[2]/ps[1])
     guidict = imshow_gui(csz, sd; name=name, aspect=aspect)
 
     roidict = imshow(guidict["frame"], guidict["canvas"], img, zr, sd, anns)
@@ -275,24 +279,24 @@ function imshow(img,
     win = guidict["window"]
     Gtk.showall(win)
     dct = Dict("gui"=>guidict, "roi"=>roidict)
-    GtkReactive.gc_preserve(win, dct)
+    GtkObservables.gc_preserve(win, dct)
     return dct
 end
 
-function imshow(frame::Gtk.GtkFrame, canvas::GtkReactive.Canvas,
-                img, zr::Signal{ZoomRegion{T}}, sd::SliceData,
+function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
+                img, zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
     @nospecialize
-    imgsig = map(zr, sd.signals...; name="imgsig") do r, s...
+    imgsig = map(zr, sd.signals...) do r, s...
         @nospecialize
         slice2d(img, r, sd)
     end
-    set_aspect!(frame, value(imgsig))
-    GtkReactive.gc_preserve(frame, imgsig)
+    set_aspect!(frame, imgsig[])
+    GtkObservables.gc_preserve(frame, imgsig)
 
     roidict = imshow(frame, canvas, imgsig, zr, anns)
     roidict["slicedata"] = sd
-    GtkReactive.gc_preserve(frame, roidict)
+    GtkObservables.gc_preserve(frame, roidict)
     roidict
 end
 
@@ -310,7 +314,7 @@ as the window is resized.
 the necessary information for creating player widgets for viewing
 multidimensional images.
 """
-function imshow_gui(canvassize::Tuple{Int,Int},
+Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
                     gridsize::Tuple{Int,Int} = (1,1);
                     name = "ImageView", aspect=:auto,
                     slicedata::SliceData=SliceData{false}())
@@ -364,7 +368,7 @@ GtkGrid layout, `frames` is an `ny`-by-`nx` array of
 GtkAspectRatioFrames that contain each canvas, and `canvases` is an
 `ny`-by-`nx` array of canvases.
 """
-function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:auto)
+Compat.@constprop :none function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:auto)
     g = Grid()
     frames = Matrix{Any}(undef, gridsize)
     canvases = Matrix{Any}(undef, gridsize)
@@ -377,7 +381,7 @@ function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:auto)
     return g, frames, canvases
 end
 
-function frame_canvas(aspect)
+Compat.@constprop :none function frame_canvas(aspect)
     f = aspect==:none ? Frame() : AspectFrame("", 0.5, 0.5, 1)
     set_gtk_property!(f, :expand, true)
     set_gtk_property!(f, :shadow_type, Gtk.GConstants.GtkShadowType.NONE)
@@ -387,14 +391,14 @@ function frame_canvas(aspect)
 end
 
 """
-    imshow(canvas, imgsig::Signal) -> guidict
-    imshow(canvas, imgsig::Signal, zr::Signal{ZoomRegion}) -> guidict
-    imshow(frame::Frame, canvas, imgsig::Signal, zr::Signal{ZoomRegion}) -> guidict
+    imshow(canvas, imgsig::Observable) -> guidict
+    imshow(canvas, imgsig::Observable, zr::Observable{ZoomRegion}) -> guidict
+    imshow(frame::Frame, canvas, imgsig::Observable, zr::Observable{ZoomRegion}) -> guidict
 
-Display `imgsig` (a `Signal` of an image) in `canvas`, setting up
+Display `imgsig` (a `Observable` of an image) in `canvas`, setting up
 panning and zooming. Optionally include a `frame` for preserving
 aspect ratio. `imgsig` must be two-dimensional (but can be a
-Signal-view of a higher-dimensional object).
+Observable-view of a higher-dimensional object).
 
 # Example
 
@@ -402,22 +406,22 @@ Signal-view of a higher-dimensional object).
 using ImageView, TestImages, Gtk
 mri = testimage("mri");
 # Create a canvas `c`. There are other approaches, like stealing one from a previous call
-# to `imshow`, or using GtkReactive directly.
+# to `imshow`, or using GtkObservables directly.
 guidict = imshow_gui((300, 300))
 c = guidict["canvas"];
 # To see anything you have to call `showall` on the window (once)
 Gtk.showall(guidict["window"])
-# Create the image Signal
-imgsig = Signal(mri[:,:,1]);
+# Create the image Observable
+imgsig = Observable(mri[:,:,1]);
 # Show it
 imshow(c, imgsig)
-# Now anytime you want to update, just push! a new image
-push!(imgsig, mri[:,:,8])
+# Now anytime you want to update, just reset with a new image
+imgsig[] = mri[:,:,8]
 ```
 """
-function imshow(canvas::GtkReactive.Canvas{UserUnit},
-                imgsig::Signal,
-                zr::Signal{ZoomRegion{T}}=Signal(ZoomRegion(value(imgsig))),
+function imshow(canvas::GtkObservables.Canvas{UserUnit},
+                imgsig::Observable,
+                zr::Observable{ZoomRegion{T}}=Observable(ZoomRegion(imgsig[])),
                 anns::Annotations=annotations()) where T<:RInteger
     @nospecialize
     zoomrb = init_zoom_rubberband(canvas, zr)
@@ -428,14 +432,14 @@ function imshow(canvas::GtkReactive.Canvas{UserUnit},
     dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
                "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
                "redraw"=>redraw)
-    GtkReactive.gc_preserve(widget(canvas), dct)
+    GtkObservables.gc_preserve(widget(canvas), dct)
     dct
 end
 
 function imshow(frame::Frame,
-                canvas::GtkReactive.Canvas{UserUnit},
-                imgsig::Signal,
-                zr::Signal{ZoomRegion{T}},
+                canvas::GtkObservables.Canvas{UserUnit},
+                imgsig::Observable,
+                zr::Observable{ZoomRegion{T}},
                 anns::Annotations=annotations()) where T<:RInteger
     @nospecialize
     zoomrb = init_zoom_rubberband(canvas, zr)
@@ -446,7 +450,7 @@ function imshow(frame::Frame,
     dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
                "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
                "redraw"=>redraw)
-    GtkReactive.gc_preserve(widget(canvas), dct)
+    GtkObservables.gc_preserve(widget(canvas), dct)
     dct
 end
 
@@ -462,8 +466,8 @@ function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     guidict = imshow(img; proplist...)
     gui = guidict["gui"]
     sd = guidict["roi"]["slicedata"]
-    close(gui["hoverinfo"])
-    gui["hoverinfo"] = map(gui["canvas"].mouse.motion; name="hoverinfo") do btn
+    off(gui["hoverinfo"])
+    gui["hoverinfo"] = on(gui["canvas"].mouse.motion) do btn
         hoverinfo(gui["status"], btn, label, sd)
     end
     guidict
@@ -501,13 +505,13 @@ _default_clim(img, ::Type{Bool}) = nothing
 _default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
 function _deflt_clim(img::AbstractMatrix)
     minval, maxval = valuespan(img)
-    Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
+    Observable(CLim(saferound(gray(minval)), saferound(gray(maxval))))
 end
 
 function _deflt_clim(img::AbstractMatrix{T}) where {T<:AbstractRGB}
     minval = RGB(0.0,0.0,0.0)
     maxval = RGB(1.0,1.0,1.0)
-    Signal(CLim(minval, maxval); name="CLim")
+    Observable(CLim(minval, maxval))
 end
 
 saferound(x::Integer) = convert(RInteger, x)
@@ -518,44 +522,52 @@ default_axes(img) = (1, 2)
 default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 
 #default_view(img) = view(img, :, :, ntuple(d->1, ndims(img)-2)...)
-#default_view(img::Signal) = default_view(value(img))
+#default_view(img::Observable) = default_view(img[])
 
-# default_slices(img) = ntuple(d->PlayerInfo(Signal(1), axes(img, d+2)), ndims(img)-2)
+# default_slices(img) = ntuple(d->PlayerInfo(Observable(1), axes(img, d+2)), ndims(img)-2)
 
-function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:GrayLike}
-    return [map(filterwhen(enabled, defaultimg, img), enabled; name="histsig") do image, _  # `enabled` fixes issue #168
-        cl = value(clim)
+function histsignals(enabled::Observable{Bool}, img::Observable, clim::Observable{CLim{T}}) where {T<:GrayLike}
+    image, cl = img[], clim[]
+    Th = float(promote_type(T, eltype(image)))
+    function computehist(image, cl)
         smin, smax = valuespan(image)
         smin = float(min(smin, cl.min))
         smax = float(max(smax, cl.max))
-        if smax == smin
-            smax = smin+1
-        end
-        rng = range(smin, stop=smax, length=300)
+        rng = LinRange(Th(smin), Th(smax), 300)
         fit(Histogram, mappedarray(nanz, vec(channelview(image))), rng; closed=:right)
-    end]
+    end
+    histsig = Observable(enabled[] ? computehist(image, cl) :
+                                     Histogram(LinRange(Th(cl.min), Th(cl.max), 2), [length(image)], :right, false))
+    map!(histsig, img, enabled) do image, en  # `enabled` fixes issue #168
+        if en
+            computehist(image, clim[])
+        else
+            histsig[]
+        end
+    end
+    return [histsig]
 end
 
 channel_clim(f, clim::CLim{T}) where {T<:AbstractRGB} = CLim(f(clim.min), f(clim.max))
 channel_clims(clim::CLim{T}) where {T<:AbstractRGB} = map(f->channel_clim(f, clim), (red, green, blue))
 
-function mapped_channel_clims(clim::Signal{CLim{T}}) where {T<:AbstractRGB}
-    inits = channel_clims(value(clim))
-    rsig = map(x->channel_clim(red, x), clim; init=inits[1])
-    gsig = map(x->channel_clim(green, x), clim; init=inits[1])
-    bsig = map(x->channel_clim(blue, x), clim; init=inits[1])
+function mapped_channel_clims(clim::Observable{CLim{T}}) where {T<:AbstractRGB}
+    inits = channel_clims(clim[])
+    rsig = map!(x->channel_clim(red, x), Observable(inits[1]), clim)
+    gsig = map!(x->channel_clim(green, x), Observable(inits[1]), clim)
+    bsig = map!(x->channel_clim(blue, x), Observable(inits[1]), clim)
     return [rsig;gsig;bsig]
 end
 
-function histsignals(enabled::Signal, defaultimg, img::Signal, clim::Signal{CLim{T}}) where {T<:AbstractRGB}
-    rv = map(x->mappedarray(red, x), filterwhen(enabled, defaultimg, img); name="redview")
-    gv = map(x->mappedarray(green,x), filterwhen(enabled, defaultimg, img); name="greenview")
-    bv = map(x->mappedarray(blue, x), filterwhen(enabled, defaultimg, img); name="blueview")
+function histsignals(enabled::Observable{Bool}, img::Observable, clim::Observable{CLim{T}}) where {T<:AbstractRGB}
+    rv = map(x->mappedarray(red, x), img)
+    gv = map(x->mappedarray(green,x), img)
+    bv = map(x->mappedarray(blue, x), img)
     cls = mapped_channel_clims(clim) #note currently this gets called twice, also in contrast gui creation (a bit inefficient/awkward)
     histsigs = []
-    push!(histsigs, histsignals(enabled, mappedarray(red, defaultimg), rv, cls[1])[1])
-    push!(histsigs, histsignals(enabled, mappedarray(green, defaultimg), gv, cls[2])[1])
-    push!(histsigs, histsignals(enabled, mappedarray(blue, defaultimg), bv, cls[3])[1])
+    push!(histsigs, histsignals(enabled, rv, cls[1])[1])
+    push!(histsigs, histsignals(enabled, gv, cls[2])[1])
+    push!(histsigs, histsignals(enabled, bv, cls[3])[1])
     return histsigs
 end
 
@@ -580,12 +592,12 @@ function safeminmax(cmin::T, cmax::T) where {T<:AbstractRGB}
     return T(rmin, gmin, bmin), T(rmax, gmax, bmax)
 end
 
-function prep_contrast(img::Signal, clim::Signal{CLim{T}}) where {T}
+function prep_contrast(@nospecialize(img::Observable), clim::Observable{CLim{T}}) where {T}
     # Set up the signals to calculate the histogram of intensity
-    enabled = Signal(false; name="contrast_enabled") # skip hist calculation if the contrast gui isn't open
-    histsigs = histsignals(enabled, value(img), img, clim)
+    enabled = Observable(false) # skip hist calculation if the contrast gui isn't open
+    histsigs = histsignals(enabled, img, clim)
     # Return a signal corresponding to the scaled image
-    imgc = map(img, clim; name="clim-mapped image") do image, cl
+    imgc = map(img, clim) do image, cl
         cmin, cmax = safeminmax(cl.min, cl.max)
         smm = scaleminmax(outtype(T), cmin, cmax)
         mappedarray(smm, image)
@@ -597,18 +609,18 @@ outtype(::Type{T}) where T<:GrayLike         = Gray{N0f8}
 outtype(::Type{C}) where C<:Color            = RGB{N0f8}
 outtype(::Type{C}) where C<:TransparentColor = RGBA{N0f8}
 
-function prep_contrast(canvas, img::Signal, clim::Signal{CLim{T}}) where T
+function prep_contrast(canvas, @nospecialize(img::Observable), clim::Observable{CLim{T}}) where T
     enabled, histsigs, imgsig = prep_contrast(img, clim)
     # Set up the right-click to open the contrast gui
     push!(canvas.preserved, create_contrast_popup(canvas, enabled, histsigs, clim))
     imgsig
 end
 
-prep_contrast(canvas, img::Signal, f) =
-    map(image->mappedarray(f, image), img; name="f-mapped image")
-prep_contrast(canvas, img::Signal{A}, ::Nothing) where {A<:AbstractArray} =
+prep_contrast(canvas, img::Observable, f) =
+    map(image->mappedarray(f, image), img)
+prep_contrast(canvas, img::Observable{A}, ::Nothing) where {A<:AbstractArray} =
     prep_contrast(canvas, img, clamp01nan)
-prep_contrast(canvas, img::Signal, ::Nothing) = img
+prep_contrast(canvas, img::Observable, ::Nothing) = img
 
 nanz(x) = ifelse(isnan(x), zero(x), x)
 nanz(x::FixedPoint) = x
@@ -619,24 +631,24 @@ function create_contrast_popup(canvas, enabled, hists, clim)
     contrast = MenuItem("Contrast...")
     push!(popupmenu, contrast)
     Gtk.showall(popupmenu)
-    push!(canvas.preserved, map(canvas.mouse.buttonpress; name="open contrast GUI") do btn
+    push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
         if btn.button == 3 && btn.clicktype == BUTTON_PRESS
             popup(popupmenu, btn.gtkevent)
         end
     end)
     signal_connect(contrast, :activate) do widget
-        push!(enabled, true)
+        enabled[] = true
         contrast_gui(enabled, hists, clim)
     end
 end
 
-function map_image_roi(@nospecialize(img), zr::Signal{ZoomRegion{T}}, slices...) where T
-    map(zr, slices...; name="map_image_roi") do r, s...
+function map_image_roi(@nospecialize(img), zr::Observable{ZoomRegion{T}}, slices...) where T
+    map(zr, slices...) do r, s...
         cv = r.currentview
         view(img, UnitRange{Int}(cv.y), UnitRange{Int}(cv.x), s...)
     end
 end
-map_image_roi(img::Signal, zr::Signal{ZoomRegion{T}}, slices...) where {T} = img
+map_image_roi(img::Observable, zr::Observable{ZoomRegion{T}}, slices...) where {T} = img
 
 function set_aspect!(frame::AspectFrame, image)
     ps = map(abs, pixelspacing(image))
@@ -669,12 +681,12 @@ and `screensize` are supplied in Gtk order (x, y).
 When supplying a GtkWindow `win`, the canvas size is limited to 60% of
 the total screen size.
 """
-function canvas_size(win::Gtk.GtkWindowLeaf, requestedsize_xy; minsize=100)
+Compat.@constprop :none function canvas_size(win::Gtk.GtkWindowLeaf, requestedsize_xy; minsize=100)
     ssz = screen_size(win)
     canvas_size(map(x->0.6*x, ssz), requestedsize_xy; minsize=minsize)
 end
 
-function canvas_size(screensize_xy, requestedsize_xy; minsize=100)
+Compat.@constprop :none function canvas_size(screensize_xy, requestedsize_xy; minsize=100)
     f = minimum(map(/, screensize_xy, requestedsize_xy))
     if f > 1
         fmn = maximum(map(/, (minsize,minsize), requestedsize_xy))
@@ -683,7 +695,7 @@ function canvas_size(screensize_xy, requestedsize_xy; minsize=100)
     (round(Int, f*requestedsize_xy[1]), round(Int, f*requestedsize_xy[2]))
 end
 
-function kwhandler(@nospecialize(img), axs; flipx=false, flipy=false, kwargs...)
+Compat.@constprop :none function kwhandler(@nospecialize(img), axs; flipx=false, flipy=false, kwargs...)
     if flipx || flipy
         inds = AbstractRange[axes(img)...]
         setrange!(inds, _axisdim(img, axs[1]), flipy)
@@ -710,15 +722,37 @@ _mappedarray(f, img) = mappedarray(f, img)
 _mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), AxisArrays.axes(img))
 _mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)))
 
-wrap_signal(x) = Signal(x)
-wrap_signal(x::Signal) = x
+wrap_signal(x) = Observable(x)
+wrap_signal(x::Observable) = x
 wrap_signal(::Nothing) = nothing
 
 include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
 
-include("precompile.jl")
-_precompile_()
+if ccall(:jl_generating_output, Cint, ()) == 1 && (!Sys.isunix() || haskey(ENV, "DISPLAY"))
+    # Partial workaround for https://github.com/JuliaLang/julia/issues/45050
+    if hasfield(Method, :constprop)
+        for m in methods(var"#imshow##kw".instance)
+            m.constprop = 0x02
+            for mb in methods(Base.bodyfunction(m))
+                mb.constprop = 0x02
+            end
+        end
+    end
+    # Precompile
+    for T in (N0f8, N0f16, Float32)
+        for C in (Gray, RGB)
+            img = rand(C{T}, 2, 2)
+            imshow(img)
+            clim = ImageView.default_clim(img)
+            imgsig = Observable(img)
+            enabled, histsig, imgc = ImageView.prep_contrast(imgsig, clim)
+            enabled[] = true
+            ImageView.contrast_gui(enabled, histsig, clim)
+        end
+    end
+    closeall()   # this is critical: you don't want to precompile with window_wrefs loaded with junk (dangling window pointers from closed session)
+end
 
 end # module

@@ -15,20 +15,20 @@ function change_blue(col::CLim{T}, chan::CLim{T2}) where {T<:AbstractRGB, T2<:Gr
     cmax = T(red(col.max), green(col.max), chan.max)
     return CLim(cmin, cmax)
 end
-change_red(col::Signal, chan::CLim) = change_red(value(col), chan)
-change_green(col::Signal, chan::CLim) = change_green(value(col), chan)
-change_blue(col::Signal, chan::CLim) = change_blue(value(col), chan)
+change_red(col::Observable, chan::CLim) = change_red(col[], chan)
+change_green(col::Observable, chan::CLim) = change_green(col[], chan)
+change_blue(col::Observable, chan::CLim) = change_blue(col[], chan)
 
-function contrast_gui(enabled::Signal{Bool}, hists::Vector, clim::Signal{CLim{T}}) where {T<:AbstractRGB}
+function contrast_gui(enabled::Observable{Bool}, hists::Vector, clim::Observable{CLim{T}}) where {T<:AbstractRGB}
     @assert length(hists) == 3 #one signal per color channel
-    chanlims = channel_clims(value(clim))
-    rsig = Signal(chanlims[1])
-    gsig = Signal(chanlims[2])
-    bsig = Signal(chanlims[3])
+    chanlims = channel_clims(clim[])
+    rsig = Observable(chanlims[1])
+    gsig = Observable(chanlims[2])
+    bsig = Observable(chanlims[3])
     #make sure that changes to individual channels update the color clim signal and vice versa
-    bindmap!(clim, x->change_red(clim, x), rsig, x->channel_clim(red, x); initial = false)
-    bindmap!(clim, x->change_green(clim, x), gsig, x->channel_clim(green, x); initial = false)
-    bindmap!(clim, x->change_blue(clim, x), bsig, x->channel_clim(blue, x); initial = false)
+    Observables.ObservablePair(clim, rsig; f=x->channel_clim(red, x),   g=x->change_red(clim, x))
+    Observables.ObservablePair(clim, gsig; f=x->channel_clim(green, x), g=x->change_green(clim, x))
+    Observables.ObservablePair(clim, bsig; f=x->channel_clim(blue, x),  g=x->change_blue(clim, x))
     names = ["Red Contrast"; "Green Contrast"; "Blue Contrast"]
     csigs = [rsig; gsig; bsig]
     cguis = []
@@ -40,8 +40,8 @@ end
 
 contrast_gui(enabled, hist::Vector, clim) = contrast_gui(enabled, hist[1], clim)
 
-function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="Contrast")
-    vhist, vclim = value(hist), value(clim)
+function contrast_gui(enabled::Observable{Bool}, hist::Observable, clim::Observable; wname="Contrast")
+    vhist, vclim = hist[], clim[]
     T = eltype(vclim)
     Δ = T <: Integer ? T(1) : eps(T)
     rng = vhist.edges[1]
@@ -52,11 +52,11 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="
             cmin, cmax = zero(cmin), oneunit(cmax)
         end
     end
-    smin = Signal(convert(eltype(rng), cmin))
-    smax = Signal(convert(eltype(rng), cmax))
+    smin = Observable(convert(eltype(rng), cmin))
+    smax = Observable(convert(eltype(rng), cmax))
     cgui = contrast_gui_layout(smin, smax, rng; wname=wname)
     signal_connect(cgui["window"], :destroy) do widget
-        push!(enabled, false)
+        enabled[] = false
     end
     updateclim = map(smin, smax) do cmin, cmax
         # if min/max is outside the current range, update the sliders
@@ -76,30 +76,30 @@ function contrast_gui(enabled::Signal{Bool}, hist::Signal, clim::Signal; wname="
             end
             mn, mx = minimum(rng), maximum(rng)
             cmin, cmax = clamp(cminT, mn, mx), clamp(cmaxT, mn, mx)
-            push!(cgui["slider_min"], rng, cmin)
-            push!(cgui["slider_max"], rng, cmax)
+            cgui["slider_min"][] = (rng, cmin)
+            cgui["slider_max"][] = (rng, cmax)
         end
         # Update the image contrast
-        push!(clim, CLim(cmin, cmax))
+        clim[] = CLim(cmin, cmax)
     end
     # TODO: we might want to throttle this?
     redraw = draw(cgui["canvas"], hist) do cnvs, hst
         if get_gtk_property(cgui["window"], :visible, Bool) # protects against window destruction
-            rng, cl = hst.edges[1], value(clim)
+            rng, cl = hst.edges[1], clim[]
             mn, mx = minimum(rng), maximum(rng)
-            push!(cgui["slider_min"], rng, clamp(cl.min, mn, mx))
-            push!(cgui["slider_max"], rng, clamp(cl.max, mn, mx))
+            cgui["slider_min"][] = (rng, clamp(cl.min, mn, mx))
+            cgui["slider_max"][] = (rng, clamp(cl.max, mn, mx))
             drawhist(cnvs, hst)
         end
     end
-    GtkReactive.gc_preserve(cgui["window"], (cgui, redraw, updateclim))
+    GtkObservables.gc_preserve(cgui["window"], (cgui, redraw, updateclim))
     cgui
 end
 
-function contrast_gui_layout(smin::Signal, smax::Signal, rng; wname="Contrast")
+function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Contrast")
     win = Window(wname) |> (g = Grid())
-    slmax = slider(rng; signal=smax)
-    slmin = slider(rng; signal=smin)
+    slmax = slider(rng; observable=smax)
+    slmin = slider(rng; observable=smin)
     for sl in (slmax, slmin)
         set_gtk_property!(sl, :draw_value, false)
     end
@@ -115,8 +115,8 @@ function contrast_gui_layout(smin::Signal, smax::Signal, rng; wname="Contrast")
     # By not specifying the range on the textbox, we let the user
     # enter something out-of-range, which can be handy in some
     # circumstances.
-    emax = textbox(eltype(smax); widget=emax_w, signal=smax) # , range=rng)
-    emin = textbox(eltype(smin); widget=emin_w, signal=smin) #, range=rng)
+    emax = textbox(eltype(smax); widget=emax_w, observable=smax) # , range=rng)
+    emin = textbox(eltype(smin); widget=emin_w, observable=smin) #, range=rng)
 
     Gtk.showall(win)
     Dict("window"=>win, "canvas"=>cnvs, "slider_min"=>slmin, "slider_max"=>slmax, "textbox_min"=>emin, "textbox_max"=>emax)

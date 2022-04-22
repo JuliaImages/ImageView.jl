@@ -1,13 +1,13 @@
 # Once this stabilizes, migrate to a Graphics layer? Only if that supports text, which seems unlikely.
 
-annotations() = Signal(Dict{UInt,Any}())
+annotations() = Observable(Dict{UInt,Any}())
 
 function annotate!(guidict::Dict, ann; anchored::Bool=true)
     c, roi, anns = guidict["gui"]["canvas"], guidict["roi"], guidict["annotations"]
     annotate!(anns, c, roi, ann; anchored=anchored)
 end
 
-function annotate!(anns::Signal{Dict{UInt,Any}}, c::GtkReactive.Canvas, roi::Dict{String}, ann; anchored::Bool=true)
+function annotate!(anns::Annotations, c::GtkObservables.Canvas, roi::Dict{String}, ann; anchored::Bool=true)
     if anchored
         zr = roi["zoomregion"]
         annf = AnchoredAnnotation((_)->canvasbb(c), (_)->zoombb(zr), ann)
@@ -19,10 +19,10 @@ function annotate!(anns::Signal{Dict{UInt,Any}}, c::GtkReactive.Canvas, roi::Dic
     return AnnotationHandle(annf, h)
 end
 
-function add_annotation!(anns::Signal{Dict{UInt,Any}}, p::Pair)
-    a = value(anns)
+function add_annotation!(anns::Annotations, p::Pair)
+    a = anns[]
     push!(a, p)
-    push!(anns, a)
+    notify(anns)
 end
 
 struct AnnotationHandle{T}
@@ -30,9 +30,9 @@ struct AnnotationHandle{T}
     hash::UInt
 end
 
-function Base.delete!(anns::Signal{Dict{UInt,Any}}, anh::AnnotationHandle)
-    delete!(value(anns), anh.hash)
-    push!(anns, value(anns))
+function Base.delete!(anns::Annotations, anh::AnnotationHandle)
+    delete!(anns[], anh.hash)
+    notify(anns)
 end
 Base.delete!(guidict::Dict, anh::AnnotationHandle) = delete!(guidict["annotations"], anh)
 
@@ -48,7 +48,7 @@ function canvasbb(c)
     BoundingBox(1, sz[1], 1, sz[2])
 end
 function zoombb(zr)
-    inds = axes(value(zr))
+    inds = axes(zr[])
     BoundingBox(first(inds[2]), last(inds[2]), first(inds[1]), last(inds[1]))
 end
 
@@ -84,7 +84,7 @@ mutable struct AnnotationScalebarFixed{T}
     color::Color
 end
 
-AnnotationScalebarFixed(width::T, height::T, imsl::Signal{M},
+AnnotationScalebarFixed(width::T, height::T, imsl::Observable{M},
                         centerx::Real, centery::Real,
                         color::Color = RGB(1,1,1)) where {M<:AbstractMatrix,T} =
     AnnotationScalebarFixed{T}(width, height, (wp,hp) -> normalized_lengths(imsl,wp,hp),
@@ -256,8 +256,8 @@ function normalized_lengths(imsl::AbstractMatrix, width, height)
     h = height/(ps[1]*length(inds[1]))
     w, h
 end
-normalized_lengths(imsl::Signal, width, height) =
-    normalized_lengths(value(imsl), width, height)
+normalized_lengths(imsl::Observable, width, height) =
+    normalized_lengths(imsl[], width, height)
 
 """
     scalebar(guidict::Dict, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
