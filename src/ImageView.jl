@@ -113,7 +113,7 @@ function imshow!(canvas::GtkObservables.Canvas{UserUnit},
                  zr::Observable{ZoomRegion{T}},
                  annotations::Annotations=annotations()) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
-        copy!(cnvs, image)
+        copy_with_restrict!(cnvs, image)
         set_coordinates(cnvs, zr[])
         draw_annotations(cnvs, anns)
     end
@@ -125,7 +125,7 @@ function imshow!(frame::Frame,
                  zr::Observable{ZoomRegion{T}},
                  annotations::Annotations=annotations()) where T<:RInteger
     draw(canvas, imgsig, annotations) do cnvs, image, anns
-        copy!(cnvs, image)
+        copy_with_restrict!(cnvs, image)
         set_coordinates(cnvs, zr[])
         set_aspect!(frame, image)
         draw_annotations(cnvs, anns)
@@ -139,7 +139,7 @@ function imshow!(canvas::GtkObservables.Canvas,
                  imgsig::Observable,
                  annotations::Annotations=annotations())
     draw(canvas, imgsig, annotations) do cnvs, image, anns
-        copy!(cnvs, image)
+        copy_with_restrict!(cnvs, image)
         set_coordinates(cnvs, axes(image))
         draw_annotations(cnvs, anns)
     end
@@ -150,11 +150,20 @@ function imshow!(canvas::GtkObservables.Canvas,
                  img::AbstractMatrix,
                  annotations::Annotations=annotations())
     draw(canvas, annotations) do cnvs, anns
-        copy!(cnvs, img)
+        copy_with_restrict!(cnvs, img)
         set_coordinates(cnvs, axes(img))
         draw_annotations(cnvs, anns)
     end
     nothing
+end
+
+function copy_with_restrict!(cnvs, img::AbstractMatrix)
+    imgsz = size(img)
+    while (imgsz[1] > 2*Graphics.height(cnvs) && imgsz[2] > 2*Graphics.width(cnvs))
+        img = restrict(img)
+        imgsz = size(img)
+    end
+    copy!(cnvs, img)
 end
 
 """

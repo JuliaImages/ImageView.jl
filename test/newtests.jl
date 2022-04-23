@@ -81,6 +81,13 @@ end
     w, h = size(win)
     ws, hs = screen_size(win)
     !Sys.iswindows() && @test w <= ws && h <= hs
+
+    # a very large image
+    img = rand(N0f8, 10000, 15000)
+    hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
+    cvs = hbig["gui"]["canvas"];
+    @test Graphics.height(getgc(cvs)) <= 500
+    @test Graphics.width(getgc(cvs)) <= 500
 end
 
 @testset "imshow!" begin
