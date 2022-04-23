@@ -19,6 +19,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 [compat]
 AxisArrays = "0.3, 0.4"
 Cairo = "0.6, 0.7, 0.8, 1"
+Compat = "3"
 Graphics = "0.2, 0.3, 0.4, 1"
 Gtk = "0.16, 0.17, 0.18, 1"
 GtkObservables = "1"
