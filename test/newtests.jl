@@ -20,11 +20,8 @@ end
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
     zr[] = (1:20, 9:10)
     @test zr[].currentview.x == 9..10
-    if Sys.islinux()
-        @test_broken get_gtk_property(frame, :ratio, Float32) ≈ 0.1
-    else
-        @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
-    end
+    sleep(0.1)  # allow the Gtk event loop to run
+    @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     zr[] = (9:10, 1:20)
     Gtk.showall(win)
     sleep(0.1)
@@ -81,6 +78,14 @@ end
     w, h = size(win)
     ws, hs = screen_size(win)
     !Sys.iswindows() && @test w <= ws && h <= hs
+
+    # a very large image
+    img = rand(N0f8, 10000, 15000)
+    hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
+    sleep(0.1)  # some extra sleep for this big image
+    cvs = hbig["gui"]["canvas"];
+    @test Graphics.height(getgc(cvs)) <= 500
+    @test Graphics.width(getgc(cvs)) <= 500
 end
 
 @testset "imshow!" begin
