@@ -21,11 +21,7 @@ end
     zr[] = (1:20, 9:10)
     @test zr[].currentview.x == 9..10
     sleep(0.1)  # allow the Gtk event loop to run
-    if Sys.islinux()
-        @test_broken get_gtk_property(frame, :ratio, Float32) ≈ 0.1
-    else
-        @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
-    end
+    @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     zr[] = (9:10, 1:20)
     Gtk.showall(win)
     sleep(0.1)
