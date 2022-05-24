@@ -1,17 +1,23 @@
 using GtkObservables, ImageCore, ImageView
 using ImageView: sliceinds
 using Test
-import AxisArrays
-using AxisArrays: Axis
+using AxisArrays: AxisArrays, Axis, AxisArray
 
 @testset "CLim" begin
     cl = Observable(CLim(0.0, 0.8))
     cl[] = CLim(0, 1)
     @test cl[] === CLim{Float64}(0, 1)
 
+    cmin = Gray(0.2)
+    cmax = Gray(0.8)
+    smm = ImageView.scalechannels(Gray{N0f8}, cmin, cmax)
+    @test @inferred(smm(cmin)) == Gray(0)
+    @test @inferred(smm(cmax)) == Gray(1)
+    @test @inferred(smm((cmin+1.00001*cmax)/2)) == Gray{N0f8}(0.5)
+
     cmin = RGB(0.2,0.4,0.1)
     cmax = RGB(1.0,0.8,0.95)
-    smm = scaleminmax(RGB{N0f8}, cmin, cmax)
+    smm = ImageView.scalechannels(RGB{N0f8}, cmin, cmax)
     @test @inferred(smm(cmin)) == RGB(0,0,0)
     @test @inferred(smm(cmax)) == RGB(1,1,1)
     @test @inferred(smm((cmin+1.00001*cmax)/2)) == RGB{N0f8}(0.5,0.5,0.5)

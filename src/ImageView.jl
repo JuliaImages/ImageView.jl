@@ -16,8 +16,6 @@ using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
 using ImageMetadata
 using Compat # for @constprop :none
 
-import ImageCore: scaleminmax
-
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
 export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, imlink,
@@ -587,12 +585,13 @@ function histsignals(enabled::Observable{Bool}, img::Observable, clim::Observabl
     return histsigs
 end
 
-function scaleminmax(::Type{Tout}, cmin::AbstractRGB{T}, cmax::AbstractRGB{T}) where {T,Tout}
+function scalechannels(::Type{Tout}, cmin::AbstractRGB{T}, cmax::AbstractRGB{T}) where {T,Tout}
     r = scaleminmax(T, red(cmin), red(cmax))
     g = scaleminmax(T, green(cmin), green(cmax))
     b = scaleminmax(T, blue(cmin), blue(cmax))
     return x->Tout(nanz(r(red(x))), nanz(g(green(x))), nanz(b(blue(x))))
 end
+scalechannels(::Type{Tout}, cmin::C, cmax::C) where {Tout, C<:Union{Number,AbstractGray}} = scaleminmax(Tout, cmin, cmax)
 
 function safeminmax(cmin::T, cmax::T) where {T<:GrayLike}
     if !(cmin < cmax)
@@ -615,7 +614,7 @@ function prep_contrast(@nospecialize(img::Observable), clim::Observable{CLim{T}}
     # Return a signal corresponding to the scaled image
     imgc = map(img, clim) do image, cl
         cmin, cmax = safeminmax(cl.min, cl.max)
-        smm = scaleminmax(outtype(T), cmin, cmax)
+        smm = scalechannels(outtype(T), cmin, cmax)
         mappedarray(smm, image)
     end
     enabled, histsigs, imgc
