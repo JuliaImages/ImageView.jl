@@ -257,6 +257,13 @@ function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
     set_aspect!(frame, imgsig[])
     imgc = prep_contrast(canvas, imgsig, clim)
     GtkObservables.gc_preserve(frame, imgc)
+    # If there is an error in one of the functions being mapped elementwise, we often don't
+    # discover it until it triggers an error inside `Gtk.draw`. Check for problems here so
+    # such errors become easier to debug.
+    if !supported_eltype(imgc[])
+        !supported_eltype(imgsig[]) && error("got unsupported eltype $(eltype(imgsig[])) in creating slice")
+        error("got unsupported eltype $(eltype(imgc[])) in preparing the constrast")
+    end
 
     roidict = imshow(frame, canvas, imgc, zr, anns)
     roidict["slicedata"] = sd
@@ -734,6 +741,11 @@ _mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)
 wrap_signal(x) = Observable(x)
 wrap_signal(x::Observable) = x
 wrap_signal(::Nothing) = nothing
+
+function supported_eltype(@nospecialize(img))
+    T = eltype(img)
+    return T <: Union{Number,Colorant} && T !== Union{}
+end
 
 include("link.jl")
 include("contrast_gui.jl")
