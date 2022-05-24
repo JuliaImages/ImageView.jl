@@ -10,7 +10,7 @@ using AxisArrays: Axis
     @test cl[] === CLim{Float64}(0, 1)
 
     cmin = Gray(0.2)
-    cmax = RGB(0.8)
+    cmax = Gray(0.8)
     smm = ImageView.scalechannels(Gray{N0f8}, cmin, cmax)
     @test @inferred(smm(cmin)) == Gray(0)
     @test @inferred(smm(cmax)) == Gray(1)
