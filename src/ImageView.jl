@@ -257,6 +257,13 @@ function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
     set_aspect!(frame, imgsig[])
     imgc = prep_contrast(canvas, imgsig, clim)
     GtkObservables.gc_preserve(frame, imgc)
+    # If there is an error in one of the functions being mapped elementwise, we often don't
+    # discover it until it triggers an error inside `Gtk.draw`. Check for problems here so
+    # such errors become easier to debug.
+    if eltype(imgc[]) === Union{}
+        eltype(imgsig[]) === Union{} && error("got Union{} eltype in creating slice")
+        error("got Union{} eltype in preparing the constrast")
+    end
 
     roidict = imshow(frame, canvas, imgc, zr, anns)
     roidict["slicedata"] = sd
