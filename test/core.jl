@@ -1,8 +1,7 @@
 using GtkObservables, ImageCore, ImageView
 using ImageView: sliceinds
 using Test
-import AxisArrays
-using AxisArrays: Axis
+using AxisArrays: AxisArrays, Axis, AxisArray
 
 @testset "CLim" begin
     cl = Observable(CLim(0.0, 0.8))
