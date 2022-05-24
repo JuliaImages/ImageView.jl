@@ -111,6 +111,24 @@ end
     @test parent(guidict["roi"]["image roi"][]) == [4 3; 2 1]
 end
 
+@testset "Mapping errors" begin
+    # Create a colortype with missing methods
+    struct OneChannelColor{T} <: Color{T,1}
+        val1::T
+    end
+    img = [OneChannelColor(0) OneChannelColor(1);
+           OneChannelColor(2) OneChannelColor(3);
+    ]
+    @test_throws ErrorException("got unsupported eltype Union{} in preparing the constrast") imshow(img, CLim(0, 1))
+
+    struct MyChar <: AbstractChar
+        c::Char
+    end
+    ImageView.prep_contrast(canvas, @nospecialize(img::Observable), clim::Observable{CLim{MyChar}}) = img
+    img = MyChar['a' 'b'; 'c' 'd']
+    @test_throws ErrorException("got unsupported eltype MyChar in creating slice") imshow(img, CLim{MyChar}('a', 'b'))
+end
+
 if Gtk.libgtk_version >= v"3.10"
     # These tests use the player widget
     @testset "Multidimensional" begin
