@@ -1,11 +1,14 @@
-using ImageView, ImageCore, ImageView.Observables
+using ImageView, ImageCore, ImageView.Observables, ImageView.MultiChannelColors
+using Gtk: Gtk
 using Test
 
 @testset "contrast GUI" begin
     # test for the fix in #119
     imgbw = rand(N0f16, 100, 100)
     imgc = rand(RGB, 100, 100)
-    for img in (imgbw, imgc)
+    ctemplate = zero(MagentaGreen{Float32})
+    imgmcc = [ctemplate(rand(), rand()) for i = 1:100, j = 1:100]
+    for img in (imgbw, imgc, imgmcc)
         clim = ImageView.default_clim(img)
         imgsig = Observable(img)
         enabled, histsig, imgc = ImageView.prep_contrast(imgsig, clim)

@@ -19,6 +19,14 @@ change_red(col::Observable, chan::CLim) = change_red(col[], chan)
 change_green(col::Observable, chan::CLim) = change_green(col[], chan)
 change_blue(col::Observable, chan::CLim) = change_blue(col[], chan)
 
+function change_channel(col::CLim{C}, chanlim::CLim{G}, i::Int) where {C<:AbstractMultiChannelColor, G<:GrayLike}
+    cmin, cmax = col.min, col.max
+    cmin = Base.setindex(cmin, chanlim.min, i)
+    cmax = Base.setindex(cmax, chanlim.max, i)
+    return CLim(cmin, cmax)
+end
+change_channel(col::Observable, chanlim::CLim, i::Int) = change_channel(col[], chanlim, i)
+
 function contrast_gui(enabled::Observable{Bool}, hists::Vector, clim::Observable{CLim{T}}) where {T<:AbstractRGB}
     @assert length(hists) == 3 #one signal per color channel
     chanlims = channel_clims(clim[])
@@ -31,6 +39,23 @@ function contrast_gui(enabled::Observable{Bool}, hists::Vector, clim::Observable
     Observables.ObservablePair(clim, bsig; f=x->channel_clim(blue, x),  g=x->change_blue(clim, x))
     names = ["Red Contrast"; "Green Contrast"; "Blue Contrast"]
     csigs = [rsig; gsig; bsig]
+    cguis = []
+    for i=1:length(hists)
+        push!(cguis, contrast_gui(enabled, hists[i], csigs[i]; wname = names[i]))
+    end
+    return cguis
+end
+
+function contrast_gui(enabled::Observable{Bool}, hists::Vector, clim::Observable{CLim{C}}) where {C<:AbstractMultiChannelColor}
+    N = length(C)
+    @assert length(hists) == N #one signal per color channel
+    chanlims = channel_clims(clim[])
+    csigs = Observable.(chanlims)
+    #make sure that changes to individual channels update the color clim signal and vice versa
+    for i = 1:N
+        Observables.ObservablePair(clim, csigs[i]; f=x->channel_clim(c->Tuple(c)[i], x), g=x->change_channel(clim, x, i))
+    end
+    names = ["Contrast $i" for i = 1:N]
     cguis = []
     for i=1:length(hists)
         push!(cguis, contrast_gui(enabled, hists[i], csigs[i]; wname = names[i]))
