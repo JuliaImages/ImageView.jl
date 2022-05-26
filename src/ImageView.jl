@@ -9,8 +9,8 @@ end
 using ImageCore, ImageBase, StatsBase
 using ImageCore.MappedArrays
 using RoundingIntegers
-using Gtk.ShortNames, GtkObservables, Graphics, Cairo
-using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
+using Gtk4, GtkObservables, Graphics, Cairo
+using Gtk4: Align_START, Align_END, Align_FILL
 using GtkObservables.Observables
 using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
 using ImageMetadata
@@ -56,7 +56,7 @@ function closeall()
     nothing
 end
 
-const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
+const window_wrefs = WeakKeyDict{Gtk4.GtkWindowLeaf,Nothing}()
 
 """
     imshow()
@@ -93,12 +93,11 @@ using GtkObservables's tools:
 # Example
 
 ```julia
-using ImageView, GtkObservables, Gtk.ShortNames, TestImages
+using ImageView, GtkObservables, Gtk4, TestImages
 # Create a window with a canvas in it
-win = Window()
+win = GtkWindow()
 c = canvas(UserUnit)
 push!(win, c)
-Gtk.showall(win)
 # Load images
 mri = testimage("mri")
 # Display the image
@@ -117,7 +116,7 @@ function imshow!(canvas::GtkObservables.Canvas{UserUnit},
     end
 end
 
-function imshow!(frame::Frame,
+function imshow!(frame::GtkAspectFrame,
                  canvas::GtkObservables.Canvas{UserUnit},
                  imgsig::Observable,
                  zr::Observable{ZoomRegion{T}},
@@ -127,6 +126,7 @@ function imshow!(frame::Frame,
         set_coordinates(cnvs, zr[])
         set_aspect!(frame, image)
         draw_annotations(cnvs, anns)
+        nothing
     end
 end
 
@@ -232,13 +232,12 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
                      wrap_signal(clim), zr, sd, anns)
 
     win = guidict["window"]
-    Gtk.showall(win)
-    dct = Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
+    dct = Dict( "clim"=>clim, "gui"=>guidict, "roi"=>roidict, "annotations"=>anns)
     GtkObservables.gc_preserve(win, dct)
     return dct
 end
 
-function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
+function imshow(frame::Gtk4.GtkAspectFrame, canvas::GtkObservables.Canvas,
                 @nospecialize(img::AbstractArray), clim::Union{Nothing,Observable{<:CLim}},
                 zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
@@ -291,13 +290,12 @@ Compat.@constprop :none function imshow(img,
     roidict = imshow(guidict["frame"], guidict["canvas"], img, zr, sd, anns)
 
     win = guidict["window"]
-    Gtk.showall(win)
     dct = Dict("gui"=>guidict, "roi"=>roidict)
     GtkObservables.gc_preserve(win, dct)
     return dct
 end
 
-function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
+function imshow(frame::Gtk4.GtkFrame, canvas::GtkObservables.Canvas,
                 img, zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
     @nospecialize
@@ -333,12 +331,12 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
                     name = "ImageView", aspect=:auto,
                     slicedata::SliceData=SliceData{false}())
     winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
-    win = Window(name, winsize...)
+    win = GtkWindow(name, winsize...)
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
         delete!(window_wrefs, win)
     end
-    vbox = Box(:v)
+    vbox = GtkBox(:v)
     push!(win, vbox)
     if gridsize == (1,1)
         frames, canvases = frame_canvas(aspect)
@@ -347,23 +345,23 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
         g, frames, canvases = canvasgrid(gridsize, aspect)
     end
     push!(vbox, g)
-    status = Label("")
-    set_gtk_property!(status, :halign, Gtk.GConstants.GtkAlign.START)
+    status = GtkLabel("")
+    set_gtk_property!(status, :halign, Gtk4.Align_START)
     push!(vbox, status)
 
     guidict = Dict("window"=>win, "vbox"=>vbox, "frame"=>frames, "status"=>status,
                    "canvas"=>canvases)
 
     # Add the player controls
-    if !isempty(slicedata)
-        players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
-        guidict["players"] = players
-        hbox = Box(:h)
-        for p in players
-            push!(hbox, frame(p))
-        end
-        push!(guidict["vbox"], hbox)
-    end
+    # if !isempty(slicedata)
+    #     players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
+    #     guidict["players"] = players
+    #     hbox = Box(:h)
+    #     for p in players
+    #         push!(hbox, frame(p))
+    #     end
+    #     push!(guidict["vbox"], hbox)
+    # end
 
     guidict
 end
@@ -396,11 +394,12 @@ Compat.@constprop :none function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:au
 end
 
 Compat.@constprop :none function frame_canvas(aspect)
-    f = aspect==:none ? Frame() : AspectFrame("", 0.5, 0.5, 1)
-    set_gtk_property!(f, :expand, true)
-    set_gtk_property!(f, :shadow_type, Gtk.GConstants.GtkShadowType.NONE)
+    f = aspect==:none ? GtkFrame() : GtkAspectFrame(0.5, 0.5, 1, true)
+    set_gtk_property!(f, :hexpand, true)
+    set_gtk_property!(f, :vexpand, true)
+    #set_gtk_property!(f, :shadow_type, Gtk4.ShadowType_NONE)
     c = canvas(UserUnit)
-    push!(f, widget(c))
+    f[] = widget(c)
     f, c
 end
 
@@ -417,14 +416,13 @@ Observable-view of a higher-dimensional object).
 # Example
 
 ```julia
-using ImageView, TestImages, Gtk
+using ImageView, TestImages, Gtk4
 mri = testimage("mri");
 # Create a canvas `c`. There are other approaches, like stealing one from a previous call
 # to `imshow`, or using GtkObservables directly.
 guidict = imshow_gui((300, 300))
 c = guidict["canvas"];
 # To see anything you have to call `showall` on the window (once)
-Gtk.showall(guidict["window"])
 # Create the image Observable
 imgsig = Observable(mri[:,:,1]);
 # Show it
@@ -438,31 +436,31 @@ function imshow(canvas::GtkObservables.Canvas{UserUnit},
                 zr::Observable{ZoomRegion{T}}=Observable(ZoomRegion(imgsig[])),
                 anns::Annotations=annotations()) where T<:RInteger
     @nospecialize
-    zoomrb = init_zoom_rubberband(canvas, zr)
-    zooms = init_zoom_scroll(canvas, zr)
-    pans = init_pan_scroll(canvas, zr)
-    pand = init_pan_drag(canvas, zr)
+    # zoomrb = init_zoom_rubberband(canvas, zr)
+    # zooms = init_zoom_scroll(canvas, zr)
+    # pans = init_pan_scroll(canvas, zr)
+    # pand = init_pan_drag(canvas, zr)
     redraw = imshow!(canvas, imgsig, zr, anns)
-    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
-               "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
+    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, #"zoom_rubberband"=>zoomrb,
+               #"zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
                "redraw"=>redraw)
     GtkObservables.gc_preserve(widget(canvas), dct)
     dct
 end
 
-function imshow(frame::Frame,
+function imshow(frame::GtkAspectFrame,
                 canvas::GtkObservables.Canvas{UserUnit},
                 imgsig::Observable,
                 zr::Observable{ZoomRegion{T}},
                 anns::Annotations=annotations()) where T<:RInteger
     @nospecialize
-    zoomrb = init_zoom_rubberband(canvas, zr)
-    zooms = init_zoom_scroll(canvas, zr)
-    pans = init_pan_scroll(canvas, zr)
-    pand = init_pan_drag(canvas, zr)
+    # zoomrb = init_zoom_rubberband(canvas, zr)
+    # zooms = init_zoom_scroll(canvas, zr)
+    # pans = init_pan_scroll(canvas, zr)
+    # pand = init_pan_drag(canvas, zr)
     redraw = imshow!(frame, canvas, imgsig, zr, anns)
-    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
-               "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
+    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, #"zoom_rubberband"=>zoomrb,
+               #"zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
                "redraw"=>redraw)
     GtkObservables.gc_preserve(widget(canvas), dct)
     dct
@@ -642,19 +640,18 @@ nanz(x::FixedPoint) = x
 nanz(x::Integer) = x
 
 function create_contrast_popup(canvas, enabled, hists, clim)
-    popupmenu = Menu()
-    contrast = MenuItem("Contrast...")
-    push!(popupmenu, contrast)
-    Gtk.showall(popupmenu)
-    push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
-        if btn.button == 3 && btn.clicktype == BUTTON_PRESS
-            popup(popupmenu, btn.gtkevent)
-        end
-    end)
-    signal_connect(contrast, :activate) do widget
-        enabled[] = true
-        contrast_gui(enabled, hists, clim)
-    end
+    popupmenu = Gtk4.GLib.GMenu()
+    # contrast = Gtk4.GLib.GMenuItem("Contrast...")
+    # push!(popupmenu, contrast)
+    # push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
+    #     if btn.button == 3 && btn.clicktype == BUTTON_PRESS
+    #         popup(popupmenu, btn.gtkevent)
+    #     end
+    # end)
+    # signal_connect(contrast, :activate) do widget
+    #     enabled[] = true
+    #     contrast_gui(enabled, hists, clim)
+    # end
 end
 
 function map_image_roi(@nospecialize(img), zr::Observable{ZoomRegion{T}}, slices...) where T
@@ -665,7 +662,7 @@ function map_image_roi(@nospecialize(img), zr::Observable{ZoomRegion{T}}, slices
 end
 map_image_roi(img::Observable, zr::Observable{ZoomRegion{T}}, slices...) where {T} = img
 
-function set_aspect!(frame::AspectFrame, image)
+function set_aspect!(frame::GtkAspectFrame, image)
     ps = map(abs, pixelspacing(image))
     sz = map(length, axes(image))
     r = sz[2]*ps[2]/(sz[1]*ps[1])
@@ -696,7 +693,7 @@ and `screensize` are supplied in Gtk order (x, y).
 When supplying a GtkWindow `win`, the canvas size is limited to 60% of
 the total screen size.
 """
-Compat.@constprop :none function canvas_size(win::Gtk.GtkWindowLeaf, requestedsize_xy; minsize=100)
+Compat.@constprop :none function canvas_size(win::Gtk4.GtkWindowLeaf, requestedsize_xy; minsize=100)
     ssz = screen_size(win)
     canvas_size(map(x->0.6*x, ssz), requestedsize_xy; minsize=minsize)
 end
@@ -750,29 +747,29 @@ include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
 
-if ccall(:jl_generating_output, Cint, ()) == 1 && (!Sys.isunix() || haskey(ENV, "DISPLAY"))
-    # Partial workaround for https://github.com/JuliaLang/julia/issues/45050
-    if hasfield(Method, :constprop)
-        for m in methods(var"#imshow##kw".instance)
-            m.constprop = 0x02
-            for mb in methods(Base.bodyfunction(m))
-                mb.constprop = 0x02
-            end
-        end
-    end
-    # Precompile
-    for T in (N0f8, N0f16, Float32)
-        for C in (Gray, RGB)
-            img = rand(C{T}, 2, 2)
-            imshow(img)
-            clim = ImageView.default_clim(img)
-            imgsig = Observable(img)
-            enabled, histsig, imgc = ImageView.prep_contrast(imgsig, clim)
-            enabled[] = true
-            ImageView.contrast_gui(enabled, histsig, clim)
-        end
-    end
-    closeall()   # this is critical: you don't want to precompile with window_wrefs loaded with junk (dangling window pointers from closed session)
-end
+# if ccall(:jl_generating_output, Cint, ()) == 1 && (!Sys.isunix() || haskey(ENV, "DISPLAY"))
+#     # Partial workaround for https://github.com/JuliaLang/julia/issues/45050
+#     if hasfield(Method, :constprop)
+#         for m in methods(var"#imshow##kw".instance)
+#             m.constprop = 0x02
+#             for mb in methods(Base.bodyfunction(m))
+#                 mb.constprop = 0x02
+#             end
+#         end
+#     end
+#     # Precompile
+#     for T in (N0f8, N0f16, Float32)
+#         for C in (Gray, RGB)
+#             img = rand(C{T}, 2, 2)
+#             imshow(img)
+#             clim = ImageView.default_clim(img)
+#             imgsig = Observable(img)
+#             enabled, histsig, imgc = ImageView.prep_contrast(imgsig, clim)
+#             enabled[] = true
+#             ImageView.contrast_gui(enabled, histsig, clim)
+#         end
+#     end
+#     closeall()   # this is critical: you don't want to precompile with window_wrefs loaded with junk (dangling window pointers from closed session)
+# end
 
 end # module

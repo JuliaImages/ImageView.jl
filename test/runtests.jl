@@ -1,13 +1,12 @@
 using ImageView
 using ImageCore, OffsetArrays
-using Gtk
+using Gtk4
 using Test
 
 if !isdefined(@__MODULE__, :imshow_now)
     function imshow_now(args...; kwargs...)
         @nospecialize
         guidict = imshow(args...; kwargs...)
-        Gtk.showall(guidict["gui"]["window"])
         sleep(0.01)
         guidict
     end

@@ -1,5 +1,5 @@
 using ImageView, TestImages, ImageCore, ImageView.Observables,
-      GtkObservables, Gtk, IntervalSets
+      GtkObservables, Gtk4, IntervalSets
 using Test
 using AxisArrays: AxisArrays, AxisArray, Axis
 
@@ -14,7 +14,7 @@ end
     img = rand(N0f8, 20, 20)
     guidict = imshow_now(img)
     win, frame = guidict["gui"]["window"], guidict["gui"]["frame"]
-    @test isa(frame, Gtk.GtkAspectFrameLeaf)
+    @test isa(frame, Gtk4.GtkAspectFrameLeaf)
     zr = guidict["roi"]["zoomregion"]
 
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
@@ -23,7 +23,6 @@ end
     sleep(0.1)  # allow the Gtk event loop to run
     @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     zr[] = (9:10, 1:20)
-    Gtk.showall(win)
     sleep(0.1)
     @test get_gtk_property(frame, :ratio, Float32) ≈ 10.0
 
@@ -31,7 +30,7 @@ end
 
     guidict = imshow_now(img, aspect=:none)
     win, frame = guidict["gui"]["window"], guidict["gui"]["frame"]
-    @test isa(frame, Gtk.GtkFrameLeaf)
+    @test isa(frame, Gtk4.GtkFrameLeaf)
     destroy(win)
 end
 
@@ -166,13 +165,11 @@ if Gtk.libgtk_version >= v"3.10"
         gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
         guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
         guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
-        Gtk.showall(gd["window"])
         sleep(0.01)
         @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
 
         # imlink
         gd = imlink(img, mriseg)
-        Gtk.showall(gd["window"])
         sleep(0.01)
         @test gd["guidata"][1]["zoomregion"] === gd["guidata"][2]["zoomregion"]
     end

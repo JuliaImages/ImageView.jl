@@ -15,11 +15,11 @@ using Test
         if isa(ret, Vector) #one gui dict per channel for color images
             for r in ret
                 @test isa(r, Dict)
-                Gtk.destroy(r["window"])
+                Gtk4.destroy(r["window"])
             end
         else
             @test isa(ret, Dict)
-            Gtk.destroy(ret["window"])
+            Gtk4.destroy(ret["window"])
         end
         # issue #168
         h = histsig[1][]

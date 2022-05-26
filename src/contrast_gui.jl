@@ -1,5 +1,3 @@
-using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
-
 function change_red(col::CLim{T}, chan::CLim{T2}) where {T<:AbstractRGB, T2<:GrayLike}
     cmin = T(chan.min, green(col.min), blue(col.min))
     cmax = T(chan.max, green(col.max), blue(col.max))
@@ -60,8 +58,8 @@ function contrast_gui(enabled::Observable{Bool}, hist::Observable, clim::Observa
     end
     updateclim = map(smin, smax) do cmin, cmax
         # if min/max is outside the current range, update the sliders
-        adj = Gtk.Adjustment(widget(cgui["slider_min"]))
-        rmin, rmax = Gtk.G_.lower(adj), Gtk.G_.upper(adj)
+        adj = Gtk4.GtkAdjustment(widget(cgui["slider_min"]))
+        rmin, rmax = Gtk4.G_.get_lower(adj), Gtk4.G_.get_upper(adj)
         if cmin < rmin || cmax > rmax || cmax-cmin < Δ
             # Also, don't cross the sliders
             bigmax = max(cmin,cmax,rmin,rmax)
@@ -97,7 +95,9 @@ function contrast_gui(enabled::Observable{Bool}, hist::Observable, clim::Observa
 end
 
 function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Contrast")
-    win = Window(wname) |> (g = Grid())
+    win = GtkWindow(wname)
+    g = GtkGrid()
+    win[] = g
     slmax = slider(rng; observable=smax)
     slmin = slider(rng; observable=smin)
     for sl in (slmax, slmin)
@@ -107,9 +107,9 @@ function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Con
     g[1,3] = widget(slmin)
     cnvs = canvas(UserUnit)
     g[1,2] = widget(cnvs)
-    set_gtk_property!(cnvs, :expand, true)
-    emax_w = Entry(; width_chars=5, hexpand=false, halign=GTK_ALIGN_END, valign=GTK_ALIGN_START)
-    emin_w = Entry(; width_chars=5, hexpand=false, halign=GTK_ALIGN_END, valign=GTK_ALIGN_END)
+    #set_gtk_property!(cnvs, :expand, true)
+    emax_w = GtkEntry(; width_chars=5, hexpand=false)#, halign=Gtk4.Align_END, valign=Gtk4.Align_START)
+    emin_w = GtkEntry(; width_chars=5, hexpand=false)#, halign=GTK_ALIGN_END, valign=GTK_ALIGN_END)
     g[2,1] = emax_w
     g[2,3] = emin_w
     # By not specifying the range on the textbox, we let the user
@@ -118,7 +118,6 @@ function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Con
     emax = textbox(eltype(smax); widget=emax_w, observable=smax) # , range=rng)
     emin = textbox(eltype(smin); widget=emin_w, observable=smin) #, range=rng)
 
-    Gtk.showall(win)
     Dict("window"=>win, "canvas"=>cnvs, "slider_min"=>slmin, "slider_max"=>slmax, "textbox_min"=>emin, "textbox_max"=>emax)
 end
 
