@@ -1,5 +1,5 @@
 using ImageView
-using ImageCore, OffsetArrays
+using ImageCore, OffsetArrays, MultiChannelColors
 using Test
 
 @testset "Simple grayscale" begin
@@ -27,7 +27,15 @@ end
     A[1,3,3] = -Inf
     A[1,4,4] = Inf
     imshow_now(colorview(RGB, A))
+end
 
+@testset "Simple MultiChannelColors" begin
+    img = rand(MagentaGreen{N0f16}, 10, 10)
+    imshow_now(img)
+    img = rand(MagentaGreen{Float32}, 10, 10)
+    img[1,1] = MagentaGreen(NaN, 0.5)
+    img[2,2] = MagentaGreen(-Inf, Inf)
+    imshow_now(img)
 end
 
 @testset "Non-1 indices" begin
