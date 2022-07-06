@@ -482,13 +482,23 @@ function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     end
 end
 
+function fast_finite_extrema(a::AbstractArray)
+	mini = a[1]
+	maxi = a[1]
+	@simd for v in a
+		if isfinite(v)
+			if v <= mini
+				mini = v
+			elseif v > maxi
+				maxi = v
+			end
+		end
+	end
+	return mini, maxi
+end
 function valuespan(img::AbstractArray)
-    minval = minimum_finite(img)
-    maxval = maximum_finite(img)
-    if minval > maxval
-        minval = zero(typeof(minval))
-        maxval = oneunit(typeof(maxval))
-    elseif minval == maxval
+    minval, maxval = fast_finite_extrema(img)
+    if minval == maxval
         maxval = minval+1
     end
     return minval, maxval
@@ -503,8 +513,7 @@ function _deflt_clim(img::AbstractArray)
     minval, maxval = valuespan(img)
     Signal(CLim(saferound(gray(minval)), saferound(gray(maxval))); name="CLim")
 end
-
-function _deflt_clim(img::AbstractMatrix{T}) where {T<:AbstractRGB}
+function _deflt_clim(img::AbstractArray{T}) where {T<:AbstractRGB}
     minval = RGB(0.0,0.0,0.0)
     maxval = RGB(1.0,1.0,1.0)
     Signal(CLim(minval, maxval); name="CLim")
