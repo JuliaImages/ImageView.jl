@@ -51,7 +51,7 @@ Closes all windows opened by ImageView2.
 """
 function closeall()
     for (w, _) in window_wrefs
-        destroy(w)
+        Gtk4.destroy(w)
     end
     empty!(window_wrefs)
     nothing
@@ -117,7 +117,7 @@ function imshow!(canvas::GtkObservables.Canvas{UserUnit},
     end
 end
 
-function imshow!(frame::GtkAspectFrame,
+function imshow!(frame::Union{GtkFrame,GtkAspectFrame},
                  canvas::GtkObservables.Canvas{UserUnit},
                  imgsig::Observable,
                  zr::Observable{ZoomRegion{T}},
@@ -238,7 +238,7 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
     return dct
 end
 
-function imshow(frame::Gtk4.GtkAspectFrame, canvas::GtkObservables.Canvas,
+function imshow(frame::Union{Gtk4.GtkFrame,Gtk4.GtkAspectFrame}, canvas::GtkObservables.Canvas,
                 @nospecialize(img::AbstractArray), clim::Union{Nothing,Observable{<:CLim}},
                 zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
@@ -296,7 +296,7 @@ Compat.@constprop :none function imshow(img,
     return dct
 end
 
-function imshow(frame::Gtk4.GtkFrame, canvas::GtkObservables.Canvas,
+function imshow(frame::Union{GtkFrame,GtkAspectFrame}, canvas::GtkObservables.Canvas,
                 img, zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
     @nospecialize
@@ -327,11 +327,12 @@ as the window is resized.
 the necessary information for creating player widgets for viewing
 multidimensional images.
 """
-Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
+function imshow_gui(canvassize::Tuple{Int,Int},
                     gridsize::Tuple{Int,Int} = (1,1);
                     name = "ImageView", aspect=:auto,
                     slicedata::SliceData=SliceData{false}())
-    winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
+    #winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
+    winsize = canvas_size((1920,1080), map(*, canvassize, gridsize))
     win = GtkWindow(name, winsize...)
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
@@ -382,7 +383,7 @@ GtkAspectRatioFrames that contain each canvas, and `canvases` is an
 `ny`-by-`nx` array of canvases.
 """
 Compat.@constprop :none function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:auto)
-    g = Grid()
+    g = GtkGrid()
     frames = Matrix{Any}(undef, gridsize)
     canvases = Matrix{Any}(undef, gridsize)
     for j = 1:gridsize[2], i = 1:gridsize[1]
@@ -449,7 +450,7 @@ function imshow(canvas::GtkObservables.Canvas{UserUnit},
     dct
 end
 
-function imshow(frame::GtkAspectFrame,
+function imshow(frame::Union{GtkFrame,GtkAspectFrame},
                 canvas::GtkObservables.Canvas{UserUnit},
                 imgsig::Observable,
                 zr::Observable{ZoomRegion{T}},

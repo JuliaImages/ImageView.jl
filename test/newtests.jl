@@ -7,7 +7,7 @@ using AxisArrays: AxisArrays, AxisArray, Axis
     img = rand(N0f8, 5)
     guidict = imshow_now(img)
     win = guidict["gui"]["window"]
-    destroy(win)
+    Gtk4.destroy(win)
 end
 
 @testset "Aspect ratio" begin
@@ -26,12 +26,12 @@ end
     sleep(0.1)
     @test get_gtk_property(frame, :ratio, Float32) ≈ 10.0
 
-    destroy(win)
+    Gtk4.destroy(win)
 
     guidict = imshow_now(img, aspect=:none)
     win, frame = guidict["gui"]["window"], guidict["gui"]["frame"]
     @test isa(frame, Gtk4.GtkFrameLeaf)
-    destroy(win)
+    Gtk4.destroy(win)
 end
 
 # image display
@@ -81,7 +81,7 @@ end
     # a very large image
     img = rand(N0f8, 10000, 15000)
     hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
-    sleep(0.1)  # some extra sleep for this big image
+    sleep(1.0)  # some extra sleep for this big image
     cvs = hbig["gui"]["canvas"];
     @test Graphics.height(getgc(cvs)) <= 500
     @test Graphics.width(getgc(cvs)) <= 500
@@ -128,55 +128,53 @@ end
     @test_throws ErrorException("got unsupported eltype MyChar in creating slice") imshow(img, CLim{MyChar}('a', 'b'))
 end
 
-if Gtk.libgtk_version >= v"3.10"
-    # These tests use the player widget
-    @testset "Multidimensional" begin
-        # Test that we can use positional or named axes with AxisArrays
-        img = AxisArray(rand(3, 5, 2), :x, :y, :z)
-        guin = imshow_now(img; name="AxisArray Named")
-        @test isa(guin["roi"]["slicedata"].axs[1], Axis{:z})
-        guip = imshow_now(img; axes=(1,2), name="AxisArray Positional")
-        @test isa(guip["roi"]["slicedata"].axs[1], Axis{3})
-        guip2 = imshow_now(img; axes=(1,3), name="AxisArray Positional")
-        @test isa(guip2["roi"]["slicedata"].axs[1], Axis{2})
+# These tests use the player widget
+@testset "Multidimensional" begin
+    # Test that we can use positional or named axes with AxisArrays
+    img = AxisArray(rand(3, 5, 2), :x, :y, :z)
+    guin = imshow_now(img; name="AxisArray Named")
+    @test isa(guin["roi"]["slicedata"].axs[1], Axis{:z})
+    guip = imshow_now(img; axes=(1,2), name="AxisArray Positional")
+    @test isa(guip["roi"]["slicedata"].axs[1], Axis{3})
+    guip2 = imshow_now(img; axes=(1,3), name="AxisArray Positional")
+    @test isa(guip2["roi"]["slicedata"].axs[1], Axis{2})
 
-        ## 3d images
-        img = testimage("mri")
-        hmri = imshow_now(img; name="P,R view")
-        @test isa(hmri["roi"]["slicedata"].axs[1], Axis{:S})
+    ## 3d images
+    img = testimage("mri")
+    hmri = imshow_now(img; name="P,R view")
+    @test isa(hmri["roi"]["slicedata"].axs[1], Axis{:S})
 
-        # Use a custom CLim here because the first slice is not representative of the intensities
-        hmrip = imshow_now(img, Observable(CLim(0.0, 1.0)), axes=(:S, :P), name="S,P view")
-        @test isa(hmrip["roi"]["slicedata"].axs[1], Axis{:R})
-        hmrip["roi"]["slicedata"].signals[1][] = 84
+    # Use a custom CLim here because the first slice is not representative of the intensities
+    hmrip = imshow_now(img, Observable(CLim(0.0, 1.0)), axes=(:S, :P), name="S,P view")
+    @test isa(hmrip["roi"]["slicedata"].axs[1], Axis{:R})
+    hmrip["roi"]["slicedata"].signals[1][] = 84
 
-        ## Two coupled images
-        mriseg = RGB.(img)
-        mriseg[img .> 0.5] .= colorant"red"
-        # version 1
-        guidata = imshow_now(img, axes=(1,2))
-        zr = guidata["roi"]["zoomregion"]
-        slicedata = guidata["roi"]["slicedata"]
-        guidata2 = imshow_now(mriseg, nothing, zr, slicedata)
-        @test guidata2["roi"]["zoomregion"] === zr
+    ## Two coupled images
+    mriseg = RGB.(img)
+    mriseg[img .> 0.5] .= colorant"red"
+    # version 1
+    guidata = imshow_now(img, axes=(1,2))
+    zr = guidata["roi"]["zoomregion"]
+    slicedata = guidata["roi"]["slicedata"]
+    guidata2 = imshow_now(mriseg, nothing, zr, slicedata)
+    @test guidata2["roi"]["zoomregion"] === zr
 
-        # version 2
-        zr, slicedata = roi(img, (1,2))
-        gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
-        guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
-        guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
-        sleep(0.01)
-        @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
+    # version 2
+    zr, slicedata = roi(img, (1,2))
+    gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
+    guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
+    guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
+    sleep(0.01)
+    @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
 
-        # imlink
-        gd = imlink(img, mriseg)
-        sleep(0.01)
-        @test gd["guidata"][1]["zoomregion"] === gd["guidata"][2]["zoomregion"]
-    end
+    # imlink
+    gd = imlink(img, mriseg)
+    sleep(0.01)
+    @test gd["guidata"][1]["zoomregion"] === gd["guidata"][2]["zoomregion"]
+end
 
-    @testset "Non-AbstractArrays" begin
-        include("cone.jl")
-    end
+@testset "Non-AbstractArrays" begin
+    include("cone.jl")
 end
 
 nothing

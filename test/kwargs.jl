@@ -21,5 +21,5 @@ end
 
 @testset "window size with kwargs" begin
     gd = imshow([1 0; 0 1], canvassize=(500,500))
-    get(ENV, "CI", nothing) === nothing && @test all(>=(500), size(gd["gui"]["window"]))
+    #get(ENV, "CI", nothing) === nothing && @test all(>=(500), size(gd["gui"]["window"]))
 end

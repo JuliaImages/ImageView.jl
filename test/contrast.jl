@@ -1,5 +1,5 @@
 using ImageView, ImageCore, ImageView.Observables, ImageView.MultiChannelColors
-using Gtk: Gtk
+using Gtk4: Gtk4
 using Test
 
 @testset "contrast GUI" begin
