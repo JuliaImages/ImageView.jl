@@ -327,12 +327,11 @@ as the window is resized.
 the necessary information for creating player widgets for viewing
 multidimensional images.
 """
-function imshow_gui(canvassize::Tuple{Int,Int},
+Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
                     gridsize::Tuple{Int,Int} = (1,1);
                     name = "ImageView", aspect=:auto,
                     slicedata::SliceData=SliceData{false}())
-    #winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
-    winsize = canvas_size((1920,1080), map(*, canvassize, gridsize))
+    winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
     win = GtkWindow(name, winsize...)
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
