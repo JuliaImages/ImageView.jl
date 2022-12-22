@@ -783,7 +783,7 @@ include("annotations.jl")
 
 if ccall(:jl_generating_output, Cint, ()) == 1 && (!Sys.isunix() || haskey(ENV, "DISPLAY"))
     # Partial workaround for https://github.com/JuliaLang/julia/issues/45050
-    if hasfield(Method, :constprop)
+    if hasfield(Method, :constprop) && isdefined(@__MODULE__, Symbol("#imshow##kw"))
         for m in methods(var"#imshow##kw".instance)
             m.constprop = 0x02
             for mb in methods(Base.bodyfunction(m))
