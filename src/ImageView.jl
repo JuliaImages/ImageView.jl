@@ -781,17 +781,8 @@ include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
 
-if ccall(:jl_generating_output, Cint, ()) == 1 && (!Sys.isunix() || haskey(ENV, "DISPLAY"))
-    # Partial workaround for https://github.com/JuliaLang/julia/issues/45050
-    if hasfield(Method, :constprop) && isdefined(@__MODULE__, Symbol("#imshow##kw"))
-        for m in methods(var"#imshow##kw".instance)
-            m.constprop = 0x02
-            for mb in methods(Base.bodyfunction(m))
-                mb.constprop = 0x02
-            end
-        end
-    end
-    # Precompile
+using SnoopPrecompile
+@precompile_all_calls begin
     for T in (N0f8, N0f16, Float32)
         for C in (Gray, RGB)
             img = rand(C{T}, 2, 2)
