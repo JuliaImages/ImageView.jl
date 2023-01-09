@@ -1,27 +1,27 @@
 using Base: Indices, tail, PermutedDimsArrays.PermutedDimsArray
 
 struct SliceData{transpose,N,Axs}
-    signals::NTuple{N,Signal{Int}}
+    signals::NTuple{N,Observable{Int}}
     axs::Axs
 end
 
 function Base.show(io::IO, sd::SliceData{transpose,N}) where {transpose,N}
     println(io, "SliceData{transpose=$transpose}:")
     for i = 1:N
-        println(io, "  ", axisname(sd.axs[i]), ": ", value(sd.signals[i]))
+        println(io, "  ", axisname(sd.axs[i]), ": ", sd.signals[i][])
     end
 end
 axisname(ax::Axis) = axisnames(ax)[1]
 
 """
-    SliceData{transpose::Bool}(signals::NTuple{N,Signal{Int}}, axes::NTuple{N,Axes})
+    SliceData{transpose::Bool}(signals::NTuple{N,Observable{Int}}, axes::NTuple{N,Axes})
 
 Specify slice information for a (possibly) multidimensional
 image. `signals` hold the currently-selected slices for the selected
 `axes`, all of which are effectively "orthogonal" to the plane in the
 viewer.
 """
-SliceData{transpose}(signals::NTuple{N,Signal{Int}}, axs::NTuple{N,Axis}) where {transpose,N} =
+SliceData{transpose}(signals::NTuple{N,Observable{Int}}, axs::NTuple{N,Axis}) where {transpose,N} =
     SliceData{transpose,N,typeof(axs)}(signals, axs)
 SliceData{transpose}() where {transpose} = SliceData{transpose}((), ())
 
@@ -29,9 +29,9 @@ Base.isempty(sd::SliceData{transpose,N}) where {transpose,N} = N == 0
 Base.length(sd::SliceData{transpose,N}) where {transpose,N} = N
 
 """
-    roi(A) -> zr::Signal(ZoomRegion), slicedata::SliceData
-    roi(A, dims=(1,2)) -> zr::Signal(ZoomRegion), slicedata::SliceData
-    roi(A, (:namey, :namex)) -> zr::Signal(ZoomRegion), slicedata::SliceData
+    roi(A) -> zr::Observable(ZoomRegion), slicedata::SliceData
+    roi(A, dims=(1,2)) -> zr::Observable(ZoomRegion), slicedata::SliceData
+    roi(A, (:namey, :namex)) -> zr::Observable(ZoomRegion), slicedata::SliceData
 
 Create the initial "region of interest" for viewing `A`. For
 multidimensional objects, optionally select two dimensions (the first
@@ -52,11 +52,11 @@ function roi(inds::Indices, dims::Dims{2})
     for i = 1:length(inds)
         if !(i ∈ dims)
             ind = inds[i]
-            push!(sigs, Signal(first(ind)))
+            push!(sigs, Observable(first(ind)))
             push!(axs, Axis{i}(ind))
         end
     end
-    Signal(zr), SliceData{dims[2] < dims[1]}((sigs...,), (axs...,))
+    Observable(zr), SliceData{dims[2] < dims[1]}((sigs...,), (axs...,))
 end
 
 function roi(axs::NTuple{N,Axis}, axnames::Tuple{Symbol,Symbol}) where N
@@ -69,11 +69,11 @@ function roi(axs::NTuple{N,Axis}, axnames::Tuple{Symbol,Symbol}) where N
     for (i, n) in enumerate(names)
         if !(n ∈ axnames)
             ind = inds[i]
-            push!(sigs, Signal(first(ind)))
+            push!(sigs, Observable(first(ind)))
             push!(axs, Axis{n}(ind))
         end
     end
-    Signal(zr), SliceData{dims[2] < dims[1]}((sigs...,), (axs...,))
+    Observable(zr), SliceData{dims[2] < dims[1]}((sigs...,), (axs...,))
 end
 
 """
@@ -95,8 +95,8 @@ function makeroi(zr::ZoomRegion, transpose::Bool)
 end
 
 makeslices(sd::SliceData) = makeslices(sd.axs, sd.signals)
-makeslices(axs::NTuple{N,Axis}, sigs::NTuple{N,Signal}) where {N} =
-    map((ax,s) -> ax(value(s)), axs, sigs)
+makeslices(axs::NTuple{N,Axis}, sigs::NTuple{N,Observable}) where {N} =
+    map((ax,s) -> ax(s[]), axs, sigs)
 
 function slice2d(img::AbstractArray, roi, slices::Axis...)
     inds = sliceinds(img, roi, slices...)

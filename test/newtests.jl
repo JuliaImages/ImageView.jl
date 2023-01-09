@@ -1,8 +1,7 @@
-using ImageView, TestImages, ImageCore, Reactive,
-      GtkReactive, Gtk, IntervalSets
+using ImageView, TestImages, ImageCore, ImageView.Observables,
+      GtkObservables, Gtk, IntervalSets
 using Test
-import AxisArrays
-using AxisArrays: Axis
+using AxisArrays: AxisArrays, AxisArray, Axis
 
 @testset "1d" begin
     img = rand(N0f8, 5)
@@ -17,19 +16,13 @@ end
     win, frame = guidict["gui"]["window"], guidict["gui"]["frame"]
     @test isa(frame, Gtk.GtkAspectFrameLeaf)
     zr = guidict["roi"]["zoomregion"]
-    Reactive.run_till_now()
-    sleep(1.0)  # give compilation a chance to catch up
 
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
-    push!(zr, (1:20, 8:10))  # The first one sometimes gets dropped. Reactive bug?
-    Reactive.run_till_now()
-    push!(zr, (1:20, 9:10))
-    Reactive.run_till_now()
-    sleep(1.0)
-    @test value(zr).currentview.x == 9..10
+    zr[] = (1:20, 9:10)
+    @test zr[].currentview.x == 9..10
+    sleep(0.1)  # allow the Gtk event loop to run
     @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
-    push!(zr, (9:10, 1:20))
-    Reactive.run_till_now()
+    zr[] = (9:10, 1:20)
     Gtk.showall(win)
     sleep(0.1)
     @test get_gtk_property(frame, :ratio, Float32) ≈ 10.0
@@ -85,6 +78,14 @@ end
     w, h = size(win)
     ws, hs = screen_size(win)
     !Sys.iswindows() && @test w <= ws && h <= hs
+
+    # a very large image
+    img = rand(N0f8, 10000, 15000)
+    hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
+    sleep(0.1)  # some extra sleep for this big image
+    cvs = hbig["gui"]["canvas"];
+    @test Graphics.height(getgc(cvs)) <= 500
+    @test Graphics.width(getgc(cvs)) <= 500
 end
 
 @testset "imshow!" begin
@@ -93,21 +94,39 @@ end
     c = guidict["gui"]["canvas"]
     ImageView.imshow!(c, img[:,:,2])
 
-    imgsig = Signal(img[:,:,1])
+    imgsig = Observable(img[:,:,1])
     imshow(c, imgsig)
-    push!(imgsig, img[:,:,8])
+    imgsig[] = img[:,:,8]
 end
 
 @testset "Orientation" begin
     img = [1 2; 3 4]
     guidict = imshow_now(img)
-    @test parent(value(guidict["roi"]["image roi"])) == [1 2; 3 4]
+    @test parent(guidict["roi"]["image roi"][]) == [1 2; 3 4]
     guidict = imshow_now(img, flipy=true)
-    @test parent(value(guidict["roi"]["image roi"])) == [3 4; 1 2]
+    @test parent(guidict["roi"]["image roi"][]) == [3 4; 1 2]
     guidict = imshow_now(img, flipx=true)
-    @test parent(value(guidict["roi"]["image roi"])) == [2 1; 4 3]
+    @test parent(guidict["roi"]["image roi"][]) == [2 1; 4 3]
     guidict = imshow_now(img, flipx=true, flipy=true)
-    @test parent(value(guidict["roi"]["image roi"])) == [4 3; 2 1]
+    @test parent(guidict["roi"]["image roi"][]) == [4 3; 2 1]
+end
+
+@testset "Mapping errors" begin
+    # Create a colortype with missing methods
+    struct OneChannelColor{T} <: Color{T,1}
+        val1::T
+    end
+    img = [OneChannelColor(0) OneChannelColor(1);
+           OneChannelColor(2) OneChannelColor(3);
+    ]
+    @test_throws ErrorException("got unsupported eltype Union{} in preparing the constrast") imshow(img, CLim(0, 1))
+
+    struct MyChar <: AbstractChar
+        c::Char
+    end
+    ImageView.prep_contrast(canvas, @nospecialize(img::Observable), clim::Observable{CLim{MyChar}}) = img
+    img = MyChar['a' 'b'; 'c' 'd']
+    @test_throws ErrorException("got unsupported eltype MyChar in creating slice") imshow(img, CLim{MyChar}('a', 'b'))
 end
 
 if Gtk.libgtk_version >= v"3.10"
@@ -128,9 +147,9 @@ if Gtk.libgtk_version >= v"3.10"
         @test isa(hmri["roi"]["slicedata"].axs[1], Axis{:S})
 
         # Use a custom CLim here because the first slice is not representative of the intensities
-        hmrip = imshow_now(img, Signal(CLim(0.0, 1.0)), axes=(:S, :P), name="S,P view")
+        hmrip = imshow_now(img, Observable(CLim(0.0, 1.0)), axes=(:S, :P), name="S,P view")
         @test isa(hmrip["roi"]["slicedata"].axs[1], Axis{:R})
-        push!(hmrip["roi"]["slicedata"].signals[1], 84)
+        hmrip["roi"]["slicedata"].signals[1][] = 84
 
         ## Two coupled images
         mriseg = RGB.(img)
