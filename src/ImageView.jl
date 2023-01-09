@@ -13,7 +13,7 @@ import ImageCore: scaleminmax
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
 export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, imlink,
-       roi, scalebar, slice2d
+       scalebar, slice2d
 
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
