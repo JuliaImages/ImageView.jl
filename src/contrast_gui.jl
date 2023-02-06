@@ -123,6 +123,10 @@ end
 
 function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Contrast")
     win = Window(wname) |> (g = Grid())
+    window_wrefs[win] = nothing
+    signal_connect(win, :destroy) do w
+        delete!(window_wrefs, win)
+    end
     slmax = slider(rng; observable=smax)
     slmin = slider(rng; observable=smin)
     for sl in (slmax, slmin)

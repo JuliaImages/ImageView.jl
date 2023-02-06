@@ -795,6 +795,7 @@ using SnoopPrecompile
         end
     end
     closeall()   # this is critical: you don't want to precompile with window_wrefs loaded with junk (dangling window pointers from closed session)
+    sleep(1)   # avoid a "waiting for IO to finish" warning on 1.10
 end
 
 end # module
