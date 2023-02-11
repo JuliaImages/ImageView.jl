@@ -501,24 +501,39 @@ function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     end
 end
 
-function fast_finite_extrema(a::AbstractArray)
-	mini = a[1]
-	maxi = a[1]
-	@simd for v in a
-		if isfinite(v)
-			if v <= mini
-				mini = v
-			elseif v > maxi
-				maxi = v
-			end
-		end
-	end
-	return mini, maxi
+function fast_finite_extrema(a::AbstractArray{T}) where T
+    mini = typemax(T)
+    maxi = typemin(T)
+    @simd for v in a
+        if isfinite(v)
+            if v <= mini
+                mini = v
+            end
+            if v > maxi
+                maxi = v
+                # Needs to have a separate if-block,
+                # for the case that all values in a are equal
+            end
+        end
+    end
+    return mini, maxi
 end
-function valuespan(img::AbstractArray)
+function valuespan(img::AbstractArray; checkmax=10^8)
+    if length(img) > checkmax
+        img = randsubseq(img, checkmax / length(img))
+    end
     minval, maxval = fast_finite_extrema(img)
-    if minval == maxval
-        maxval = minval+1
+    invalid_min, invalid_max = (!isfinite).((minval, maxval))
+    (invalid_min || invalid_max) && @warn "Could not determine valid value span"
+    if invalid_min && invalid_max
+        minval = 0
+        maxval = 1
+    elseif invalid_min
+        minval = maxval - 1
+    elseif invalid_max
+        maxval = minval + 1
+    elseif minval == maxval
+        maxval = minval + 1
     end
     return minval, maxval
 end
