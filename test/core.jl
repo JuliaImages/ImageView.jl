@@ -1,5 +1,5 @@
 using GtkObservables, ImageCore, ImageView
-using ImageView: sliceinds
+using ImageView: sliceinds, roi
 using Test
 using AxisArrays: AxisArrays, Axis, AxisArray
 
