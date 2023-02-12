@@ -16,6 +16,7 @@ using GtkObservables.Observables
 using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
 using ImageMetadata
 using Compat # for @constprop :none
+using Random
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
