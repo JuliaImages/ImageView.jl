@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
         version: ['1.6', '1', 'nightly']
-        arch: [x64]
+        arch: [x64, x86]
         include:
           - os: ubuntu-latest
             prefix: xvfb-run
