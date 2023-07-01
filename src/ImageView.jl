@@ -778,8 +778,8 @@ include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
 
-using SnoopPrecompile
-@precompile_all_calls begin
+using PrecompileTools
+@compile_workload begin
     for T in (N0f8, N0f16, Float32)
         for C in (Gray, RGB)
             img = rand(C{T}, 2, 2)
