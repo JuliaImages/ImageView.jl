@@ -3,6 +3,8 @@ using ImageCore, OffsetArrays
 using Gtk4
 using Test
 
+Gtk4.GLib.start_main_loop()
+
 if !isdefined(@__MODULE__, :imshow_now)
     function imshow_now(args...; kwargs...)
         @nospecialize
