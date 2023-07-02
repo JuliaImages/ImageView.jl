@@ -107,7 +107,7 @@ function contrast_gui(enabled::Observable{Bool}, hist::Observable, clim::Observa
     end
     # TODO: we might want to throttle this?
     redraw = draw(cgui["canvas"], hist) do cnvs, hst
-        if get_gtk_property(cgui["window"], :visible, Bool) # protects against window destruction
+        if isvisible(cgui["window"]) # protects against window destruction
             rng, cl = hst.edges[1], clim[]
             mn, mx = minimum(rng), maximum(rng)
             cgui["slider_min"][] = (rng, clamp(cl.min, mn, mx))
@@ -130,13 +130,14 @@ function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Con
     slmax = slider(rng; observable=smax)
     slmin = slider(rng; observable=smin)
     for sl in (slmax, slmin)
-        set_gtk_property!(sl, :draw_value, false)
+        Gtk4.draw_value(widget(sl), false)
     end
     g[1,1] = widget(slmax)
-    g[1,3] = widget(slmin)
     cnvs = canvas(UserUnit)
     g[1,2] = widget(cnvs)
-    #set_gtk_property!(cnvs, :expand, true)
+    g[1,3] = widget(slmin)
+    widget(cnvs).hexpand = widget(cnvs).vexpand = true
+    Gtk4.content_height(widget(cnvs), 100)
     emax_w = GtkEntry(; width_chars=5, hexpand=false)#, halign=Gtk4.Align_END, valign=Gtk4.Align_START)
     emin_w = GtkEntry(; width_chars=5, hexpand=false)#, halign=GTK_ALIGN_END, valign=GTK_ALIGN_END)
     g[2,1] = emax_w

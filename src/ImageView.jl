@@ -256,7 +256,7 @@ function imshow(frame::Union{Gtk4.GtkFrame,Gtk4.GtkAspectFrame}, canvas::GtkObse
     imgc = prep_contrast(canvas, imgsig, clim)
     GtkObservables.gc_preserve(frame, imgc)
     # If there is an error in one of the functions being mapped elementwise, we often don't
-    # discover it until it triggers an error inside `Gtk.draw`. Check for problems here so
+    # discover it until it triggers an error inside `Gtk4.draw`. Check for problems here so
     # such errors become easier to debug.
     if !supported_eltype(imgc[])
         !supported_eltype(imgsig[]) && error("got unsupported eltype $(eltype(imgsig[])) in creating slice")
@@ -437,13 +437,13 @@ function imshow(canvas::GtkObservables.Canvas{UserUnit},
                 zr::Observable{ZoomRegion{T}}=Observable(ZoomRegion(imgsig[])),
                 anns::Annotations=annotations()) where T<:RInteger
     @nospecialize
-    # zoomrb = init_zoom_rubberband(canvas, zr)
-    # zooms = init_zoom_scroll(canvas, zr)
-    # pans = init_pan_scroll(canvas, zr)
-    # pand = init_pan_drag(canvas, zr)
+    zoomrb = init_zoom_rubberband(canvas, zr)
+    zooms = init_zoom_scroll(canvas, zr)
+    pans = init_pan_scroll(canvas, zr)
+    pand = init_pan_drag(canvas, zr)
     redraw = imshow!(canvas, imgsig, zr, anns)
-    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, #"zoom_rubberband"=>zoomrb,
-               #"zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
+    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
+               "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
                "redraw"=>redraw)
     GtkObservables.gc_preserve(widget(canvas), dct)
     dct
@@ -455,13 +455,13 @@ function imshow(frame::Union{GtkFrame,GtkAspectFrame},
                 zr::Observable{ZoomRegion{T}},
                 anns::Annotations=annotations()) where T<:RInteger
     @nospecialize
-    # zoomrb = init_zoom_rubberband(canvas, zr)
-    # zooms = init_zoom_scroll(canvas, zr)
-    # pans = init_pan_scroll(canvas, zr)
-    # pand = init_pan_drag(canvas, zr)
+    zoomrb = init_zoom_rubberband(canvas, zr)
+    zooms = init_zoom_scroll(canvas, zr)
+    pans = init_pan_scroll(canvas, zr)
+    pand = init_pan_drag(canvas, zr)
     redraw = imshow!(frame, canvas, imgsig, zr, anns)
-    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, #"zoom_rubberband"=>zoomrb,
-               #"zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
+    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
+               "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
                "redraw"=>redraw)
     GtkObservables.gc_preserve(widget(canvas), dct)
     dct
@@ -671,18 +671,19 @@ nanz(x::FixedPoint) = x
 nanz(x::Integer) = x
 
 function create_contrast_popup(canvas, enabled, hists, clim)
-    popupmenu = Gtk4.GLib.GMenu()
-    # contrast = Gtk4.GLib.GMenuItem("Contrast...")
-    # push!(popupmenu, contrast)
-    # push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
-    #     if btn.button == 3 && btn.clicktype == BUTTON_PRESS
-    #         popup(popupmenu, btn.gtkevent)
-    #     end
-    # end)
-    # signal_connect(contrast, :activate) do widget
-    #     enabled[] = true
-    #     contrast_gui(enabled, hists, clim)
-    # end
+    popupmenu = GtkPopover()
+    Gtk4.parent(popupmenu, widget(canvas))
+    contrast = GtkButton("Contrast...")
+    popupmenu[] = contrast
+    push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
+        if btn.button == 3 && btn.clicktype == BUTTON_PRESS
+            popup(popupmenu)
+        end
+    end)
+    signal_connect(contrast, :clicked) do widget
+        enabled[] = true
+        @idle_add contrast_gui(enabled, hists, clim)
+    end
 end
 
 function map_image_roi(@nospecialize(img), zr::Observable{ZoomRegion{T}}, slices...) where T
