@@ -51,7 +51,7 @@ Closes all windows opened by ImageView2.
 """
 function closeall()
     for (w, _) in window_wrefs
-        Gtk4.destroy(w)
+        destroy(w)
     end
     empty!(window_wrefs)
     nothing
@@ -233,7 +233,7 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
                      wrap_signal(clim), zr, sd, anns)
 
     win = guidict["window"]
-    dct = Dict( "clim"=>clim, "gui"=>guidict, "roi"=>roidict, "annotations"=>anns)
+    dct = Dict( "gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
     GtkObservables.gc_preserve(win, dct)
     return dct
 end
@@ -354,15 +354,15 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
                    "canvas"=>canvases)
 
     # Add the player controls
-    # if !isempty(slicedata)
-    #     players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
-    #     guidict["players"] = players
-    #     hbox = Box(:h)
-    #     for p in players
-    #         push!(hbox, frame(p))
-    #     end
-    #     push!(guidict["vbox"], hbox)
-    # end
+    if !isempty(slicedata)
+        players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
+        guidict["players"] = players
+        hbox = GtkBox(:h)
+        for p in players
+            #push!(hbox, frame(p))  # FIXME: causes freeze in tests
+        end
+        push!(guidict["vbox"], hbox)
+    end
 
     guidict
 end
