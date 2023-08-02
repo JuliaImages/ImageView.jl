@@ -179,7 +179,7 @@ imshow(mriseg, nothing, zr, slicedata)
 
 Here we used `imshow` to create the first window, and then extracted
 the `zoomregion` and `slicedata` information from that display and
-used them to intialize a second window with the second image. If you
+used them to initialize a second window with the second image. If you
 zoom, pan, or change the slice plane in one window, it makes the same
 change in the other.
 
