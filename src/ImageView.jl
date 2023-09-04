@@ -359,7 +359,7 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
         guidict["players"] = players
         hbox = GtkBox(:h)
         for p in players
-            #push!(hbox, frame(p))  # FIXME: causes freeze in tests
+            push!(hbox, frame(p))
         end
         push!(guidict["vbox"], hbox)
     end
@@ -399,7 +399,7 @@ Compat.@constprop :none function frame_canvas(aspect)
     set_gtk_property!(f, :hexpand, true)
     set_gtk_property!(f, :vexpand, true)
     #set_gtk_property!(f, :shadow_type, Gtk4.ShadowType_NONE)
-    c = canvas(UserUnit)
+    c = canvas(UserUnit,10,10)  # set minimum size of 10x10 pixels
     f[] = widget(c)
     f, c
 end
