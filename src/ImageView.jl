@@ -396,9 +396,9 @@ end
 
 Compat.@constprop :none function frame_canvas(aspect)
     f = aspect==:none ? GtkFrame() : GtkAspectFrame(0.5, 0.5, 1, true)
+    Gtk4.G_.set_css_classes(f, ["squared"])  # remove rounded corners (see __init__)
     set_gtk_property!(f, :hexpand, true)
     set_gtk_property!(f, :vexpand, true)
-    #set_gtk_property!(f, :shadow_type, Gtk4.ShadowType_NONE)
     c = canvas(UserUnit,10,10)  # set minimum size of 10x10 pixels
     f[] = widget(c)
     f, c
@@ -778,6 +778,16 @@ end
 include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
+
+function __init__()
+    # by default, GtkFrame and GtkAspectFrame use rounded corners
+    # the way to override this is via custom CSS
+    css="""
+        .squared {border-radius: 0;}
+    """
+    cssprov=GtkCssProvider(css)
+    push!(GdkDisplay(), cssprov, Gtk4.STYLE_PROVIDER_PRIORITY_APPLICATION)
+end
 
 using PrecompileTools
 @compile_workload begin
