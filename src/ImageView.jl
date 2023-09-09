@@ -395,7 +395,7 @@ Compat.@constprop :none function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:au
 end
 
 Compat.@constprop :none function frame_canvas(aspect)
-    f = aspect==:none ? GtkFrame() : GtkAspectFrame(0.5, 0.5, 1, true)
+    f = aspect==:none ? GtkFrame() : GtkAspectFrame(0.5, 0.5, 1, false)
     Gtk4.G_.set_css_classes(f, ["squared"])  # remove rounded corners (see __init__)
     set_gtk_property!(f, :hexpand, true)
     set_gtk_property!(f, :vexpand, true)
