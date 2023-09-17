@@ -138,8 +138,8 @@ function contrast_gui_layout(smin::Observable, smax::Observable, rng; wname="Con
     g[1,3] = widget(slmin)
     widget(cnvs).hexpand = widget(cnvs).vexpand = true
     Gtk4.content_height(widget(cnvs), 100)
-    emax_w = GtkEntry(; width_chars=5, hexpand=false)#, halign=Gtk4.Align_END, valign=Gtk4.Align_START)
-    emin_w = GtkEntry(; width_chars=5, hexpand=false)#, halign=GTK_ALIGN_END, valign=GTK_ALIGN_END)
+    emax_w = GtkEntry(; width_chars=5, hexpand=false)
+    emin_w = GtkEntry(; width_chars=5, hexpand=false)
     g[2,1] = emax_w
     g[2,3] = emin_w
     # By not specifying the range on the textbox, we let the user

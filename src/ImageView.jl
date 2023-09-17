@@ -13,7 +13,7 @@ using RoundingIntegers
 using Gtk4, GtkObservables, Graphics, Cairo
 using Gtk4: Align_START, Align_END, Align_FILL
 using GtkObservables.Observables
-using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
+using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues, axisdim
 using ImageMetadata
 using Compat # for @constprop :none
 
@@ -233,7 +233,7 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
                      wrap_signal(clim), zr, sd, anns)
 
     win = guidict["window"]
-    dct = Dict( "gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
+    dct = Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
     GtkObservables.gc_preserve(win, dct)
     return dct
 end
@@ -677,6 +677,8 @@ function create_contrast_popup(canvas, enabled, hists, clim)
     popupmenu[] = contrast
     push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
         if btn.button == 3 && btn.clicktype == BUTTON_PRESS
+            x,y = GtkObservables.convertunits(DeviceUnit, canvas, btn.position.x, btn.position.y)
+            Gtk4.G_.set_pointing_to(popupmenu,Ref(Gtk4._GdkRectangle(round(Int32,x.val),round(Int32,y.val),1,1)))
             popup(popupmenu)
         end
     end)
