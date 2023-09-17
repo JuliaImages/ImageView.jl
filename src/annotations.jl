@@ -291,7 +291,7 @@ annotation_isvalid(x, z, t) = true
 function setvalid!(ann::FloatingAnnotation, z, t)
 end
 
-function Gtk.draw(c::Gtk.GtkCanvas, ann::AnchoredAnnotation)
+function Gtk4.draw(c::Gtk4.GtkCanvas, ann::AnchoredAnnotation)
     if ann.valid
         ctx = getgc(c)
         Graphics.save(ctx)
@@ -304,7 +304,7 @@ function Gtk.draw(c::Gtk.GtkCanvas, ann::AnchoredAnnotation)
     end
 end
 
-function Gtk.draw(c::Gtk.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}}) where T
+function Gtk4.draw(c::Gtk4.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}}) where T
     ctx = getgc(c)
     Graphics.save(ctx)
     data = ann.data

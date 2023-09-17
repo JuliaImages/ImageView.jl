@@ -16,7 +16,6 @@ function imlink(imgs...; gridsize=imlink_grid(imgs), dims=(1,2))
         end
     end
     gd["guidata"] = guidata
-    Gtk.showall(gd["window"])
     gd
 end
 

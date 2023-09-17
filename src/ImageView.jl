@@ -10,10 +10,10 @@ using ImageCore, ImageBase, StatsBase
 using ImageCore.MappedArrays
 using MultiChannelColors
 using RoundingIntegers
-using Gtk.ShortNames, GtkObservables, Graphics, Cairo
-using Gtk.GConstants.GtkAlign: GTK_ALIGN_START, GTK_ALIGN_END, GTK_ALIGN_FILL
+using Gtk4, GtkObservables, Graphics, Cairo
+using Gtk4: Align_START, Align_END, Align_FILL
 using GtkObservables.Observables
-using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues
+using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues, axisdim
 using ImageMetadata
 using Compat # for @constprop :none
 
@@ -57,7 +57,7 @@ function closeall()
     nothing
 end
 
-const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
+const window_wrefs = WeakKeyDict{Gtk4.GtkWindowLeaf,Nothing}()
 
 """
     imshow()
@@ -94,12 +94,11 @@ using GtkObservables's tools:
 # Example
 
 ```julia
-using ImageView, GtkObservables, Gtk.ShortNames, TestImages
+using ImageView, GtkObservables, Gtk4, TestImages
 # Create a window with a canvas in it
-win = Window()
+win = GtkWindow()
 c = canvas(UserUnit)
 push!(win, c)
-Gtk.showall(win)
 # Load images
 mri = testimage("mri")
 # Display the image
@@ -118,7 +117,7 @@ function imshow!(canvas::GtkObservables.Canvas{UserUnit},
     end
 end
 
-function imshow!(frame::Frame,
+function imshow!(frame::Union{GtkFrame,GtkAspectFrame},
                  canvas::GtkObservables.Canvas{UserUnit},
                  imgsig::Observable,
                  zr::Observable{ZoomRegion{T}},
@@ -128,6 +127,7 @@ function imshow!(frame::Frame,
         set_coordinates(cnvs, zr[])
         set_aspect!(frame, image)
         draw_annotations(cnvs, anns)
+        nothing
     end
 end
 
@@ -233,13 +233,12 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
                      wrap_signal(clim), zr, sd, anns)
 
     win = guidict["window"]
-    Gtk.showall(win)
     dct = Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
     GtkObservables.gc_preserve(win, dct)
     return dct
 end
 
-function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
+function imshow(frame::Union{Gtk4.GtkFrame,Gtk4.GtkAspectFrame}, canvas::GtkObservables.Canvas,
                 @nospecialize(img::AbstractArray), clim::Union{Nothing,Observable{<:CLim}},
                 zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
@@ -257,7 +256,7 @@ function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
     imgc = prep_contrast(canvas, imgsig, clim)
     GtkObservables.gc_preserve(frame, imgc)
     # If there is an error in one of the functions being mapped elementwise, we often don't
-    # discover it until it triggers an error inside `Gtk.draw`. Check for problems here so
+    # discover it until it triggers an error inside `Gtk4.draw`. Check for problems here so
     # such errors become easier to debug.
     if !supported_eltype(imgc[])
         !supported_eltype(imgsig[]) && error("got unsupported eltype $(eltype(imgsig[])) in creating slice")
@@ -292,13 +291,12 @@ Compat.@constprop :none function imshow(img,
     roidict = imshow(guidict["frame"], guidict["canvas"], img, zr, sd, anns)
 
     win = guidict["window"]
-    Gtk.showall(win)
     dct = Dict("gui"=>guidict, "roi"=>roidict)
     GtkObservables.gc_preserve(win, dct)
     return dct
 end
 
-function imshow(frame::Gtk.GtkFrame, canvas::GtkObservables.Canvas,
+function imshow(frame::Union{GtkFrame,GtkAspectFrame}, canvas::GtkObservables.Canvas,
                 img, zr::Observable{ZoomRegion{T}}, sd::SliceData,
                 anns::Annotations=annotations()) where T
     @nospecialize
@@ -334,12 +332,12 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
                     name = "ImageView", aspect=:auto,
                     slicedata::SliceData=SliceData{false}())
     winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
-    win = Window(name, winsize...)
+    win = GtkWindow(name, winsize...)
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
         delete!(window_wrefs, win)
     end
-    vbox = Box(:v)
+    vbox = GtkBox(:v)
     push!(win, vbox)
     if gridsize == (1,1)
         frames, canvases = frame_canvas(aspect)
@@ -348,8 +346,8 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
         g, frames, canvases = canvasgrid(gridsize, aspect)
     end
     push!(vbox, g)
-    status = Label("")
-    set_gtk_property!(status, :halign, Gtk.GConstants.GtkAlign.START)
+    status = GtkLabel("")
+    set_gtk_property!(status, :halign, Gtk4.Align_START)
     push!(vbox, status)
 
     guidict = Dict("window"=>win, "vbox"=>vbox, "frame"=>frames, "status"=>status,
@@ -359,7 +357,7 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
     if !isempty(slicedata)
         players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
         guidict["players"] = players
-        hbox = Box(:h)
+        hbox = GtkBox(:h)
         for p in players
             push!(hbox, frame(p))
         end
@@ -384,7 +382,7 @@ GtkAspectRatioFrames that contain each canvas, and `canvases` is an
 `ny`-by-`nx` array of canvases.
 """
 Compat.@constprop :none function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:auto)
-    g = Grid()
+    g = GtkGrid()
     frames = Matrix{Any}(undef, gridsize)
     canvases = Matrix{Any}(undef, gridsize)
     for j = 1:gridsize[2], i = 1:gridsize[1]
@@ -397,11 +395,12 @@ Compat.@constprop :none function canvasgrid(gridsize::Tuple{Int,Int}, aspect=:au
 end
 
 Compat.@constprop :none function frame_canvas(aspect)
-    f = aspect==:none ? Frame() : AspectFrame("", 0.5, 0.5, 1)
-    set_gtk_property!(f, :expand, true)
-    set_gtk_property!(f, :shadow_type, Gtk.GConstants.GtkShadowType.NONE)
-    c = canvas(UserUnit)
-    push!(f, widget(c))
+    f = aspect==:none ? GtkFrame() : GtkAspectFrame(0.5, 0.5, 1, false)
+    Gtk4.G_.set_css_classes(f, ["squared"])  # remove rounded corners (see __init__)
+    set_gtk_property!(f, :hexpand, true)
+    set_gtk_property!(f, :vexpand, true)
+    c = canvas(UserUnit,10,10)  # set minimum size of 10x10 pixels
+    f[] = widget(c)
     f, c
 end
 
@@ -418,14 +417,13 @@ Observable-view of a higher-dimensional object).
 # Example
 
 ```julia
-using ImageView, TestImages, Gtk
+using ImageView, TestImages, Gtk4
 mri = testimage("mri");
 # Create a canvas `c`. There are other approaches, like stealing one from a previous call
 # to `imshow`, or using GtkObservables directly.
 guidict = imshow_gui((300, 300))
 c = guidict["canvas"];
 # To see anything you have to call `showall` on the window (once)
-Gtk.showall(guidict["window"])
 # Create the image Observable
 imgsig = Observable(mri[:,:,1]);
 # Show it
@@ -451,7 +449,7 @@ function imshow(canvas::GtkObservables.Canvas{UserUnit},
     dct
 end
 
-function imshow(frame::Frame,
+function imshow(frame::Union{GtkFrame,GtkAspectFrame},
                 canvas::GtkObservables.Canvas{UserUnit},
                 imgsig::Observable,
                 zr::Observable{ZoomRegion{T}},
@@ -673,18 +671,20 @@ nanz(x::FixedPoint) = x
 nanz(x::Integer) = x
 
 function create_contrast_popup(canvas, enabled, hists, clim)
-    popupmenu = Menu()
-    contrast = MenuItem("Contrast...")
-    push!(popupmenu, contrast)
-    Gtk.showall(popupmenu)
+    popupmenu = GtkPopover()
+    Gtk4.parent(popupmenu, widget(canvas))
+    contrast = GtkButton("Contrast...")
+    popupmenu[] = contrast
     push!(canvas.preserved, on(canvas.mouse.buttonpress) do btn
         if btn.button == 3 && btn.clicktype == BUTTON_PRESS
-            popup(popupmenu, btn.gtkevent)
+            x,y = GtkObservables.convertunits(DeviceUnit, canvas, btn.position.x, btn.position.y)
+            Gtk4.G_.set_pointing_to(popupmenu,Ref(Gtk4._GdkRectangle(round(Int32,x.val),round(Int32,y.val),1,1)))
+            popup(popupmenu)
         end
     end)
-    signal_connect(contrast, :activate) do widget
+    signal_connect(contrast, :clicked) do widget
         enabled[] = true
-        contrast_gui(enabled, hists, clim)
+        @idle_add contrast_gui(enabled, hists, clim)
     end
 end
 
@@ -696,7 +696,7 @@ function map_image_roi(@nospecialize(img), zr::Observable{ZoomRegion{T}}, slices
 end
 map_image_roi(img::Observable, zr::Observable{ZoomRegion{T}}, slices...) where {T} = img
 
-function set_aspect!(frame::AspectFrame, image)
+function set_aspect!(frame::GtkAspectFrame, image)
     ps = map(abs, pixelspacing(image))
     sz = map(length, axes(image))
     r = sz[2]*ps[2]/(sz[1]*ps[1])
@@ -727,7 +727,7 @@ and `screensize` are supplied in Gtk order (x, y).
 When supplying a GtkWindow `win`, the canvas size is limited to 60% of
 the total screen size.
 """
-Compat.@constprop :none function canvas_size(win::Gtk.GtkWindowLeaf, requestedsize_xy; minsize=100)
+Compat.@constprop :none function canvas_size(win::Gtk4.GtkWindowLeaf, requestedsize_xy; minsize=100)
     ssz = screen_size(win)
     canvas_size(map(x->0.6*x, ssz), requestedsize_xy; minsize=minsize)
 end
@@ -780,6 +780,16 @@ end
 include("link.jl")
 include("contrast_gui.jl")
 include("annotations.jl")
+
+function __init__()
+    # by default, GtkFrame and GtkAspectFrame use rounded corners
+    # the way to override this is via custom CSS
+    css="""
+        .squared {border-radius: 0;}
+    """
+    cssprov=GtkCssProvider(css)
+    push!(GdkDisplay(), cssprov, Gtk4.STYLE_PROVIDER_PRIORITY_APPLICATION)
+end
 
 using PrecompileTools
 @compile_workload begin
