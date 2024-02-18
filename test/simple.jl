@@ -26,7 +26,18 @@ end
     A[1,2,2] = NaN
     A[1,3,3] = -Inf
     A[1,4,4] = Inf
-    imshow_now(colorview(RGB, A))
+    imgdict = imshow_now(colorview(RGB, A))
+
+    # test window actions
+    win = imgdict["gui"]["window"]
+    Gtk4.G_.activate_action(win, "win.fullscreen", nothing)
+    sleep(0.5)
+    @test Gtk4.isfullscreen(win)
+    Gtk4.G_.activate_action(win, "win.fullscreen", nothing)
+    sleep(0.5)
+    @test !Gtk4.isfullscreen(win)
+
+    Gtk4.G_.activate_action(win, "win.close", nothing)
 end
 
 @testset "Simple MultiChannelColors" begin
