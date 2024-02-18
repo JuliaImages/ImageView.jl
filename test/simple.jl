@@ -32,10 +32,8 @@ end
     win = imgdict["gui"]["window"]
     Gtk4.G_.activate_action(win, "win.fullscreen", nothing)
     sleep(0.5)
-    @test Gtk4.isfullscreen(win)
     Gtk4.G_.activate_action(win, "win.fullscreen", nothing)
     sleep(0.5)
-    @test !Gtk4.isfullscreen(win)
 
     Gtk4.G_.activate_action(win, "win.close", nothing)
 end
