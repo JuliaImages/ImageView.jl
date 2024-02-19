@@ -77,6 +77,8 @@ imshow(img, flipy=true)
 imshow(img, axes=(2,1)).
 ```
 
+The window can be closed using Ctrl-W (on Linux or Windows, use Cmd-W on a Mac) and fullscreen can be toggled using F11 (on Linux or Windows, use Cmd-Shift-F on a Mac).
+
 For movies, 3D, and 4D images, ImageView will create a "player" widget.
 
 ```julia

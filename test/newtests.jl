@@ -83,13 +83,13 @@ end
     hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
     sleep(1.0)  # some extra sleep for this big image
     cvs = hbig["gui"]["canvas"];
+    # GUI update takes a very long time in CI (sometimes) for MacOS, hence the following
     i=1
     passed=false
     while !passed && i<10
-        println(i)
+        #println(i)
         sleep(1.0)
-        passed = passed || Graphics.height(getgc(cvs)) <= 500
-        passed = passed || Graphics.width(getgc(cvs)) <= 500
+        passed = passed || (Graphics.height(getgc(cvs)) <= 500 && Graphics.width(getgc(cvs)) <= 500)
         i=i+1
     end
     @test passed
