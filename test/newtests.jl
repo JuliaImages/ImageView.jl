@@ -83,6 +83,7 @@ end
     hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
     sleep(1.0)  # some extra sleep for this big image
     cvs = hbig["gui"]["canvas"];
+    sleep(1.0)
     @test Graphics.height(getgc(cvs)) <= 500
     @test Graphics.width(getgc(cvs)) <= 500
 end
