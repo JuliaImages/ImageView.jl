@@ -20,10 +20,10 @@ end
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
     zr[] = (1:20, 9:10)
     @test zr[].currentview.x == 9..10
-    sleep(0.3)  # allow the Gtk event loop to run
+    sleep(0.5)  # allow the Gtk event loop to run
     @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     zr[] = (9:10, 1:20)
-    sleep(0.1)
+    sleep(0.5)
     @test get_gtk_property(frame, :ratio, Float32) ≈ 10.0
 
     Gtk4.destroy(win)
