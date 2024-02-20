@@ -87,10 +87,12 @@ end
     i=1
     passed=false
     while !passed && i<10
-        #println(i)
         sleep(1.0)
         passed = passed || (Graphics.height(getgc(cvs)) <= 500 && Graphics.width(getgc(cvs)) <= 500)
         i=i+1
+    end
+    if !passed
+        println("failed after $i seconds")
     end
     @test passed
 end
