@@ -313,6 +313,23 @@ function imshow(frame::Union{GtkFrame,GtkAspectFrame}, canvas::GtkObservables.Ca
     roidict
 end
 
+function close_cb(::Ptr, par, win)
+    @idle_add Gtk4.destroy(win)
+    nothing
+end
+
+function fullscreen_cb(aptr::Ptr, par, win)
+    gv=Gtk4.GLib.GVariant(par)
+    a=convert(Gtk4.GLib.GSimpleAction, aptr)
+    if gv[Bool]
+        @idle_add Gtk4.fullscreen(win)
+    else
+        @idle_add Gtk4.unfullscreen(win)
+    end
+    Gtk4.GLib.set_state(a, gv)
+    nothing
+end
+
 """
     guidict = imshow_gui(canvassize, gridsize=(1,1); name="ImageView", aspect=:auto, slicedata=SliceData{false}())
 
@@ -333,6 +350,15 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
                     slicedata::SliceData=SliceData{false}())
     winsize = canvas_size(screen_size(), map(*, canvassize, gridsize))
     win = GtkWindow(name, winsize...)
+    ag = Gtk4.GLib.GSimpleActionGroup()
+    m = Gtk4.GLib.GActionMap(ag)
+    push!(win, Gtk4.GLib.GActionGroup(ag), "win")
+    Gtk4.GLib.add_action(m, "close", close_cb, win)
+    Gtk4.GLib.add_stateful_action(m, "fullscreen", false, fullscreen_cb, win)
+    sc = GtkShortcutController(win)
+    Gtk4.add_action_shortcut(sc,Sys.isapple() ? "<Meta>W" : "<Control>W", "win.close")
+    Gtk4.add_action_shortcut(sc,Sys.isapple() ? "<Meta><Shift>F" : "F11", "win.fullscreen")
+
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
         delete!(window_wrefs, win)
