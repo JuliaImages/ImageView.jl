@@ -97,7 +97,7 @@ imshow(img, axes=(:S, :P), flipy=true)  # a sagittal plane (Superior, Posterior)
 | ![photo](readme_images/mri.jpg) | ![photo](readme_images/mri_sagittal.jpg) |
 
 
-Finally, for grayscale images, right-clicking on the image yields a brightness/contrast GUI:
+Finally, right-clicking on the image yields context menu that allows you to save the image shown in the viewer (including annotations) to a PNG file or to the clipboard, and a brightness/contrast GUI:
 
 ![Contrast GUI snapshot](readme_images/contrast.jpg)
 
