@@ -10,8 +10,6 @@ To install the `ImageView` package:
 Pkg.add("ImageView")
 ```
 
-Note for Mac users: It is strongly recommended that you use Julia 1.3 or higher, as this release introduced a new approach for handling library dependencies like Cairo and Gtk.
-
 ## Preparation
 
 First let's try it with a photograph. If you have an image on your computer, load it this way:
@@ -77,7 +75,7 @@ imshow(img, flipy=true)
 imshow(img, axes=(2,1)).
 ```
 
-The window can be closed using Ctrl-W (on Linux or Windows, use Cmd-W on a Mac) and fullscreen can be toggled using F11 (on Linux or Windows, use Cmd-Shift-F on a Mac).
+The window can be closed using Ctrl-W (use Cmd-W on a Mac). All windows opened by ImageView can be closed using Ctrl-Shift-W (Cmd-Shift-W on a Mac). Fullscreen can be toggled using F11 (on Linux or Windows, use Cmd-Shift-F on a Mac).
 
 For movies, 3D, and 4D images, ImageView will create a "player" widget.
 

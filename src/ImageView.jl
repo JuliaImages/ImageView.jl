@@ -47,7 +47,7 @@ Base.eltype(::CLim{T}) where {T} = T
 """
     closeall()
 
-Closes all windows opened by ImageView2.
+Closes all windows opened by ImageView.
 """
 function closeall()
     for (w, _) in window_wrefs
@@ -318,6 +318,11 @@ function close_cb(::Ptr, par, win)
     nothing
 end
 
+function closeall_cb(::Ptr, par, win)
+    @idle_add closeall()
+    nothing
+end
+
 function fullscreen_cb(aptr::Ptr, par, win)
     gv=Gtk4.GLib.GVariant(par)
     a=convert(Gtk4.GLib.GSimpleAction, aptr)
@@ -354,9 +359,11 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
     m = Gtk4.GLib.GActionMap(ag)
     push!(win, Gtk4.GLib.GActionGroup(ag), "win")
     Gtk4.GLib.add_action(m, "close", close_cb, win)
+    Gtk4.GLib.add_action(m, "closeall", closeall_cb, nothing)
     Gtk4.GLib.add_stateful_action(m, "fullscreen", false, fullscreen_cb, win)
     sc = GtkShortcutController(win)
     Gtk4.add_action_shortcut(sc,Sys.isapple() ? "<Meta>W" : "<Control>W", "win.close")
+    Gtk4.add_action_shortcut(sc,Sys.isapple() ? "<Meta><Shift>W" : "<Control><Shift>W", "win.closeall")
     Gtk4.add_action_shortcut(sc,Sys.isapple() ? "<Meta><Shift>F" : "F11", "win.fullscreen")
 
     window_wrefs[win] = nothing
