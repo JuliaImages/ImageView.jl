@@ -98,9 +98,11 @@ function contrast_gui(enabled::Observable{Bool}, hist::Observable, clim::Observa
                 cmaxT = max(cmaxT, cmaxT+Δ)
             end
             mn, mx = minimum(rng), maximum(rng)
-            cmin, cmax = clamp(cminT, mn, mx), clamp(cmaxT, mn, mx)
-            cgui["slider_min"][] = (rng, cmin)
-            cgui["slider_max"][] = (rng, cmax)
+            cmin, cmax = T(clamp(cminT, mn, mx)), T(clamp(cmaxT, mn, mx))
+            if cmin != cgui["slider_min"][] || cmax != cgui["slider_max"][]
+                cgui["slider_min"][] = (rng, cmin)
+                cgui["slider_max"][] = (rng, cmax)
+            end
         end
         # Update the image contrast
         clim[] = CLim(cmin, cmax)
