@@ -110,8 +110,9 @@ function imshow!(canvas::GtkObservables.Canvas{UserUnit},
                  imgsig::Observable,
                  zr::Observable{ZoomRegion{T}},
                  annotations::Annotations=annotations()) where T<:RInteger
+    pyr = ImagePyramid(imgsig)
     draw(canvas, imgsig, annotations) do cnvs, image, anns
-        copy_with_restrict!(cnvs, image)
+        copy_with_restrict!(cnvs, pyr)
         set_coordinates(cnvs, zr[])
         draw_annotations(cnvs, anns)
     end
@@ -122,8 +123,9 @@ function imshow!(frame::Union{GtkFrame,GtkAspectFrame},
                  imgsig::Observable,
                  zr::Observable{ZoomRegion{T}},
                  annotations::Annotations=annotations()) where T<:RInteger
+    pyr = ImagePyramid(imgsig)
     draw(canvas, imgsig, annotations) do cnvs, image, anns
-        copy_with_restrict!(cnvs, image)
+        copy_with_restrict!(cnvs, pyr)
         set_coordinates(cnvs, zr[])
         set_aspect!(frame, image)
         draw_annotations(cnvs, anns)
@@ -137,8 +139,9 @@ end
 function imshow!(canvas::GtkObservables.Canvas,
                  imgsig::Observable,
                  annotations::Annotations=annotations())
+    pyr = ImagePyramid(imgsig)
     draw(canvas, imgsig, annotations) do cnvs, image, anns
-        copy_with_restrict!(cnvs, image)
+        copy_with_restrict!(cnvs, pyr)
         set_coordinates(cnvs, axes(image))
         draw_annotations(cnvs, anns)
     end
@@ -148,21 +151,45 @@ end
 function imshow!(canvas::GtkObservables.Canvas,
                  img::AbstractMatrix,
                  annotations::Annotations=annotations())
+    pyr = ImagePyramid(img)
     draw(canvas, annotations) do cnvs, anns
-        copy_with_restrict!(cnvs, img)
+        copy_with_restrict!(cnvs, pyr)
         set_coordinates(cnvs, axes(img))
         draw_annotations(cnvs, anns)
     end
     nothing
 end
 
-function copy_with_restrict!(cnvs, img::AbstractMatrix)
-    imgsz = size(img)
-    while (imgsz[1] > 2*Graphics.height(cnvs) && imgsz[2] > 2*Graphics.width(cnvs))
-        img = restrict(img)
-        imgsz = size(img)
+# cache of the image plus downscaled versions
+struct ImagePyramid
+    imgs::Vector
+end
+
+ImagePyramid(img::AbstractMatrix) = ImagePyramid(Any[img])
+
+function ImagePyramid(img::Observable)
+    pyr = ImagePyramid(Any[img[]])
+    on(img) do image
+        push!(empty!(pyr.imgs),image)
     end
-    copy!(cnvs, img)
+    pyr
+end
+
+function get_image(p::ImagePyramid, i)
+    while length(p.imgs)<i
+        push!(p.imgs,restrict(p.imgs[end]))
+    end
+    p.imgs[i]
+end
+
+function copy_with_restrict!(cnvs, p::ImagePyramid)
+    imgsz = size(p.imgs[1])
+    i=1
+    while (imgsz[1] > 2*Graphics.height(cnvs) && imgsz[2] > 2*Graphics.width(cnvs))
+        i=i+1
+        imgsz = size(get_image(p,i))
+    end
+    copy!(cnvs, get_image(p, i))
 end
 
 """
