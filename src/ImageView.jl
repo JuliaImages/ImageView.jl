@@ -161,29 +161,25 @@ function imshow!(canvas::GtkObservables.Canvas,
 end
 
 # cache of the image plus downscaled versions
-struct ImagePyramid
-    imgs::Vector
-end
-
-ImagePyramid(img::AbstractMatrix) = ImagePyramid(Any[img])
+ImagePyramid(img::AbstractMatrix) = Any[img]
 
 function ImagePyramid(img::Observable)
-    pyr = ImagePyramid(Any[img[]])
+    pyr = Any[img[]]
     on(img) do image
-        push!(empty!(pyr.imgs),image)
+        push!(empty!(pyr),image)
     end
     pyr
 end
 
-function get_image(p::ImagePyramid, i)
-    while length(p.imgs)<i
-        push!(p.imgs,restrict(p.imgs[end]))
+function get_image(p, i)
+    while length(p)<i
+        push!(p,restrict(p[end]))
     end
-    p.imgs[i]
+    p[i]
 end
 
-function copy_with_restrict!(cnvs, p::ImagePyramid)
-    imgsz = size(p.imgs[1])
+function copy_with_restrict!(cnvs, p)
+    imgsz = size(p[1])
     i=1
     while (imgsz[1] > 2*Graphics.height(cnvs) && imgsz[2] > 2*Graphics.width(cnvs))
         i=i+1
