@@ -83,7 +83,7 @@ function contrast_gui(enabled::Observable{Bool}, hist::Observable, clim::Observa
     end
     updateclim = map(smin, smax) do cmin, cmax
         # if min/max is outside the current range, update the sliders
-        adj = Gtk4.GtkAdjustment(widget(cgui["slider_min"]))
+        adj = Gtk4.adjustment(widget(cgui["slider_min"]))
         rmin, rmax = Gtk4.G_.get_lower(adj), Gtk4.G_.get_upper(adj)
         if cmin < rmin || cmax > rmax || cmax-cmin < Δ
             # Also, don't cross the sliders
