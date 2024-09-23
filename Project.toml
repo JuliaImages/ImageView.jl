@@ -1,7 +1,7 @@
 name = "ImageView"
 uuid = "86fae568-95e7-573e-a6b2-d8a6b900c9ef"
 author = ["Tim Holy <tim.holy@gmail.com"]
-version = "0.12.5"
+version = "0.12.6"
 
 [deps]
 AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
@@ -24,7 +24,7 @@ Cairo = "0.6, 0.7, 0.8, 1"
 Compat = "3, 4"
 Graphics = "0.2, 0.3, 0.4, 1"
 GtkObservables = "2.1"
-Gtk4 = "0.6.2"
+Gtk4 = "0.6.2, 0.7"
 ImageBase = "0.1"
 ImageCore = "0.9, 0.10"
 ImageMetadata = "0.9"
