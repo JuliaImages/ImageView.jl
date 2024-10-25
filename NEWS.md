@@ -1,3 +1,8 @@
+# New in 0.12
+
+- switch from Gtk to Gtk4. Fixes REPL lag on Windows.
+- Julia 1.6 is now required
+
 # New in 0.11
 
 - switch from GtkReactive to GtkObservables. Reactive was essentially

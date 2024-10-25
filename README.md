@@ -10,8 +10,6 @@ To install the `ImageView` package:
 Pkg.add("ImageView")
 ```
 
-Note for Mac users: It is strongly recommended that you use Julia 1.3 or higher, as this release introduced a new approach for handling library dependencies like Cairo and Gtk.
-
 ## Preparation
 
 First let's try it with a photograph. If you have an image on your computer, load it this way:
@@ -77,6 +75,8 @@ imshow(img, flipy=true)
 imshow(img, axes=(2,1)).
 ```
 
+The window can be closed using Ctrl-W (use Cmd-W on a Mac). All windows opened by ImageView can be closed using Ctrl-Shift-W (Cmd-Shift-W on a Mac). Fullscreen can be toggled using F11 (on Linux or Windows, use Cmd-Shift-F on a Mac).
+
 For movies, 3D, and 4D images, ImageView will create a "player" widget.
 
 ```julia
@@ -95,7 +95,7 @@ imshow(img, axes=(:S, :P), flipy=true)  # a sagittal plane (Superior, Posterior)
 | ![photo](readme_images/mri.jpg) | ![photo](readme_images/mri_sagittal.jpg) |
 
 
-Finally, for grayscale images, right-clicking on the image yields a brightness/contrast GUI:
+Finally, right-clicking on the image yields context menu that allows you to save the image shown in the viewer (including annotations) to a PNG file or to the clipboard, and a brightness/contrast GUI:
 
 ![Contrast GUI snapshot](readme_images/contrast.jpg)
 
@@ -110,12 +110,12 @@ values into the text boxes.
 
 You can place multiple images in the same window using `imshow_gui`:
 ```
-using ImageView, TestImages, Gtk.ShortNames
+using ImageView, TestImages, Gtk4
 gui = imshow_gui((300, 300), (2, 1))  # 2 columns, 1 row of images (each initially 300×300)
 canvases = gui["canvas"]
 imshow(canvases[1,1], testimage("lighthouse"))
 imshow(canvases[1,2], testimage("mandrill"))
-Gtk.showall(gui["window"])
+show(gui["window"])
 ```
 
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
@@ -123,7 +123,7 @@ Gtk.showall(gui["window"])
 `gui["window"]` returns the window; `gui["canvas"]` either returns a single canvas
 (if there is just one), or an array if you've specified a grid of canvases.
 
-`Gtk.showall(win)` is sometimes needed when using the lower-level utilities of this
+`Gtk4.show(win)` is sometimes needed when using the lower-level utilities of this
 package. Generally you should call it after you've finished assembling the entire window,
 so as to avoid redraws with each subsequent change.
 
@@ -179,7 +179,7 @@ imshow(mriseg, nothing, zr, slicedata)
 
 Here we used `imshow` to create the first window, and then extracted
 the `zoomregion` and `slicedata` information from that display and
-used them to intialize a second window with the second image. If you
+used them to initialize a second window with the second image. If you
 zoom, pan, or change the slice plane in one window, it makes the same
 change in the other.
 
@@ -189,7 +189,6 @@ zr, slicedata = roi(mri, (1,2))
 gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
 imshow(gd["frame"][1,1], gd["canvas"][1,1], mri, nothing, zr, slicedata)
 imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
-Gtk.showall(gd["window"])
 ```
 
 You should see something like this:
@@ -245,7 +244,7 @@ If you have a grid of images, then each image needs its own set of annotations, 
 by calling `annotations()`:
 
 ```julia
-using ImageView, Images, Gtk.ShortNames
+using ImageView, Images, Gtk4
 # Create the window and a 2x2 grid of canvases, each 300x300 pixels in size
 gui = imshow_gui((300, 300), (2, 2))
 canvases = gui["canvas"]
@@ -261,7 +260,6 @@ roidict = [imshow(canvases[1,1], imgs[1,1], anns[1,1]) imshow(canvases[1,2], img
            imshow(canvases[2,1], imgs[2,1], anns[2,1]) imshow(canvases[2,2], imgs[2,2], anns[2,2])]
 # Now we'll add an annotation to the lower-right image
 annotate!(anns[2,2], canvases[2,2], roidict[2,2], AnnotationBox(5, 5, 30, 80, linewidth=3, color=RGB(1,1,0)))
-Gtk.showall(gui["window"])
 ```
 
 ![grid annotations](readme_images/grid_annotations.png)
@@ -348,10 +346,10 @@ Properties:
 
 ### Calling imshow from a script file
 
-If you call Julia from a script file, the julia process will terminate at the end of the program. This will cause any windows opened with `imshow()` to terminate, which is probably not what you intend. We want to make it only terminate the process when the image window is closed. Below is some example code to do this:
+If you call Julia from a script file, the GLib main loop (which is responsible for handling events like mouse clicks, etc.) will not start automatically, and the julia process will terminate at the end of the program. This will cause any windows opened with `imshow()` to terminate, which is probably not what you intend. We want to start the main loop and then make it only terminate the process when the image window is closed. Below is some example code to do this:
 
 ```
-using Images, ImageView, TestImages, Gtk.ShortNames
+using Images, ImageView, TestImages, Gtk4
 
 img = testimage("mandrill")
 guidict = imshow(img);
@@ -364,9 +362,12 @@ if (!isinteractive())
 
     # Get the window
     win = guidict["gui"]["window"]
+    
+    # Start the GLib main loop
+    @async Gtk4.GLib.glib_main()
 
     # Notify the condition object when the window closes
-    signal_connect(win, :destroy) do widget
+    signal_connect(win, :close_request) do widget
         notify(c)
     end
 
@@ -382,4 +383,7 @@ manually close it with `CTRL + C`.
 
 If you are opening more than one window you will need to create more
 than one `Condition` object, if you wish to wait until the last one is
-closed.
+closed. See 
+(here)[https://juliagtk.github.io/Gtk4.jl/dev/howto/nonreplusage/] for
+more information.
+

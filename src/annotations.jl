@@ -291,20 +291,22 @@ annotation_isvalid(x, z, t) = true
 function setvalid!(ann::FloatingAnnotation, z, t)
 end
 
-function Gtk.draw(c::Gtk.GtkCanvas, ann::AnchoredAnnotation)
+function Gtk4.draw(c::Gtk4.GtkCanvas, ann::AnchoredAnnotation)
     if ann.valid
         ctx = getgc(c)
         Graphics.save(ctx)
         data = ann.data
-        set_coordinates(ctx, ann.devicebb(data), ann.userbb(data))
-        scale_x = width(ann.userbb(data))/width(ann.devicebb(data))
-        scale_y = height(ann.userbb(data))/height(ann.devicebb(data))
+        userbb = BoundingBox(ann.userbb(data).xmin-0.5,ann.userbb(data).xmax+0.5,ann.userbb(data).ymin-0.5,ann.userbb(data).ymax+0.5)
+        devicebb = ann.devicebb(data)
+        set_coordinates(ctx, ann.devicebb(data), userbb)
+        scale_x = width(userbb)/width(devicebb)
+        scale_y = height(userbb)/height(devicebb)
         draw_anchored(ctx, data, scale_x, scale_y)
         restore(ctx)
     end
 end
 
-function Gtk.draw(c::Gtk.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}}) where T
+function Gtk4.draw(c::Gtk4.GtkCanvas, ann::FloatingAnnotation{AnnotationScalebarFixed{T}}) where T
     ctx = getgc(c)
     Graphics.save(ctx)
     data = ann.data
