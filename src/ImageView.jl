@@ -16,11 +16,12 @@ using GtkObservables.Observables
 using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues, axisdim
 using ImageMetadata
 using Compat # for @constprop :none
+using Random
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
 export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, imlink,
-       roi, scalebar, slice2d
+       scalebar, slice2d
 
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
@@ -198,8 +199,8 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray);
                 kwargs...)
     imgmapped, kwargs = kwhandler(_mappedarray(scalei, img), axes; kwargs...)
     zr, sd = roi(imgmapped, axes)
-    v = slice2d(imgmapped, zr[], sd)
-    imshow(Base.inferencebarrier(imgmapped)::AbstractArray, default_clim(v), zr, sd; name=name, aspect=aspect, kwargs...)
+    #v = slice2d(imgmapped, zr[], sd)
+    imshow(Base.inferencebarrier(imgmapped)::AbstractArray, default_clim(img), zr, sd; name=name, aspect=aspect, kwargs...)
 end
 
 imshow(img::AbstractVector; kwargs...) = (@nospecialize; imshow(reshape(img, :, 1); kwargs...))
@@ -532,14 +533,39 @@ function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     end
 end
 
-function valuespan(img::AbstractMatrix)
-    minval = minimum_finite(img)
-    maxval = maximum_finite(img)
-    if minval > maxval
-        minval = zero(typeof(minval))
-        maxval = oneunit(typeof(maxval))
+function fast_finite_extrema(a::AbstractArray{T}) where T
+    mini = typemax(T)
+    maxi = typemin(T)
+    @simd for v in a
+        if isfinite(v)
+            if v <= mini
+                mini = v
+            end
+            if v > maxi
+                maxi = v
+                # Needs to have a separate if-block,
+                # for the case that all values in a are equal
+            end
+        end
+    end
+    return mini, maxi
+end
+function valuespan(img::AbstractArray; checkmax=10^8)
+    if length(img) > checkmax
+        img = randsubseq(img, checkmax / length(img))
+    end
+    minval, maxval = fast_finite_extrema(img)
+    invalid_min, invalid_max = (!isfinite).((minval, maxval))
+    (invalid_min || invalid_max) && @warn "Could not determine valid value span"
+    if invalid_min && invalid_max
+        minval = 0
+        maxval = 1
+    elseif invalid_min
+        minval = maxval - 1
+    elseif invalid_max
+        maxval = minval + 1
     elseif minval == maxval
-        maxval = minval+1
+        maxval = minval + 1
     end
     return minval, maxval
 end
@@ -550,12 +576,11 @@ default_clim(img::AbstractArray{C}) where {C<:AbstractRGB} = _default_clim(img, 
 default_clim(img::AbstractArray{C}) where {C<:AbstractMultiChannelColor} = _default_clim(img, eltype(C))
 _default_clim(img, ::Type{Bool}) = nothing
 _default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
-function _deflt_clim(img::AbstractMatrix)
+function _deflt_clim(img::AbstractArray)
     minval, maxval = valuespan(img)
     Observable(CLim(saferound(gray(minval)), saferound(gray(maxval))))
 end
-
-function _deflt_clim(img::AbstractMatrix{T}) where {T<:AbstractRGB}
+function _deflt_clim(img::AbstractArray{T}) where {T<:AbstractRGB}
     minval = RGB(0.0,0.0,0.0)
     maxval = RGB(1.0,1.0,1.0)
     Observable(CLim(minval, maxval))
