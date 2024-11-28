@@ -228,6 +228,9 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
     guidict["hoverinfo"] = on(guidict["canvas"].mouse.motion) do btn
         hoverinfo(guidict["status"], btn, img, sd)
     end
+    guidict["zoomregion_info"]=on(zr; update=true) do z
+        viewinfo(guidict["viewlabel"], z, sd)
+    end
 
     roidict = imshow(guidict["frame"], guidict["canvas"], img,
                      wrap_signal(clim), zr, sd, anns)
@@ -379,12 +382,16 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
         g, frames, canvases = canvasgrid(gridsize, aspect)
     end
     push!(vbox, g)
+    cbox = GtkCenterBox()
+    push!(vbox, cbox)
     status = GtkLabel("")
-    set_gtk_property!(status, :halign, Gtk4.Align_START)
-    push!(vbox, status)
+    cbox[:start] = status
+    viewlabel = GtkLabel(""; selectable = true)
+    Gtk4.ellipsize(viewlabel, Gtk4.Pango.EllipsizeMode_MIDDLE)
+    cbox[:end] = viewlabel
 
     guidict = Dict("window"=>win, "vbox"=>vbox, "frame"=>frames, "status"=>status,
-                   "canvas"=>canvases)
+                   "canvas"=>canvases, "viewlabel"=>viewlabel)
 
     # Add the player controls
     if !isempty(slicedata)
@@ -526,10 +533,22 @@ function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose
     if checkbounds(Bool, img, axes...)
         print(io, '[', y, ',', x, "] ")
         show(IOContext(io, :compact=>true), img[axes...])
-        set_gtk_property!(lbl, :label, String(take!(io)))
+        Gtk4.label(lbl, String(take!(io)))
     else
-        set_gtk_property!(lbl, :label, "")
+        Gtk4.label(lbl, "")
     end
+end
+
+function viewinfo(lbl, zr, sd::SliceData{transpose}) where transpose
+    io = IOBuffer()
+    if zr.currentview == zr.fullview
+        print(io, "")
+    else
+        print(io, "view: ")
+        x, y = transpose ? (zr.currentview.x, zr.currentview.y) : (zr.currentview.y, zr.currentview.x)
+        print(io, '[', x.left, ':', x.right, ',', y.left, ':', y.right, ']')
+    end
+    Gtk4.label(lbl, String(take!(io)))
 end
 
 function valuespan(img::AbstractMatrix)
