@@ -41,7 +41,7 @@ You should get a window with your image:
 ![photo](readme_images/photo1.jpg)
 
 You can use `imshow()` if you want to choose an image using a file
-dialog.
+dialog (requires [FileIO](https://github.com/JuliaIO/FileIO.jl)).
 
 Try resizing the image window by dragging one of its corners; you'll
 see that the aspect ratio of the image is preserved when you
