@@ -384,6 +384,6 @@ manually close it with `CTRL + C`.
 If you are opening more than one window you will need to create more
 than one `Condition` object, if you wish to wait until the last one is
 closed. See 
-(here)[https://juliagtk.github.io/Gtk4.jl/dev/howto/nonreplusage/] for
+[here](https://juliagtk.github.io/Gtk4.jl/dev/howto/nonreplusage/) for
 more information.
 
