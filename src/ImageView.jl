@@ -60,13 +60,6 @@ end
 const window_wrefs = WeakKeyDict{Gtk4.GtkWindowLeaf,Nothing}()
 
 """
-    imshow()
-
-Choose an image to display via a file dialog.
-"""
-imshow() = imshow(load(open_dialog("Pick an image to display")))
-
-"""
     imshow!(canvas, img) -> drawsignal
     imshow!(canvas, img::Observable, zr::Observable{ZoomRegion}) -> drawsignal
     imshow!(frame::Frame, canvas, img::Observable, zr::Observable{ZoomRegion}) -> drawsignal
