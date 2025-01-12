@@ -1,4 +1,4 @@
-using ImageView, ImageCore, ImageView.Observables, ImageView.MultiChannelColors
+using ImageView, ImageCore, ImageView.Observables, MultiChannelColors
 using Gtk4: Gtk4
 using Test
 

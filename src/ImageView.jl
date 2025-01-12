@@ -8,13 +8,11 @@ end
 
 using ImageCore, ImageBase, StatsBase
 using ImageCore.MappedArrays
-using MultiChannelColors
 using RoundingIntegers
 using Gtk4, GtkObservables, Graphics, Cairo
 using Gtk4: Align_START, Align_END, Align_FILL
 using GtkObservables.Observables
 using AxisArrays: AxisArrays, Axis, AxisArray, axisnames, axisvalues, axisdim
-using ImageMetadata
 using Compat # for @constprop :none
 
 export AnnotationText, AnnotationPoint, AnnotationPoints,
@@ -559,7 +557,6 @@ end
 default_clim(img) = nothing
 default_clim(img::AbstractArray{C}) where {C<:GrayLike} = _default_clim(img, eltype(C))
 default_clim(img::AbstractArray{C}) where {C<:AbstractRGB} = _default_clim(img, eltype(C))
-default_clim(img::AbstractArray{C}) where {C<:AbstractMultiChannelColor} = _default_clim(img, eltype(C))
 _default_clim(img, ::Type{Bool}) = nothing
 _default_clim(img, ::Type{T}) where {T} = _deflt_clim(img)
 function _deflt_clim(img::AbstractMatrix)
@@ -570,12 +567,6 @@ end
 function _deflt_clim(img::AbstractMatrix{T}) where {T<:AbstractRGB}
     minval = RGB(0.0,0.0,0.0)
     maxval = RGB(1.0,1.0,1.0)
-    Observable(CLim(minval, maxval))
-end
-
-function _deflt_clim(img::AbstractMatrix{C}) where {C<:AbstractMultiChannelColor}
-    minval = zero(C)
-    maxval = oneunit(C)
     Observable(CLim(minval, maxval))
 end
 
@@ -615,7 +606,6 @@ end
 
 channel_clim(f, clim::CLim{C}) where {C<:Colorant} = CLim(f(clim.min), f(clim.max))
 channel_clims(clim::CLim{T}) where {T<:AbstractRGB} = map(f->channel_clim(f, clim), (red, green, blue))
-channel_clims(clim::CLim{C}) where {C<:AbstractMultiChannelColor} = map(f->channel_clim(f, clim), ntuple(i -> (c -> Tuple(c)[i]), length(C)))
 
 function mapped_channel_clims(clim::Observable{CLim{T}}) where {T<:AbstractRGB}
     inits = channel_clims(clim[])
@@ -634,18 +624,6 @@ function histsignals(enabled::Observable{Bool}, img::Observable, clim::Observabl
     push!(histsigs, histsignals(enabled, rv, cls[1])[1])
     push!(histsigs, histsignals(enabled, gv, cls[2])[1])
     push!(histsigs, histsignals(enabled, bv, cls[3])[1])
-    return histsigs
-end
-
-function mapped_channel_clims(clim::Observable{CLim{C}}) where {C<:AbstractMultiChannelColor}
-    inits = channel_clims(clim[])
-    return [map!(x -> channel_clim(c -> Tuple(c)[i], x), Observable(inits[1]), clim) for i = 1:length(C)]
-end
-
-function histsignals(enabled::Observable{Bool}, img::Observable, clim::Observable{CLim{C}}) where {C<:AbstractMultiChannelColor}
-    chanarrays = [map(x->mappedarray(c -> Tuple(c)[i], x), img) for i = 1:length(C)]
-    cls = mapped_channel_clims(clim) #note currently this gets called twice, also in contrast gui creation (a bit inefficient/awkward)
-    histsigs = [histsignals(enabled, chanarrays[i], cls[i])[1] for i = 1:length(C)]
     return histsigs
 end
 
@@ -671,15 +649,6 @@ function safeminmax(cmin::T, cmax::T) where {T<:AbstractRGB}
     return T(rmin, gmin, bmin), T(rmax, gmax, bmax)
 end
 
-function scalechannels(::Type{Tout}, cmin::AbstractMultiChannelColor{T}, cmax::AbstractMultiChannelColor{T}) where {T,Tout}
-    return x->Tout(ntuple(i -> nanz(scaleminmax(T, Tuple(cmin)[i], Tuple(cmax)[i])(Tuple(x)[i])), length(cmin)))
-end
-
-function safeminmax(cmin::C, cmax::C) where {C<:AbstractMultiChannelColor}
-    minmaxpairs = ntuple(i -> safeminmax(Tuple(cmin)[i], Tuple(cmax)[i]), length(C))
-    return C(first.(minmaxpairs)), C(last.(minmaxpairs))
-end
-
 function prep_contrast(@nospecialize(img::Observable), clim::Observable{CLim{T}}) where {T}
     # Set up the signals to calculate the histogram of intensity
     enabled = Observable(false) # skip hist calculation if the contrast gui isn't open
@@ -695,7 +664,6 @@ end
 
 outtype(::Type{T}) where T<:GrayLike         = Gray{N0f8}
 outtype(::Type{C}) where C<:Color            = RGB{N0f8}
-outtype(::Type{C}) where C<:AbstractMultiChannelColor = C
 outtype(::Type{C}) where C<:TransparentColor = RGBA{N0f8}
 
 function prep_contrast(canvas, @nospecialize(img::Observable), clim::Observable{CLim{T}}) where T
@@ -833,7 +801,6 @@ isgray(img) = false
 
 _mappedarray(f, img) = mappedarray(f, img)
 _mappedarray(f, img::AxisArray) = AxisArray(mappedarray(f, img.data), AxisArrays.axes(img))
-_mappedarray(f, img::ImageMeta) = shareproperties(img, _mappedarray(f, data(img)))
 
 wrap_signal(x) = Observable(x)
 wrap_signal(x::Observable) = x
