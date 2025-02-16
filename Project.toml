@@ -12,8 +12,6 @@ Gtk4 = "9db2cae5-386f-4011-9d63-a5602296539b"
 GtkObservables = "8710efd8-4ad6-11eb-33ea-2d5ceb25a41c"
 ImageBase = "c817782e-172a-44cc-b673-b171935fbb9e"
 ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
-ImageMetadata = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
-MultiChannelColors = "d4071afc-4203-49ee-90bc-13ebeb18d604"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 RoundingIntegers = "d5f540fe-1c90-5db3-b776-2e2f362d9394"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
@@ -24,7 +22,7 @@ Cairo = "0.6, 0.7, 0.8, 1"
 Compat = "3, 4"
 Graphics = "0.2, 0.3, 0.4, 1"
 GtkObservables = "2.1"
-Gtk4 = "0.6.2, 0.7"
+Gtk4 = "0.7.6"
 ImageBase = "0.1"
 ImageCore = "0.9, 0.10"
 ImageMetadata = "0.9"
@@ -37,9 +35,13 @@ TestImages = "1.9"
 
 [weakdeps]
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+ImageMetadata = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
+MultiChannelColors = "d4071afc-4203-49ee-90bc-13ebeb18d604"
 
 [extensions]
 ImageViewFileIOExt = "FileIO"
+ImageViewMultiChannelColorsExt = "MultiChannelColors"
+ImageViewImageMetadataExt = "ImageMetadata"
 
 [extras]
 ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
@@ -51,4 +53,4 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestImages = "5e47fb64-e119-507b-a336-dd2b206d9990"
 
 [targets]
-test = ["ImageCore", "ImageIO", "IntervalSets", "OffsetArrays", "Observables", "Test", "TestImages"]
+test = ["ImageCore", "ImageIO", "IntervalSets", "MultiChannelColors", "OffsetArrays", "Observables", "Test", "TestImages"]
