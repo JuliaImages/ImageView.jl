@@ -816,6 +816,10 @@ include("contrast_gui.jl")
 include("annotations.jl")
 
 function __init__()
+    if !Gtk4.initialized[]
+        error("Gtk4 not initialized")
+        return
+    end
     # by default, GtkFrame and GtkAspectFrame use rounded corners
     # the way to override this is via custom CSS
     css="""
@@ -830,6 +834,10 @@ using PrecompileTools
     for T in (N0f8, N0f16, Float32)
         for C in (Gray, RGB)
             img = rand(C{T}, 2, 2)
+            if !Gtk4.initialized[]
+                @warn("ImageView precompile skipped: Gtk4 could not be initialized (are you on a headless system?)")
+                return
+            end
             imshow(img)
             clim = ImageView.default_clim(img)
             imgsig = Observable(img)
