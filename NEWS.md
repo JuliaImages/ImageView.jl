@@ -1,3 +1,8 @@
+# New in 0.13
+
+- Julia 1.10 is now required
+- MultiChannelColors, FileIO support now in extensions
+
 # New in 0.12
 
 - switch from Gtk to Gtk4. Fixes REPL lag on Windows.
