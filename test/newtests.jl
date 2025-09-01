@@ -126,7 +126,7 @@ end
     img = [OneChannelColor(0) OneChannelColor(1);
            OneChannelColor(2) OneChannelColor(3);
     ]
-    @test_throws ErrorException("got unsupported eltype Union{} in preparing the constrast") imshow(img, CLim(0, 1))
+    @test_throws ErrorException("got unsupported eltype Any in preparing the contrast") imshow(img, CLim(0, 1))
 
     struct MyChar <: AbstractChar
         c::Char

@@ -254,7 +254,7 @@ function imshow(frame::Union{Gtk4.GtkFrame,Gtk4.GtkAspectFrame}, canvas::GtkObse
     # such errors become easier to debug.
     if !supported_eltype(imgc[])
         !supported_eltype(imgsig[]) && error("got unsupported eltype $(eltype(imgsig[])) in creating slice")
-        error("got unsupported eltype $(eltype(imgc[])) in preparing the constrast")
+        error("got unsupported eltype $(eltype(imgc[])) in preparing the contrast")
     end
 
     roidict = imshow(frame, canvas, imgc, zr, anns)
@@ -590,7 +590,11 @@ default_axes(img::AxisArray) = axisnames(img)[[1,2]]
 
 function histsignals(enabled::Observable{Bool}, img::Observable, clim::Observable{CLim{T}}) where {T<:GrayLike}
     image, cl = img[], clim[]
-    Th = float(promote_type(T, eltype(image)))
+    hist_type = promote_type(T, eltype(image))
+    if hist_type == Any
+        error("got unsupported eltype Any in preparing the contrast")
+    end
+    Th = float(hist_type)
     function computehist(image, cl)
         smin, smax = valuespan(image)
         smin = float(min(smin, cl.min))
