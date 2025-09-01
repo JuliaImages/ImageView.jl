@@ -564,6 +564,12 @@ function _deflt_clim(img::AbstractMatrix)
     Observable(CLim(saferound(gray(minval)), saferound(gray(maxval))))
 end
 
+# The method above began throwing an error for integers >1 in mid 2025
+# This restores the previous "clamping" behavior
+function _deflt_clim(img::AbstractMatrix{T}) where {T<:Integer}
+    Observable(CLim(0.0, 1.0))
+end
+
 function _deflt_clim(img::AbstractMatrix{T}) where {T<:AbstractRGB}
     minval = RGB(0.0,0.0,0.0)
     maxval = RGB(1.0,1.0,1.0)
