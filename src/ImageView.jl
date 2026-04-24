@@ -18,7 +18,7 @@ using Compat # for @constprop :none
 export AnnotationText, AnnotationPoint, AnnotationPoints,
        AnnotationLine, AnnotationLines, AnnotationBox
 export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, imlink,
-       roi, scalebar, slice2d
+       roi, scalebar, setup_contrast_popup!, slice2d
 
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
@@ -731,6 +731,49 @@ function create_contrast_popup(canvas, enabled, hists, clim)
         enabled[] = true
         @idle_add contrast_gui(enabled, hists, clim)
     end
+end
+
+function dummy_histsig(clim::Observable{CLim{T}}; floor=nothing) where {T<:GrayLike}
+    Th = float(T)
+    cl = clim[]
+    lo, hi = Th(cl.min), Th(cl.max)
+    if !(lo < hi)
+        lo, hi = zero(Th), one(Th)
+    end
+    span = hi - lo
+    rnglo = floor === nothing ? lo - span/2 : max(Th(floor), lo - span/2)
+    rng = LinRange(rnglo, hi + span/2, 300)
+    Observable(Histogram(rng, zeros(Int, 299), :right, false))
+end
+
+dummy_histsigs(clim::Observable{CLim{T}}; floor=nothing) where {T<:GrayLike} =
+    [dummy_histsig(clim; floor)]
+
+dummy_histsigs(clim::Observable{CLim{T}}; floor=nothing) where {T<:AbstractRGB} =
+    [dummy_histsig(map(x->channel_clim(red, x), clim); floor),
+     dummy_histsig(map(x->channel_clim(green, x), clim); floor),
+     dummy_histsig(map(x->channel_clim(blue, x), clim); floor)]
+
+"""
+    setup_contrast_popup!(canvas, clim; img=nothing)
+
+Set up a right-click context menu on `canvas` that allows interactive
+adjustment of `clim` via a contrast GUI window. If `img` is an
+`Observable` wrapping an array compatible with `clim`, a histogram of
+pixel intensities is computed and shown whenever the GUI is opened.
+Without `img`, the GUI shows sliders only (no histogram).
+
+This is a lower-level complement to [`imshow`](@ref), useful when
+contrast is managed internally by the image type but an interactive
+right-click popup is still desired.
+"""
+function setup_contrast_popup!(canvas, clim::Observable{CLim{T}};
+                                img::Union{Nothing,Observable}=nothing,
+                                floor=nothing) where T
+    enabled = Observable(false)
+    histsigs = img === nothing ? dummy_histsigs(clim; floor) : histsignals(enabled, img, clim)
+    push!(canvas.preserved, create_contrast_popup(canvas, enabled, histsigs, clim))
+    return canvas
 end
 
 function map_image_roi(@nospecialize(img), zr::Observable{ZoomRegion{T}}, slices...) where T
