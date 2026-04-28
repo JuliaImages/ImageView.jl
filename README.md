@@ -186,7 +186,7 @@ change in the other.
 Alternatively, you can place both displays in a single window:
 ```julia
 zr, slicedata = roi(mri, (1,2))
-gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
+gd = imshow_gui((200, 200), (2, 1); slicedata=slicedata)
 imshow(gd["frame"][1,1], gd["canvas"][1,1], mri, nothing, zr, slicedata)
 imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
 ```
