@@ -20,7 +20,7 @@ end
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
     zr[] = (1:20, 9:10)
     @test zr[].currentview.x == 9..10
-    sleep(1.0)  # allow the Gtk event loop to run (macOS is particularly sensitive to this)
+    sleep(2.0)  # allow the Gtk event loop to run (macOS is particularly sensitive to this)
     @test get_gtk_property(frame, :ratio, Float32) ≈ 0.1
     zr[] = (9:10, 1:20)
     sleep(0.5)
