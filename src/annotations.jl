@@ -259,10 +259,10 @@ normalized_lengths(imsl::Observable, width, height) =
     normalized_lengths(imsl[], width, height)
 
 """
-    scalebar(guidict::Dict, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
+    scalebar(disp::ImageDisplay, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
 
 Add a scale bar annotation to the image display controlled by
-`guidict` (returned by [`imshow`](@ref)). If the
+`disp` (returned by [`imshow`](@ref)). If the
 [`pixelspacing`](@ref) of the image is set using Unitful quantities,
 `length` should also be expressed in physical units.
 

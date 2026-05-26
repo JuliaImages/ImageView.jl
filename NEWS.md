@@ -1,5 +1,26 @@
 # New in 0.13
 
+- `imshow` now returns an `ImageDisplay` struct rather than a nested
+  `Dict{String,Any}`. The nested GUI and ROI groupings are exposed as
+  the structs `ImageViewGUI` (returned by `imshow_gui`) and `ImageROI`
+  (returned by the low-level `imshow(::Canvas, ...)`). Field access
+  is flattened on `ImageDisplay`, so where you previously wrote
+  `result["gui"]["window"]`, `result["roi"]["zoomregion"]`, or
+  `result["roi"]["image roi"]`, you can now write `result.window`,
+  `result.zoomregion`, `result.image_roi`. Call `propertynames(result)`
+  to see every accessible field.
+
+  This change fixes a long-standing usability problem: the default
+  `show` for the old `Dict` recursively printed the underlying image
+  array, which could hang the REPL for several seconds on a large
+  image when the trailing semicolon was forgotten. The new types have
+  compact `show` methods that print only summary information.
+
+  The string-key API (`result["gui"]["window"]` etc.) still works and
+  routes through a deprecation shim; each call emits a
+  `Base.depwarn`. The shim will be removed in the next breaking
+  release. Downstream packages can dispatch on `ImageView.ImageDisplay`,
+  `ImageView.ImageViewGUI`, or `ImageView.ImageROI` directly.
 - Julia 1.10 is now required
 - MultiChannelColors, FileIO support now in extensions
 

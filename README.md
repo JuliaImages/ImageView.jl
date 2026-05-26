@@ -112,46 +112,52 @@ You can place multiple images in the same window using `imshow_gui`:
 ```
 using ImageView, TestImages, Gtk4
 gui = imshow_gui((300, 300), (2, 1))  # 2 columns, 1 row of images (each initially 300×300)
-canvases = gui["canvas"]
+canvases = gui.canvas
 imshow(canvases[1,1], testimage("lighthouse"))
 imshow(canvases[1,2], testimage("mandrill"))
-show(gui["window"])
+show(gui.window)
 ```
 
 ![canvasgrid snapshot](readme_images/canvasgrid.jpg)
 
-`gui["window"]` returns the window; `gui["canvas"]` either returns a single canvas
+`gui.window` returns the window; `gui.canvas` either returns a single canvas
 (if there is just one), or an array if you've specified a grid of canvases.
 
 `Gtk4.show(win)` is sometimes needed when using the lower-level utilities of this
 package. Generally you should call it after you've finished assembling the entire window,
 so as to avoid redraws with each subsequent change.
 
-### The dictionary and region-of-interest manipulations
+### The display handle and region-of-interest manipulations
 
-`imshow` returns a dictionary containing a wealth of information about
-the state of the viewer. Perhaps most interesting is the `"roi"`
-entry, which itself is another dictionary containing information about
-the current selected region or interest. These are
-[Observables signals](https://juliagizmos.github.io/Observables.jl/), and consequently you can even manipulate the
-state of the GUI by `push!`ing new values to these signals.
+`imshow` returns an `ImageDisplay`, a struct holding the GTK widgets and
+Observables that drive the viewer. The most interesting subgroup is the
+region-of-interest (accessible as `disp.roi` or directly via hoisted fields
+like `disp.zoomregion`, `disp.image_roi`, `disp.slicedata`). The signals are
+[Observables](https://juliagizmos.github.io/Observables.jl/), and you can
+manipulate the state of the GUI by `push!`ing (or assigning) new values to
+them.
 
 For example, using the `"mri"` image above, you can select the 5th slice with
 ```julia
-guidict = imshow(img)
-guidict["roi"]["slicedata"].signals[1][] = 5
+disp = imshow(img)
+disp.slicedata.signals[1][] = 5
 ```
 
 `SliceData` objects contain information about which axes are displayed
 and the current slice indices of those axes perpendicular to the view
-plane. Likewise, `"image roi"` contains the actual image data
+plane. Likewise, `disp.image_roi` contains the actual image data
 currently being shown in the window (including all zoom/slice
 settings).
 
-The `"zoom"`- and `"pan"`-related signals originate from
+The `zoom_*` and `pan_*` signals originate from
 [GtkObservables](https://juliagizmos.github.io/GtkObservables.jl/stable/),
 and users should see the documentation for that package for more
 information.
+
+`propertynames(disp)` lists every accessible field. For backwards
+compatibility, the older string-key syntax (`disp["gui"]["window"]`,
+`disp["roi"]["zoomregion"]`, etc.) still works but emits a deprecation
+warning; it will be removed in the next breaking release.
 
 ### Coupling two or more images together
 
@@ -171,9 +177,9 @@ mriseg[mri .> 0.5] .= colorant"red"
 Now we display the images:
 
 ```julia
-guidata = imshow(mri, axes=(1,2))
-zr = guidata["roi"]["zoomregion"]
-slicedata = guidata["roi"]["slicedata"]
+disp = imshow(mri, axes=(1,2))
+zr = disp.zoomregion
+slicedata = disp.slicedata
 imshow(mriseg, nothing, zr, slicedata)
 ```
 
@@ -187,8 +193,8 @@ Alternatively, you can place both displays in a single window:
 ```julia
 zr, slicedata = roi(mri, (1,2))
 gd = imshow_gui((200, 200), (2, 1); slicedata=slicedata)
-imshow(gd["frame"][1,1], gd["canvas"][1,1], mri, nothing, zr, slicedata)
-imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
+imshow(gd.frame[1,1], gd.canvas[1,1], mri, nothing, zr, slicedata)
+imshow(gd.frame[1,2], gd.canvas[1,2], mriseg, nothing, zr, slicedata)
 ```
 
 You should see something like this:
@@ -208,8 +214,8 @@ and "floating" annotations are best for things like scalebars.
 
 Here's an example of adding a 30-pixel scale bar to an image:
 ```julia
-guidict = imshow(img)
-scalebar(guidict, 30; x = 0.1, y = 0.05)
+disp = imshow(img)
+scalebar(disp, 30; x = 0.1, y = 0.05)
 ```
 
 `x` and `y` describe the center of the scale bar in normalized
@@ -226,14 +232,14 @@ using Images, ImageView
 z = ones(10,50);
 y = 8; x = 2;
 z[y,x] = 0
-guidict = imshow(z)
-idx = annotate!(guidict, AnnotationText(x, y, "x", color=RGB(0,0,1), fontsize=3))
-idx2 = annotate!(guidict, AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(1,0,0)))
-idx3 = annotate!(guidict, AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
-idx4 = annotate!(guidict, AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
-idx5 = annotate!(guidict, AnnotationBox(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,0,1)))
+disp = imshow(z)
+idx = annotate!(disp, AnnotationText(x, y, "x", color=RGB(0,0,1), fontsize=3))
+idx2 = annotate!(disp, AnnotationPoint(x+10, y, shape='.', size=4, color=RGB(1,0,0)))
+idx3 = annotate!(disp, AnnotationPoint(x+20, y-6, shape='.', size=1, color=RGB(1,0,0), linecolor=RGB(0,0,0), scale=true))
+idx4 = annotate!(disp, AnnotationLine(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,1,0)))
+idx5 = annotate!(disp, AnnotationBox(x+10, y, x+20, y-6, linewidth=2, color=RGB(0,0,1)))
 # This shows that you can remove annotations, too:
-delete!(guidict, idx)
+delete!(disp, idx)
 ```
 
 This is what this looks like before `delete!`ing the first annotation:
@@ -247,7 +253,7 @@ by calling `annotations()`:
 using ImageView, Images, Gtk4
 # Create the window and a 2x2 grid of canvases, each 300x300 pixels in size
 gui = imshow_gui((300, 300), (2, 2))
-canvases = gui["canvas"]
+canvases = gui.canvas
 # Create some single-color images (just for testing purposes)
 makeimage(color) = fill(color, 100, 100)
 imgs = makeimage.([colorant"red" colorant"green";
@@ -256,10 +262,10 @@ imgs = makeimage.([colorant"red" colorant"green";
 anns = [annotations() annotations();
         annotations() annotations()]
 # Draw the images on the canvases. Note that we supply the annotation object for each.
-roidict = [imshow(canvases[1,1], imgs[1,1], anns[1,1]) imshow(canvases[1,2], imgs[1,2], anns[1,2]);
-           imshow(canvases[2,1], imgs[2,1], anns[2,1]) imshow(canvases[2,2], imgs[2,2], anns[2,2])]
+rois = [imshow(canvases[1,1], imgs[1,1], anns[1,1]) imshow(canvases[1,2], imgs[1,2], anns[1,2]);
+        imshow(canvases[2,1], imgs[2,1], anns[2,1]) imshow(canvases[2,2], imgs[2,2], anns[2,2])]
 # Now we'll add an annotation to the lower-right image
-annotate!(anns[2,2], canvases[2,2], roidict[2,2], AnnotationBox(5, 5, 30, 80, linewidth=3, color=RGB(1,1,0)))
+annotate!(anns[2,2], canvases[2,2], rois[2,2], AnnotationBox(5, 5, 30, 80, linewidth=3, color=RGB(1,1,0)))
 ```
 
 ![grid annotations](readme_images/grid_annotations.png)
@@ -352,7 +358,7 @@ If you call Julia from a script file, the GLib main loop (which is responsible f
 using Images, ImageView, TestImages, Gtk4
 
 img = testimage("mandrill")
-guidict = imshow(img);
+disp = imshow(img);
 
 #If we are not in a REPL
 if (!isinteractive())
@@ -361,7 +367,7 @@ if (!isinteractive())
     c = Condition()
 
     # Get the window
-    win = guidict["gui"]["window"]
+    win = disp.window
     
     # Start the GLib main loop
     @async Gtk4.GLib.glib_main()

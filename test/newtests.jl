@@ -6,16 +6,16 @@ using AxisArrays: AxisArrays, AxisArray, Axis
 @testset "1d" begin
     img = rand(N0f8, 5)
     guidict = imshow_now(img)
-    win = guidict["gui"]["window"]
+    win = guidict.window
     Gtk4.destroy(win)
 end
 
 @testset "Aspect ratio" begin
     img = rand(N0f8, 20, 20)
     guidict = imshow_now(img)
-    win, frame = guidict["gui"]["window"], guidict["gui"]["frame"]
+    win, frame = guidict.window, guidict.frame
     @test isa(frame, Gtk4.GtkAspectFrameLeaf)
-    zr = guidict["roi"]["zoomregion"]
+    zr = guidict.zoomregion
 
     @test get_gtk_property(frame, :ratio, Float32) == 1.0
     zr[] = (1:20, 9:10)
@@ -29,7 +29,7 @@ end
     Gtk4.destroy(win)
 
     guidict = imshow_now(img, aspect=:none)
-    win, frame = guidict["gui"]["window"], guidict["gui"]["frame"]
+    win, frame = guidict.window, guidict.frame
     @test isa(frame, Gtk4.GtkFrameLeaf)
     Gtk4.destroy(win)
 end
@@ -38,7 +38,7 @@ end
 @testset "Image display" begin
     img_n0f8 = rand(N0f8, 3,3)
     imsd = imshow_now(img_n0f8; name="N0f8")
-    @test get_gtk_property(imsd["gui"]["window"], :title, String) == "N0f8"
+    @test get_gtk_property(imsd.window, :title, String) == "N0f8"
 
     img_n0f16 = rand(N0f16, 3,3)
     imshow_now(img_n0f16; name="N0f16")
@@ -73,7 +73,7 @@ end
     # a large image
     img = testimage("earth")
     hbig = imshow_now(img, name="Earth")
-    win = hbig["gui"]["window"]
+    win = hbig.window
     w, h = size(win)
     ws, hs = screen_size(win)
     !Sys.iswindows() && @test w <= ws && h <= hs
@@ -82,7 +82,7 @@ end
     img = rand(N0f8, 10000, 15000)
     hbig = imshow_now(img, name="VeryBig"; canvassize=(500,500))
     sleep(1.0)  # some extra sleep for this big image
-    cvs = hbig["gui"]["canvas"];
+    cvs = hbig.canvas;
     # GUI update takes a very long time in CI (sometimes) for MacOS, hence the following
     i=1
     passed=false
@@ -98,7 +98,7 @@ end
 @testset "imshow!" begin
     img = testimage("mri")
     guidict = imshow(img[:,:,1])
-    c = guidict["gui"]["canvas"]
+    c = guidict.canvas
     ImageView.imshow!(c, img[:,:,2])
 
     imgsig = Observable(img[:,:,1])
@@ -109,13 +109,13 @@ end
 @testset "Orientation" begin
     img = [1 2; 3 4]
     guidict = imshow_now(img)
-    @test parent(guidict["roi"]["image roi"][]) == [1 2; 3 4]
+    @test parent(guidict.image_roi[]) == [1 2; 3 4]
     guidict = imshow_now(img, flipy=true)
-    @test parent(guidict["roi"]["image roi"][]) == [3 4; 1 2]
+    @test parent(guidict.image_roi[]) == [3 4; 1 2]
     guidict = imshow_now(img, flipx=true)
-    @test parent(guidict["roi"]["image roi"][]) == [2 1; 4 3]
+    @test parent(guidict.image_roi[]) == [2 1; 4 3]
     guidict = imshow_now(img, flipx=true, flipy=true)
-    @test parent(guidict["roi"]["image roi"][]) == [4 3; 2 1]
+    @test parent(guidict.image_roi[]) == [4 3; 2 1]
 end
 
 @testset "Mapping errors" begin
@@ -141,44 +141,44 @@ end
     # Test that we can use positional or named axes with AxisArrays
     img = AxisArray(rand(3, 5, 2), :x, :y, :z)
     guin = imshow_now(img; name="AxisArray Named")
-    @test isa(guin["roi"]["slicedata"].axs[1], Axis{:z})
+    @test isa(guin.slicedata.axs[1], Axis{:z})
     guip = imshow_now(img; axes=(1,2), name="AxisArray Positional")
-    @test isa(guip["roi"]["slicedata"].axs[1], Axis{3})
+    @test isa(guip.slicedata.axs[1], Axis{3})
     guip2 = imshow_now(img; axes=(1,3), name="AxisArray Positional")
-    @test isa(guip2["roi"]["slicedata"].axs[1], Axis{2})
+    @test isa(guip2.slicedata.axs[1], Axis{2})
 
     ## 3d images
     img = testimage("mri")
     hmri = imshow_now(img; name="P,R view")
-    @test isa(hmri["roi"]["slicedata"].axs[1], Axis{:S})
+    @test isa(hmri.slicedata.axs[1], Axis{:S})
 
     # Use a custom CLim here because the first slice is not representative of the intensities
     hmrip = imshow_now(img, Observable(CLim(0.0, 1.0)), axes=(:S, :P), name="S,P view")
-    @test isa(hmrip["roi"]["slicedata"].axs[1], Axis{:R})
-    hmrip["roi"]["slicedata"].signals[1][] = 84
+    @test isa(hmrip.slicedata.axs[1], Axis{:R})
+    hmrip.slicedata.signals[1][] = 84
 
     ## Two coupled images
     mriseg = RGB.(img)
     mriseg[img .> 0.5] .= colorant"red"
     # version 1
     guidata = imshow_now(img, axes=(1,2))
-    zr = guidata["roi"]["zoomregion"]
-    slicedata = guidata["roi"]["slicedata"]
+    zr = guidata.zoomregion
+    slicedata = guidata.slicedata
     guidata2 = imshow_now(mriseg, nothing, zr, slicedata)
-    @test guidata2["roi"]["zoomregion"] === zr
+    @test guidata2.zoomregion === zr
 
     # version 2
     zr, slicedata = roi(img, (1,2))
     gd = imshow_gui((200, 200), (1,2); slicedata=slicedata)
-    guidata1 = imshow(gd["frame"][1,1], gd["canvas"][1,1], img, nothing, zr, slicedata)
-    guidata2 = imshow(gd["frame"][1,2], gd["canvas"][1,2], mriseg, nothing, zr, slicedata)
+    guidata1 = imshow(gd.frame[1,1], gd.canvas[1,1], img, nothing, zr, slicedata)
+    guidata2 = imshow(gd.frame[1,2], gd.canvas[1,2], mriseg, nothing, zr, slicedata)
     sleep(0.01)
-    @test guidata1["zoomregion"] === guidata2["zoomregion"] === zr
+    @test guidata1.zoomregion === guidata2.zoomregion === zr
 
     # imlink
     gd = imlink(img, mriseg)
     sleep(0.01)
-    @test gd["guidata"][1]["zoomregion"] === gd["guidata"][2]["zoomregion"]
+    @test gd.extras[:guidata][1].zoomregion === gd.extras[:guidata][2].zoomregion
 end
 
 @testset "Non-AbstractArrays" begin

@@ -23,7 +23,7 @@ scalebar(guidict, 30; x = 0.1, y = 0.05)
 
 # Grid of images (issue #202)
 gd = imshow_gui((300, 300), (2, 2))
-canvases = gd["canvas"]
+canvases = gd.canvas
 anns = [annotations() annotations();
         annotations() annotations()]
 makeimage(color) = fill(color, 100, 100)

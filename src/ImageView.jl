@@ -284,13 +284,14 @@ function copy_with_restrict!(cnvs, img::AbstractMatrix)
 end
 
 """
-    imshow(img; axes=(1,2), name="ImageView") -> guidict
-    imshow(img, clim; kwargs...) -> guidict
-    imshow(img, clim, zoomregion, slicedata, annotations; kwargs...) -> guidict
+    imshow(img; axes=(1,2), name="ImageView") -> disp::ImageDisplay
+    imshow(img, clim; kwargs...) -> disp::ImageDisplay
+    imshow(img, clim, zoomregion, slicedata, annotations; kwargs...) -> disp::ImageDisplay
 
-Display the image `img` in a new window titled with `name`, returning
-a dictionary `guidict` containing any Observables signals or GtkObservables
-widgets. If the image is 3 or 4 dimensional, GUI controls will be
+Display the image `img` in a new window titled with `name`, returning an
+[`ImageDisplay`](@ref) `disp` whose fields expose the Observables and
+GtkObservables widgets that drive the GUI (see `propertynames(disp)`).
+If the image is 3 or 4 dimensional, GUI controls will be
 added for slicing along "extra" axes. By default the two-dimensional
 slice containing axes 1 and 2 are shown, but that can be changed by
 passing a different setting for `axes`.
@@ -455,7 +456,7 @@ function fullscreen_cb(aptr::Ptr, par, win)
 end
 
 """
-    guidict = imshow_gui(canvassize, gridsize=(1,1); name="ImageView", aspect=:auto, slicedata=SliceData{false}())
+    gui = imshow_gui(canvassize, gridsize=(1,1); name="ImageView", aspect=:auto, slicedata=SliceData{false}()) -> gui::ImageViewGUI
 
 Create an image-viewer GUI. By default creates a single canvas, but
 with custom `gridsize = (nx, ny)` you can create a grid of canvases.
@@ -560,9 +561,9 @@ Compat.@constprop :none function frame_canvas(aspect)
 end
 
 """
-    imshow(canvas, imgsig::Observable) -> guidict
-    imshow(canvas, imgsig::Observable, zr::Observable{ZoomRegion}) -> guidict
-    imshow(frame::Frame, canvas, imgsig::Observable, zr::Observable{ZoomRegion}) -> guidict
+    imshow(canvas, imgsig::Observable) -> roi::ImageROI
+    imshow(canvas, imgsig::Observable, zr::Observable{ZoomRegion}) -> roi::ImageROI
+    imshow(frame::Frame, canvas, imgsig::Observable, zr::Observable{ZoomRegion}) -> roi::ImageROI
 
 Display `imgsig` (a `Observable` of an image) in `canvas`, setting up
 panning and zooming. Optionally include a `frame` for preserving
@@ -576,8 +577,8 @@ using ImageView, TestImages, Gtk4
 mri = testimage("mri");
 # Create a canvas `c`. There are other approaches, like stealing one from a previous call
 # to `imshow`, or using GtkObservables directly.
-guidict = imshow_gui((300, 300))
-c = guidict["canvas"];
+gui = imshow_gui((300, 300))
+c = gui.canvas;
 # To see anything you have to call `showall` on the window (once)
 # Create the image Observable
 imgsig = Observable(mri[:,:,1]);
