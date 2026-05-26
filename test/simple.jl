@@ -15,7 +15,7 @@ using Test
 
     # default contrast setting with a homogenous image
     imgdict = imshow_now(zeros(3, 3))
-    @test imgdict["clim"][] == ImageView.CLim(0.0,1.0)
+    @test imgdict.clim[] == ImageView.CLim(0.0,1.0)
 end
 
 @testset "Simple RGB" begin
@@ -29,7 +29,7 @@ end
     imgdict = imshow_now(colorview(RGB, A))
 
     # test window actions
-    win = imgdict["gui"]["window"]
+    win = imgdict.window
     Gtk4.G_.activate_action(win, "win.fullscreen", nothing)
     sleep(0.5)
     Gtk4.G_.activate_action(win, "win.fullscreen", nothing)

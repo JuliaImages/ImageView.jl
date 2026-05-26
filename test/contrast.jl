@@ -56,9 +56,9 @@ end
         Observable(CLim(RGB(0f0,0f0,0f0), RGB(1f0,1f0,1f0))))) == 3
 
     # setup_contrast_popup! registers the contrast_gui action on the canvas
-    # (gridsize (1,1) default → gd["canvas"] is a single Canvas, not a matrix)
+    # (gridsize (1,1) default → gd.canvas is a single Canvas, not a matrix)
     gd = imshow_gui((50, 50))
-    canvas = gd["canvas"]
+    canvas = gd.canvas
     clim2 = Observable(CLim(0.0f0, 1.0f0))
     n_preserved = length(canvas.preserved)
     ret = setup_contrast_popup!(canvas, clim2)
@@ -68,12 +68,12 @@ end
 
     # with img kwarg: uses histsignals; action still registered
     gd2 = imshow_gui((50, 50))
-    canvas2 = gd2["canvas"]
+    canvas2 = gd2.canvas
     clim3 = Observable(CLim(0.0f0, 1.0f0))
     img  = Observable(rand(Float32, 10, 10))
     setup_contrast_popup!(canvas2, clim3; img=img)
     @test "contrast_gui" in keys(canvas2.action_group)
 
-    Gtk4.destroy(gd["window"])
-    Gtk4.destroy(gd2["window"])
+    Gtk4.destroy(gd.window)
+    Gtk4.destroy(gd2.window)
 end
