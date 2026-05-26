@@ -43,6 +43,133 @@ Base.convert(::Type{CLim{T}}, clim::CLim) where {T} = CLim(convert(T, clim.min),
 Base.eltype(::CLim{T}) where {T} = T
 
 """
+    ImageViewGUI
+
+Holds the GTK widgets that make up an `ImageView` window: the window itself,
+its layout containers, frame(s), canvas(es), the status and view labels, and
+(for multidimensional images) the player widgets used to scrub through slices.
+
+In a grid layout, `frame` and `canvas` are `Matrix`es of widgets; for a
+single-image window they are individual widgets.
+
+Returned by [`imshow_gui`](@ref) and accessible as `disp.gui` on an
+[`ImageDisplay`](@ref).
+"""
+mutable struct ImageViewGUI
+    window
+    vbox
+    frame
+    canvas
+    status
+    viewlabel
+    players          # Vector or `nothing`
+    hoverinfo        # Observer handle or `nothing`; set after construction
+    zoomregion_info  # Observer handle or `nothing`; set after construction
+    extras::Dict{Symbol,Any}
+end
+ImageViewGUI(window, vbox, frame, canvas, status, viewlabel, players=nothing) =
+    ImageViewGUI(window, vbox, frame, canvas, status, viewlabel, players,
+                 nothing, nothing, Dict{Symbol,Any}())
+
+"""
+    ImageROI
+
+Holds the region-of-interest state and pan/zoom interaction signals for a
+displayed image: the currently-shown image slice (`image_roi`), the
+`zoomregion` observable, signals for rubberband/scroll zooming and panning,
+the redraw signal, and the `slicedata` (when the source image has more than
+two dimensions).
+
+Returned by `imshow(::Canvas, ...)` and accessible as `disp.roi` on an
+[`ImageDisplay`](@ref).
+"""
+mutable struct ImageROI
+    image_roi
+    zoomregion
+    zoom_rubberband
+    zoom_scroll
+    pan_scroll
+    pan_drag
+    redraw
+    slicedata        # `SliceData` or `nothing`
+end
+ImageROI(image_roi, zoomregion, zoom_rubberband, zoom_scroll, pan_scroll, pan_drag, redraw) =
+    ImageROI(image_roi, zoomregion, zoom_rubberband, zoom_scroll, pan_scroll, pan_drag, redraw, nothing)
+
+"""
+    ImageDisplay
+
+The handle returned by [`imshow`](@ref). Composes an [`ImageViewGUI`](@ref)
+(accessible via `disp.gui` or by hoisted fields like `disp.window`,
+`disp.canvas`), an [`ImageROI`](@ref) (via `disp.roi` or hoisted fields like
+`disp.zoomregion`, `disp.image_roi`), an optional `clim`, and the
+`annotations` observable.
+
+`ImageDisplay` overloads `Base.getproperty` so any field of the nested `gui`
+or `roi` can be reached directly on the top-level handle. Downstream packages
+that need to dispatch on "an ImageView display" should dispatch on this type.
+
+`Base.show` deliberately prints only a compact summary; it never prints the
+underlying image array.
+"""
+struct ImageDisplay
+    gui::ImageViewGUI
+    roi::ImageROI
+    clim             # `Observable{<:CLim}` or `nothing`
+    annotations      # `Annotations` (= `Observable{Dict{UInt,Any}}`)
+end
+
+function Base.getproperty(d::ImageDisplay, name::Symbol)
+    name === :gui         && return getfield(d, :gui)
+    name === :roi         && return getfield(d, :roi)
+    name === :clim        && return getfield(d, :clim)
+    name === :annotations && return getfield(d, :annotations)
+    g = getfield(d, :gui)
+    hasfield(ImageViewGUI, name) && return getfield(g, name)
+    r = getfield(d, :roi)
+    hasfield(ImageROI, name) && return getfield(r, name)
+    throw(ArgumentError("ImageDisplay has no property `$name`. Available: $(propertynames(d))"))
+end
+
+Base.propertynames(::ImageDisplay) =
+    (:gui, :roi, :clim, :annotations,
+     fieldnames(ImageViewGUI)..., fieldnames(ImageROI)...)
+
+function Base.show(io::IO, d::ImageDisplay)
+    img = getfield(d, :roi).image_roi
+    print(io, "ImageDisplay(", eltype(img[]), ", ", size(img[]), ")")
+end
+function Base.show(io::IO, ::MIME"text/plain", d::ImageDisplay)
+    img = getfield(d, :roi).image_roi[]
+    println(io, "ImageDisplay: ", size(img), " ", eltype(img))
+    sd = getfield(d, :roi).slicedata
+    sd === nothing || isempty(sd) || println(io, "  slicedata: ", sd)
+    cl = getfield(d, :clim)
+    cl === nothing || println(io, "  clim: ", cl[])
+    print(io, "  fields: ", join(propertynames(d), ", "))
+end
+
+function Base.show(io::IO, gui::ImageViewGUI)
+    print(io, "ImageViewGUI(")
+    f = getfield(gui, :frame)
+    if f isa AbstractMatrix
+        print(io, size(f), " grid")
+    else
+        print(io, "single canvas")
+    end
+    print(io, ")")
+end
+
+function Base.show(io::IO, r::ImageROI)
+    print(io, "ImageROI(")
+    print(io, eltype(r.image_roi[]), ", ", size(r.image_roi[]))
+    r.slicedata === nothing || isempty(r.slicedata) || print(io, ", with slicedata")
+    print(io, ")")
+end
+
+include("deprecated.jl")
+
+"""
     closeall()
 
 Closes all windows opened by ImageView.
@@ -215,21 +342,20 @@ Compat.@constprop :none function imshow(@nospecialize(img::AbstractArray), clim,
     if canvassize === nothing
         canvassize = default_canvas_size(fullsize(zr[]), ps[2]/ps[1])
     end
-    guidict = imshow_gui(canvassize, sd; name=name, aspect=aspect)
-    guidict["hoverinfo"] = on(guidict["canvas"].mouse.motion) do btn
-        hoverinfo(guidict["status"], btn, img, sd)
+    gui = imshow_gui(canvassize, sd; name=name, aspect=aspect)
+    gui.hoverinfo = on(gui.canvas.mouse.motion) do btn
+        hoverinfo(gui.status, btn, img, sd)
     end
-    guidict["zoomregion_info"]=on(zr; update=true) do z
-        viewinfo(guidict["viewlabel"], z, sd)
+    gui.zoomregion_info = on(zr; update=true) do z
+        viewinfo(gui.viewlabel, z, sd)
     end
 
-    roidict = imshow(guidict["frame"], guidict["canvas"], img,
-                     wrap_signal(clim), zr, sd, anns)
+    roi_ = imshow(gui.frame, gui.canvas, img,
+                  wrap_signal(clim), zr, sd, anns)
 
-    win = guidict["window"]
-    dct = Dict("gui"=>guidict, "clim"=>clim, "roi"=>roidict, "annotations"=>anns)
-    GtkObservables.gc_preserve(win, dct)
-    return dct
+    disp = ImageDisplay(gui, roi_, clim, anns)
+    GtkObservables.gc_preserve(gui.window, disp)
+    return disp
 end
 
 function imshow(frame::Union{Gtk4.GtkFrame,Gtk4.GtkAspectFrame}, canvas::GtkObservables.Canvas,
@@ -257,9 +383,9 @@ function imshow(frame::Union{Gtk4.GtkFrame,Gtk4.GtkAspectFrame}, canvas::GtkObse
         error("got unsupported eltype $(eltype(imgc[])) in preparing the contrast")
     end
 
-    roidict = imshow(frame, canvas, imgc, zr, anns)
-    roidict["slicedata"] = sd
-    roidict
+    roi_ = imshow(frame, canvas, imgc, zr, anns)
+    roi_.slicedata = sd
+    roi_
 end
 
 # For things that are not AbstractArrays, we don't offer the clim
@@ -280,14 +406,13 @@ Compat.@constprop :none function imshow(img,
     v = slice2d(img, zr[], sd)
     ps = map(abs, pixelspacing(v))
     csz = default_canvas_size(fullsize(zr[]), ps[2]/ps[1])
-    guidict = imshow_gui(csz, sd; name=name, aspect=aspect)
+    gui = imshow_gui(csz, sd; name=name, aspect=aspect)
 
-    roidict = imshow(guidict["frame"], guidict["canvas"], img, zr, sd, anns)
+    roi_ = imshow(gui.frame, gui.canvas, img, zr, sd, anns)
 
-    win = guidict["window"]
-    dct = Dict("gui"=>guidict, "roi"=>roidict)
-    GtkObservables.gc_preserve(win, dct)
-    return dct
+    disp = ImageDisplay(gui, roi_, nothing, anns)
+    GtkObservables.gc_preserve(gui.window, disp)
+    return disp
 end
 
 function imshow(frame::Union{GtkFrame,GtkAspectFrame}, canvas::GtkObservables.Canvas,
@@ -301,10 +426,10 @@ function imshow(frame::Union{GtkFrame,GtkAspectFrame}, canvas::GtkObservables.Ca
     set_aspect!(frame, imgsig[])
     GtkObservables.gc_preserve(frame, imgsig)
 
-    roidict = imshow(frame, canvas, imgsig, zr, anns)
-    roidict["slicedata"] = sd
-    GtkObservables.gc_preserve(frame, roidict)
-    roidict
+    roi_ = imshow(frame, canvas, imgsig, zr, anns)
+    roi_.slicedata = sd
+    GtkObservables.gc_preserve(frame, roi_)
+    roi_
 end
 
 function close_cb(::Ptr, par, win)
@@ -381,21 +506,20 @@ Compat.@constprop :none function imshow_gui(canvassize::Tuple{Int,Int},
     Gtk4.ellipsize(viewlabel, Gtk4.Pango.EllipsizeMode_MIDDLE)
     cbox[:end] = viewlabel
 
-    guidict = Dict("window"=>win, "vbox"=>vbox, "frame"=>frames, "status"=>status,
-                   "canvas"=>canvases, "viewlabel"=>viewlabel)
+    gui = ImageViewGUI(win, vbox, frames, canvases, status, viewlabel)
 
     # Add the player controls
     if !isempty(slicedata)
         players = [player(slicedata.signals[i], axisvalues(slicedata.axs[i])[1]; id=i) for i = 1:length(slicedata)]
-        guidict["players"] = players
+        gui.players = players
         hbox = GtkBox(:h)
         for p in players
             push!(hbox, frame(p))
         end
-        push!(guidict["vbox"], hbox)
+        push!(gui.vbox, hbox)
     end
 
-    guidict
+    gui
 end
 
 imshow_gui(canvassize::Tuple{Int,Int}, slicedata::SliceData, args...; kwargs...) =
@@ -473,11 +597,9 @@ function imshow(canvas::GtkObservables.Canvas{UserUnit},
     pans = init_pan_scroll(canvas, zr)
     pand = init_pan_drag(canvas, zr)
     redraw = imshow!(canvas, imgsig, zr, anns)
-    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
-               "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
-               "redraw"=>redraw)
-    GtkObservables.gc_preserve(widget(canvas), dct)
-    dct
+    roi_ = ImageROI(imgsig, zr, zoomrb, zooms, pans, pand, redraw)
+    GtkObservables.gc_preserve(widget(canvas), roi_)
+    roi_
 end
 
 function imshow(frame::Union{GtkFrame,GtkAspectFrame},
@@ -491,11 +613,9 @@ function imshow(frame::Union{GtkFrame,GtkAspectFrame},
     pans = init_pan_scroll(canvas, zr)
     pand = init_pan_drag(canvas, zr)
     redraw = imshow!(frame, canvas, imgsig, zr, anns)
-    dct = Dict("image roi"=>imgsig, "zoomregion"=>zr, "zoom_rubberband"=>zoomrb,
-               "zoom_scroll"=>zooms, "pan_scroll"=>pans, "pan_drag"=>pand,
-               "redraw"=>redraw)
-    GtkObservables.gc_preserve(widget(canvas), dct)
-    dct
+    roi_ = ImageROI(imgsig, zr, zoomrb, zooms, pans, pand, redraw)
+    GtkObservables.gc_preserve(widget(canvas), roi_)
+    roi_
 end
 
 """
@@ -507,14 +627,14 @@ value in the status bar.
 function imshowlabeled(img::AbstractArray, label::AbstractArray; proplist...)
     @nospecialize
     axes(img) == axes(label) || throw(DimensionMismatch("axes $(axes(label)) of label array disagree with axes $(axes(img)) of the image"))
-    guidict = imshow(img; proplist...)
-    gui = guidict["gui"]
-    sd = guidict["roi"]["slicedata"]
-    off(gui["hoverinfo"])
-    gui["hoverinfo"] = on(gui["canvas"].mouse.motion) do btn
-        hoverinfo(gui["status"], btn, label, sd)
+    disp = imshow(img; proplist...)
+    gui = disp.gui
+    sd = disp.roi.slicedata
+    off(gui.hoverinfo)
+    gui.hoverinfo = on(gui.canvas.mouse.motion) do btn
+        hoverinfo(gui.status, btn, label, sd)
     end
-    guidict
+    disp
 end
 
 function hoverinfo(lbl, btn, img, sd::SliceData{transpose}) where transpose

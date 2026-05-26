@@ -2,14 +2,13 @@
 
 annotations() = Observable(Dict{UInt,Any}())
 
-function annotate!(guidict::Dict, ann; anchored::Bool=true)
-    c, roi, anns = guidict["gui"]["canvas"], guidict["roi"], guidict["annotations"]
-    annotate!(anns, c, roi, ann; anchored=anchored)
+function annotate!(disp::ImageDisplay, ann; anchored::Bool=true)
+    annotate!(disp.annotations, disp.gui.canvas, disp.roi, ann; anchored=anchored)
 end
 
-function annotate!(anns::Annotations, c::GtkObservables.Canvas, roi::Dict{String}, ann; anchored::Bool=true)
+function annotate!(anns::Annotations, c::GtkObservables.Canvas, roi::ImageROI, ann; anchored::Bool=true)
     if anchored
-        zr = roi["zoomregion"]
+        zr = roi.zoomregion
         annf = AnchoredAnnotation((_)->canvasbb(c), (_)->zoombb(zr), ann)
     else
         annf = FloatingAnnotation((_)->canvasbb(c), ann)
@@ -34,7 +33,7 @@ function Base.delete!(anns::Annotations, anh::AnnotationHandle)
     delete!(anns[], anh.hash)
     notify(anns)
 end
-Base.delete!(guidict::Dict, anh::AnnotationHandle) = delete!(guidict["annotations"], anh)
+Base.delete!(disp::ImageDisplay, anh::AnnotationHandle) = delete!(disp.annotations, anh)
 
 function draw_annotations(canvas, anns)
     for (h, ann) in anns
@@ -269,10 +268,10 @@ Add a scale bar annotation to the image display controlled by
 
 `x` and `y` control the placement of the scalebar, and `color` its rendered color.
 """
-function scalebar(guidict::Dict, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
-    imsl = guidict["roi"]["image roi"]
+function scalebar(disp::ImageDisplay, length; x = 0.8, y = 0.1, color = RGB(1,1,1))
+    imsl = disp.roi.image_roi
     ann = AnnotationScalebarFixed(length/1, length/10, imsl, x, y, color)
-    annotate!(guidict, ann, anchored=false)
+    annotate!(disp, ann, anchored=false)
 end
 
 ##############
