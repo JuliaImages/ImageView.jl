@@ -66,14 +66,24 @@ function _legacy_get(g::ImageViewGUI, key::AbstractString)
     key == "hoverinfo"      && return getfield(g, :hoverinfo)
     key == "zoomregion_info" && return getfield(g, :zoomregion_info)
     key == "guidata"        && return getfield(g, :extras)[:guidata]
-    throw(KeyError(key))
+    # Pre-0.13 callers used the GUI Dict as scratch space for arbitrary keys
+    # (e.g. stashing a `zoom_region` observable). Route those through `extras`.
+    return getfield(g, :extras)[Symbol(key)]
 end
 function _legacy_set!(g::ImageViewGUI, key::AbstractString, value)
     key == "hoverinfo"       && (g.hoverinfo = value; return value)
     key == "zoomregion_info" && (g.zoomregion_info = value; return value)
     key == "players"         && (g.players = value; return value)
-    key == "guidata"         && (g.extras[:guidata] = value; return value)
-    throw(ArgumentError("cannot assign legacy key \"$key\" on ImageViewGUI"))
+    getfield(g, :extras)[Symbol(key)] = value
+    return value
+end
+
+Base.haskey(g::ImageViewGUI, key::AbstractString) =
+    _legacy_haskey_known(g, key) || haskey(getfield(g, :extras), Symbol(key))
+
+function _legacy_haskey_known(::ImageViewGUI, key::AbstractString)
+    return key in ("window", "vbox", "frame", "canvas", "status", "viewlabel",
+                   "players", "hoverinfo", "zoomregion_info", "guidata")
 end
 
 function _legacy_get(r::ImageROI, key::AbstractString)
