@@ -20,6 +20,11 @@ export AnnotationText, AnnotationPoint, AnnotationPoints,
 export CLim, annotate!, annotations, canvasgrid, imshow, imshow!, imshow_gui, imlink,
        roi, scalebar, setup_contrast_popup!, slice2d
 
+# Public-but-not-exported types that downstream packages dispatch on.
+@static if VERSION >= v"1.11"
+    eval(Expr(:public, :ImageDisplay, :ImageViewGUI, :ImageROI))
+end
+
 const AbstractGray{T} = Color{T,1}
 const GrayLike = Union{AbstractGray,Number}
 const FixedColorant{T<:FixedPoint} = Colorant{T}

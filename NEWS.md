@@ -1,5 +1,10 @@
 # New in 0.13
 
+- 0.13.3: the legacy string-key shim on `ImageViewGUI` now routes unknown
+  keys to the `extras::Dict{Symbol,Any}` field instead of throwing
+  `ArgumentError`. This restores the pre-0.13 pattern of using the GUI
+  handle as a scratch space for downstream-defined keys (with a depwarn).
+  `Base.haskey(::ImageViewGUI, ::AbstractString)` is also defined.
 - `imshow` now returns an `ImageDisplay` struct rather than a nested
   `Dict{String,Any}`. The nested GUI and ROI groupings are exposed as
   the structs `ImageViewGUI` (returned by `imshow_gui`) and `ImageROI`
